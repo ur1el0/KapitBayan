@@ -6,10 +6,10 @@ import {
     ListOrdered, 
     Radio, 
     LogOut, 
-    ShieldCheck, 
     Building2,
     HandHeart,
     CircleHelp,
+    Settings,
 } from 'lucide-react';
 import kapitBayanSymbol from '../../assets/kapitbayan/symbol.png';
 
@@ -48,7 +48,7 @@ export const CitizenLayout: React.FC = () => {
                                     <span className="text-xl font-bold tracking-tight text-primary-foreground leading-none">
                                         KapitBayan
                                     </span>
-                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-primary-foreground text-primary shrink-0">
+                                    <span className="hidden sm:inline-flex px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-primary-foreground text-primary shrink-0">
                                         Resident Portal
                                     </span>
                                 </div>
@@ -90,24 +90,31 @@ export const CitizenLayout: React.FC = () => {
 
                         {/* Right: Resident Profile Pill & Logout */}
                         <div className="flex items-center gap-3 shrink-0">
-                            <div className="hidden sm:flex items-center gap-2.5 bg-white/5 border border-white/10 px-3.5 py-1.5 rounded-full max-w-[200px]">
+                            <NavLink
+                                to="/portal/profile"
+                                aria-label={`Profile and settings for ${displayName}`}
+                                title="Profile and settings"
+                                className={({ isActive }) => `flex min-h-[44px] items-center gap-2 rounded-full border px-2 sm:px-3.5 py-1.5 max-w-[190px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-primary ${isActive ? 'border-white/40 bg-white/20' : 'border-white/10 bg-white/5 hover:bg-white/10'}`}
+                            >
                                 <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-xs font-bold shrink-0">
                                     {displayName.charAt(0).toUpperCase()}
                                 </div>
-                                <div className="flex flex-col text-left min-w-0">
-                                    <span className="text-xs font-bold text-primary-foreground leading-tight truncate" title={displayName}>
+                                <div className="hidden sm:flex flex-col text-left min-w-0">
+                                    <span className="text-xs font-bold text-primary-foreground leading-tight truncate">
                                         {displayName}
                                     </span>
-                                    <span className="flex items-center gap-1 text-[10px] text-emerald-400 font-semibold shrink-0">
-                                        <ShieldCheck className="w-3 h-3" />
-                                        Verified Resident
+                                    <span className="flex items-center gap-1 text-[10px] text-primary-foreground/75 font-semibold shrink-0">
+                                        <Settings className="w-3 h-3" aria-hidden="true" />
+                                        Profile &amp; Settings
                                     </span>
                                 </div>
-                            </div>
+                            </NavLink>
 
                             <button
+                                type="button"
                                 onClick={handleLogout}
                                 title="Log Out"
+                                aria-label="Log out"
                                 className="flex min-h-[44px] items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-primary-foreground hover:bg-rose-500/20 border border-rose-500/30 transition-all cursor-pointer touch-manipulation"
                             >
                                 <LogOut className="w-4 h-4" />
@@ -138,6 +145,10 @@ export const CitizenLayout: React.FC = () => {
                     <NavLink to="/portal/help" className={`${navLinkClass} whitespace-nowrap`}>
                         <CircleHelp className="w-4 h-4" aria-hidden="true" />
                         <span className="text-xs">FAQs</span>
+                    </NavLink>
+                    <NavLink to="/portal/profile" className={`${navLinkClass} whitespace-nowrap`}>
+                        <Settings className="w-4 h-4" aria-hidden="true" />
+                        <span className="text-xs">Profile &amp; Settings</span>
                     </NavLink>
                 </nav>
             </header>
