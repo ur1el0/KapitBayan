@@ -37,12 +37,11 @@ describe('web login role boundaries', () => {
             } as never);
 
         render(
-            <MemoryRouter>
+            <MemoryRouter initialEntries={['/official-login']}>
                 <Login />
             </MemoryRouter>,
         );
 
-        fireEvent.click(screen.getByTitle('Tap to switch between Citizen and Official mode'));
         fireEvent.change(screen.getByPlaceholderText('Enter your username or email'), {
             target: { value: 'field.staff@example.gov.ph' },
         });
