@@ -82,10 +82,17 @@ class AuthRegistrationAPITests(IsolatedAuthAPITestCase):
             role=User.Role.DILG_ADMIN,
             is_staff=True,
         )
-        application = BarangayApplication.objects.create(
+        barangay = Barangay.objects.create(
             name="Barangay Onboarded",
             municipality="Lucena City",
             province="Quezon",
+        )
+        application = BarangayApplication.objects.create(
+            application_type=BarangayApplication.ApplicationType.OFFICIAL,
+            existing_barangay=barangay,
+            name=barangay.name,
+            municipality=barangay.municipality,
+            province=barangay.province,
             applicant_name="Kapitan Mario Reyes",
             applicant_position="Punong Barangay",
             applicant_email="kapitan.mario@example.com",
