@@ -4,6 +4,7 @@ import { InlineErrorState } from '../../components/ui/InlineErrorState';
 
 interface Application {
     id: number;
+    application_type: 'BARANGAY' | 'OFFICIAL';
     name: string;
     municipality: string;
     province: string;
@@ -46,7 +47,7 @@ export function BarangayApplications() {
 
     const review = async (application: Application, decision: 'APPROVED' | 'REJECTED') => {
         const reviewNote = notes[application.id]?.trim() || '';
-        if (decision === 'APPROVED' && !window.confirm(`Approve ${application.name}, ${application.municipality}? This creates its tenant and first official account.`)) return;
+        if (decision === 'APPROVED' && !window.confirm(`Approve the official account request for ${application.applicant_name} at ${application.name}?`)) return;
         if (decision === 'REJECTED' && !reviewNote) {
             setError('Enter a reason before rejecting an application.');
             return;
@@ -71,8 +72,8 @@ export function BarangayApplications() {
         <section className="mx-auto max-w-6xl space-y-5 p-4 sm:p-8">
             <header>
                 <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary-text">DILG administration</p>
-                <h1 className="mt-1 text-2xl font-extrabold text-slate-900">Barangay applications</h1>
-                <p className="mt-2 text-sm text-slate-600">Verify the barangay and applicant through official channels before approving. Approval creates the tenant and a first official account without a password.</p>
+                <h1 className="mt-1 text-2xl font-extrabold text-slate-900">Official Account Applications</h1>
+                <p className="mt-2 text-sm text-slate-600">Verify each official through official channels before approving. Approval provisions a passwordless account for the verified official.</p>
             </header>
             {error && <p role="alert" className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">{error}</p>}
             {loading ? <p role="status" className="text-sm text-slate-500">Loading applications…</p> : loadError ? (
@@ -89,8 +90,8 @@ export function BarangayApplications() {
                         <article key={application.id} className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
                             <div className="flex flex-wrap items-start justify-between gap-3">
                                 <div>
-                                    <h2 className="text-lg font-bold text-slate-900">{application.name}</h2>
-                                    <p className="text-sm text-slate-600">{application.municipality}, {application.province}</p>
+                                    <h2 className="text-lg font-bold text-slate-900">{application.applicant_name} — Official Account Request</h2>
+                                    <p className="text-sm text-slate-600">{application.name} ({application.municipality}, {application.province})</p>
                                 </div>
                                 <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">{application.status}</span>
                             </div>
@@ -104,7 +105,7 @@ export function BarangayApplications() {
                                         <textarea rows={2} maxLength={1000} value={notes[application.id] || ''} onChange={(event) => setNotes((current) => ({ ...current, [application.id]: event.target.value }))} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" placeholder="Required for rejection; include the verification outcome." />
                                     </label>
                                     <div className="mt-3 flex flex-wrap gap-2">
-                                        <button type="button" onClick={() => void review(application, 'APPROVED')} disabled={savingId === application.id} className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">{savingId === application.id ? 'Saving…' : 'Approve and create account'}</button>
+                                        <button type="button" onClick={() => void review(application, 'APPROVED')} disabled={savingId === application.id} className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">{savingId === application.id ? 'Saving…' : 'Approve official account'}</button>
                                         <button type="button" onClick={() => void review(application, 'REJECTED')} disabled={savingId === application.id || !notes[application.id]?.trim()} className="rounded-lg bg-rose-700 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">Reject</button>
                                     </div>
                                 </div>
