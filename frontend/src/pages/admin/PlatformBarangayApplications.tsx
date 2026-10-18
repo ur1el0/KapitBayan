@@ -130,7 +130,7 @@ export function PlatformBarangayApplications() {
 
             <aside className="flex gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
                 <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
-                <p>Applicant contact details are visible only to platform superusers. Do not approve from this form alone: independently verify the official and Barangay. A Barangay that already has an Admin must use its existing Admin’s staff-management page to invite another Admin.</p>
+                <p>Applicant contact details are visible only to platform superusers. Do not approve from this form alone: independently verify the official and Barangay. This workflow provisions the first Admin for a Barangay; existing Barangay Admins manage Field Officials from staff management.</p>
             </aside>
 
             {message && <p role={message.type === 'error' ? 'alert' : 'status'} className={`rounded-lg border p-3 text-sm ${message.type === 'error' ? 'border-rose-200 bg-rose-50 text-rose-800' : 'border-emerald-200 bg-emerald-50 text-emerald-900'}`}>{message.text}</p>}

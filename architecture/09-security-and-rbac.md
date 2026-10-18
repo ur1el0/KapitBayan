@@ -9,7 +9,7 @@ The API uses JWT access credentials and server-managed refresh sessions/cookies 
 ## Role and tenant controls
 
 - `RESIDENT`: access to the authenticated resident's own profile and service records.
-- `ADMIN`: barangay staff operations limited to the assigned barangay.
+- `ADMIN`: barangay staff operations limited to the assigned barangay. Admins can provision and manage Field Officials, but cannot create or list peer Admin accounts; a platform operator provisions the initial Admin for a Barangay.
 - `FIELD_OFFICIAL`: mobile-oriented staff permissions defined per endpoint and limited to the assigned barangay.
 - Django `is_superuser`: platform recovery and Django administration only; this flag does not create barangay service access and is not an active product role.
 

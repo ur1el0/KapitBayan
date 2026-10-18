@@ -101,7 +101,7 @@ export function BarangayOnboarding() {
                                     <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary-text">New Barangay onboarding</p>
                                     <h1 className="mt-1 text-2xl font-extrabold text-slate-900 sm:text-3xl">Request your Barangay’s first Admin account</h1>
                                     <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
-                                        Submit your Barangay locality and the official who will manage KapitBayan. A platform operator verifies the request before creating the Barangay account. This form does not create a login or password. Existing Barangays should ask their Admin to invite another staff account.
+                                        Submit your Barangay locality and the official who will manage KapitBayan. A platform operator verifies the request before creating the Barangay account. This form does not create a login or password. Existing Barangays should contact their Admin about Field Official accounts.
                                     </p>
                                 </div>
                             </div>

@@ -403,7 +403,7 @@ export const Register: React.FC = () => {
                             </div>
 
                             <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-center text-xs leading-5 text-slate-600">
-                                Barangay staff accounts are created by an existing Barangay Admin. First Admin setup is handled by the system operator.
+                                Field Official accounts are created by their Barangay Admin. Barangay Admin accounts are provisioned by the system operator after review.
                             </p>
 
                             {/* Back to Login */}

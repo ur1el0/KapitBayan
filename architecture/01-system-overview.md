@@ -18,7 +18,7 @@ The web client uses the API through the configured same-origin proxy in the inte
 
 - `RESIDENT` accounts belong to one barangay and can access their own resident services.
 - `ADMIN` and `FIELD_OFFICIAL` accounts are assigned to a barangay and receive staff permissions defined by each endpoint.
-- `ADMIN` accounts manage only their assigned barangay. A new Barangay may submit a public onboarding application; an active Django superuser verifies the application and provisions its tenant and first Admin. See [ADR 022](decisions/022-reviewed-new-barangay-onboarding.md).
+- A new Barangay's first `ADMIN` account is provisioned by an active Django superuser after reviewing and verifying its public onboarding application. The Admin manages Field Officials in the assigned Barangay and cannot provision or list other Admin accounts. See [ADR 022](decisions/022-reviewed-new-barangay-onboarding.md).
 - Django superusers are platform operators, not a resident or barangay staff role. Their bounded account-recovery surface is isolated from normal barangay portals; legacy role values cannot authenticate.
 
 Tenant scope is derived and enforced by the backend. A client-supplied barangay identifier does not grant access to another tenant's records. See [Security and RBAC](09-security-and-rbac.md) and [ADR 004](decisions/004-multi-tenant-isolation.md).

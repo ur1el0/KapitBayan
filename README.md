@@ -2,7 +2,7 @@
 
 KapitBayan is a web and mobile information and service system for barangays. The repository contains a Django REST API, a React web application for staff and resident use, and a Flutter mobile application for residents and field personnel. Internal Django package names such as `gridy_auth` remain part of the migration history and are not product names.
 
-The platform supports resident document requests, manual fee assessment and treasury verification, queue services, assistance requests, incident reporting, communications, and public information. A new Barangay can request onboarding through a reviewed application; a platform operator provisions its first Admin after independent verification, and that Admin can invite peers within the Barangay. It records out-of-band payments but does not process funds through a payment gateway. Staff make service decisions; assistance eligibility and document approval are not automated.
+The platform supports resident document requests, manual fee assessment and treasury verification, queue services, assistance requests, incident reporting, communications, and public information. A new Barangay can request onboarding through a reviewed application; a platform operator provisions its first Admin after independent verification. Barangay Admins manage Field Official accounts for their own Barangay and cannot create peer Admin accounts. It records out-of-band payments but does not process funds through a payment gateway. Staff make service decisions; assistance eligibility and document approval are not automated.
 
 ## Architecture and API
 

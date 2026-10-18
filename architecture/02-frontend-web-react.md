@@ -12,7 +12,7 @@ The browser application is a React and TypeScript single-page application built 
 | `/platform/accounts` | Active Django superuser | Bounded account recovery and status support |
 | `/portal/documents`, `/portal/queue`, `/portal/bulletin`, `/portal/aid` | `RESIDENT` | Resident self-service |
 
-`/aid-requests` has an additional `ADMIN` route guard. `/register/barangay` creates only a pending request. `/platform/barangay-applications` is restricted to an active Django superuser, who must independently verify an applicant before creating the tenant and its first Admin. Existing same-Barangay Admins continue to invite peers from their staff-management page. `FIELD_OFFICIAL` has no web staff workspace in the current router and uses the Flutter client; browser login for that role is rejected. These are UI route guards; the API remains the authorization boundary. The Field Official API token is not cryptographically bound to a native device.
+`/aid-requests` has an additional `ADMIN` route guard. `/register/barangay` creates only a pending request. `/platform/barangay-applications` is restricted to an active Django superuser, who must independently verify an applicant before creating the tenant and its Admin. Barangay Admins cannot create or list other Admin accounts; they can manage Field Officials through staff settings. `FIELD_OFFICIAL` has no web staff workspace in the current router and uses the Flutter client; browser login for that role is rejected. These are UI route guards; the API remains the authorization boundary. The Field Official API token is not cryptographically bound to a native device.
 
 ## API and authentication
 

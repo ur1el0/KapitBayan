@@ -6,7 +6,7 @@
 
 ## Context
 
-Barangay Admins can invite peer Admins only after a Barangay already has an Admin account. A Barangay that is new to KapitBayan therefore has no way to request its first account. Public self-provisioning would let an unverified person create a tenant or assign themselves an Admin role. The first Admin must remain operator-created, as previously agreed, while a new Barangay needs a clear route to apply.
+A Barangay that is new to KapitBayan has no way to request an Admin account. Public self-provisioning would let an unverified person create a tenant or assign themselves an Admin role. Admin account creation must remain operator-controlled, while a new Barangay needs a clear route to apply. After approval, its Admin can manage Field Officials but cannot create or list another Admin account.
 
 ## Decision
 
@@ -14,8 +14,8 @@ Barangay Admins can invite peer Admins only after a Barangay already has an Admi
 2. Public submission creates only a pending `BarangayApplication`. It cannot create or select a tenant, create an account, choose a role, set a password, or see the state or details of another application. Submissions use a shared database throttle.
 3. Only an active Django superuser can list application details or approve/reject. Before approval, the operator must verify the Barangay and official through an independent official channel. Rejection records a reason. Review actions are one-time from the pending state and are audited.
 4. Approval runs in one database transaction. It creates the tenant for the verified Barangay locality or reuses one matching legacy record with incomplete locality fields. Multiple possible matches, an existing Admin, a conflicting username/email, or a database uniqueness conflict stop approval for manual review. Client-supplied role or tenant identifiers are never accepted.
-5. Approval creates the first `ADMIN` assigned to the resulting tenant with an unusable password, records the reviewing operator and verification attestation, and requests a one-time `/set-password` email after the transaction commits. If a setup email is not received, the platform operator can use the bounded account-support recovery path after independently verifying the official's contact details.
-6. After the first Admin is established, that Admin may invite additional Admins only within the same Barangay. No DILG product role or cross-Barangay service access is introduced.
+5. Approval creates the Barangay's first `ADMIN` assigned to the resulting tenant with an unusable password, records the reviewing operator and verification attestation, and requests a one-time `/set-password` email after the transaction commits. If a setup email is not received, the platform operator can use the bounded account-support recovery path after independently verifying the official's contact details.
+6. Barangay Admins may provision and manage Field Officials only within their own Barangay. They cannot create or list peer Admins. No DILG product role or cross-Barangay service access is introduced.
 
 ## Consequences
 
