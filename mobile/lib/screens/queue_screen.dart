@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '../core/network/api_client.dart';
 import '../core/theme/app_colors.dart';
@@ -30,7 +32,7 @@ class QueueScreen extends StatefulWidget {
   State<QueueScreen> createState() => _QueueScreenState();
 }
 
-class _QueueScreenState extends State<QueueScreen> {
+class _QueueScreenState extends State<QueueScreen> with WidgetsBindingObserver {
   QueueService? _queueService;
   AuthService? _authService;
   UserModel? _currentUser;
@@ -41,6 +43,8 @@ class _QueueScreenState extends State<QueueScreen> {
   bool _isRetrying = false;
   final int _selectedNavIndex = 1;
   bool _isRequestingTicket = false;
+  bool _isLoadingQueueData = false;
+  Timer? _queueRefreshTimer;
 
   void _showRequestTicketModal() {
     showModalBottomSheet<void>(
@@ -90,6 +94,7 @@ class _QueueScreenState extends State<QueueScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _initializeAndLoad();
   }
 
@@ -108,11 +113,49 @@ class _QueueScreenState extends State<QueueScreen> {
     );
 
     await _loadQueueData();
+    _startQueuePolling();
+  }
+
+  void _startQueuePolling() {
+    if (_queueRefreshTimer != null ||
+        WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed) {
+      return;
+    }
+
+    _queueRefreshTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (!mounted ||
+          WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed ||
+          ModalRoute.of(context)?.isCurrent != true) {
+        return;
+      }
+      _loadQueueData();
+    });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _startQueuePolling();
+      if (ModalRoute.of(context)?.isCurrent == true) {
+        _loadQueueData();
+      }
+    } else {
+      _queueRefreshTimer?.cancel();
+      _queueRefreshTimer = null;
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _queueRefreshTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadQueueData({bool isRetry = false}) async {
-    if (_queueService == null) return;
+    if (_queueService == null || _isLoadingQueueData) return;
 
+    _isLoadingQueueData = true;
     if (isRetry && mounted) {
       setState(() => _isRetrying = true);
     }
@@ -139,6 +182,8 @@ class _QueueScreenState extends State<QueueScreen> {
           _isRetrying = false;
         });
       }
+    } finally {
+      _isLoadingQueueData = false;
     }
   }
 
