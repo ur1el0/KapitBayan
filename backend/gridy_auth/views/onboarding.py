@@ -36,13 +36,13 @@ class PublicBarangayDirectoryView(APIView):
         return Response(PublicBarangaySerializer(barangays, many=True).data)
 
 
-@extend_schema(tags=["Barangay Onboarding"])
+@extend_schema(tags=["Official Registration"])
 class BarangayApplicationViewSet(
     mixins.ListModelMixin,
     mixins.RetrieveModelMixin,
     viewsets.GenericViewSet,
 ):
-    queryset = BarangayApplication.objects.select_related("reviewed_by", "created_barangay")
+    queryset = BarangayApplication.objects.select_related("reviewed_by", "created_barangay", "existing_barangay")
     throttle_classes = [SharedDatabaseScopedRateThrottle]
     throttle_scope = "barangay_application"
 
@@ -65,7 +65,7 @@ class BarangayApplicationViewSet(
 
     def get_queryset(self):
         if self.request.user.is_authenticated and self.request.user.role == User.Role.DILG_ADMIN:
-            return self.queryset
+            return self.queryset.filter(application_type=BarangayApplication.ApplicationType.OFFICIAL)
         return BarangayApplication.objects.none()
 
     def create(self, request, *args, **kwargs):
@@ -75,7 +75,7 @@ class BarangayApplicationViewSet(
         return Response(
             {
                 "id": application.pk,
-                "detail": "Application received. DILG must verify it before an account or barangay is created.",
+                "detail": "Official account request received. DILG must verify your credentials before your account is activated.",
             },
             status=status.HTTP_201_CREATED,
         )
@@ -95,45 +95,19 @@ class BarangayApplicationViewSet(
             if application.status != BarangayApplication.Status.PENDING:
                 raise ValidationError({"status": "Only pending applications can be reviewed."})
 
+            if application.application_type != BarangayApplication.ApplicationType.OFFICIAL or not application.existing_barangay_id:
+                raise ValidationError({"detail": "Only official account requests for existing barangays can be reviewed."})
+
             if decision == BarangayApplication.Status.APPROVED:
-                locality = {
-                    f"{field}__iexact": getattr(application, field)
-                    for field in ("name", "municipality", "province")
-                }
-                barangays = Barangay.objects.select_for_update()
-                if barangays.filter(**locality).exists():
-                    raise ValidationError({
-                        "name": "A barangay with this locality is already onboarded."
-                    })
                 if User.objects.filter(email__iexact=application.applicant_email).exists():
                     raise ValidationError({
                         "applicant_email": "This email already belongs to an account. Resolve that account before approving."
                     })
 
-                legacy_matches = list(
-                    barangays.filter(name__iexact=application.name)
-                    .filter(
-                        Q(municipality="")
-                        | Q(municipality__iexact=application.municipality),
-                        Q(province="") | Q(province__iexact=application.province),
-                    )[:2]
+                barangay = get_object_or_404(
+                    Barangay.objects.select_for_update(),
+                    pk=application.existing_barangay_id,
                 )
-                if len(legacy_matches) > 1:
-                    raise ValidationError({
-                        "name": "More than one incomplete barangay record matches this name. Resolve the existing records before approval."
-                    })
-
-                if legacy_matches:
-                    barangay = legacy_matches[0]
-                    barangay.municipality = application.municipality
-                    barangay.province = application.province
-                    barangay.save(update_fields=["municipality", "province"])
-                else:
-                    barangay = Barangay.objects.create(
-                        name=application.name,
-                        municipality=application.municipality,
-                        province=application.province,
-                    )
                 username_base = slugify(application.applicant_email.split("@", 1)[0])
                 username_base = re.sub(r"[^a-zA-Z0-9._-]", "", username_base)[:130]
                 username_base = username_base or "barangay-official"
@@ -182,7 +156,7 @@ class BarangayApplicationViewSet(
                 user=request.user,
                 action_type=AuditLog.ActionType.USER_ACTION,
                 description=(
-                    f"{decision.title()} barangay onboarding application #{application.pk} "
+                    f"{decision.title()} official account application #{application.pk} "
                     f"for {application.name}, {application.municipality}, {application.province}."
                     + (f" Review note: {review_note}" if review_note else "")
                 ),
