@@ -45,14 +45,31 @@ class Barangay(models.Model):
 
 
 class BarangayApplication(models.Model):
+    class ApplicationType(models.TextChoices):
+        BARANGAY = "BARANGAY", "Barangay onboarding"
+        OFFICIAL = "OFFICIAL", "Official account"
+
     class Status(models.TextChoices):
         PENDING = "PENDING", "Pending review"
         APPROVED = "APPROVED", "Approved"
         REJECTED = "REJECTED", "Rejected"
 
-    name = models.CharField(max_length=255)
-    municipality = models.CharField(max_length=120)
-    province = models.CharField(max_length=120)
+    application_type = models.CharField(
+        max_length=12,
+        choices=ApplicationType.choices,
+        default=ApplicationType.BARANGAY,
+        db_index=True,
+    )
+    name = models.CharField(max_length=255, blank=True, default="")
+    municipality = models.CharField(max_length=120, blank=True, default="")
+    province = models.CharField(max_length=120, blank=True, default="")
+    existing_barangay = models.ForeignKey(
+        Barangay,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="official_account_applications",
+    )
     applicant_name = models.CharField(max_length=255)
     applicant_position = models.CharField(max_length=120)
     applicant_email = models.EmailField()
@@ -89,8 +106,13 @@ class BarangayApplication(models.Model):
                 Lower("name"),
                 Lower("municipality"),
                 Lower("province"),
-                condition=Q(status="PENDING"),
+                condition=Q(status="PENDING", application_type="BARANGAY"),
                 name="unique_pending_barangay_application",
+            ),
+            models.UniqueConstraint(
+                Lower("applicant_email"),
+                condition=Q(status="PENDING", application_type="OFFICIAL"),
+                name="unique_pending_official_email_application",
             ),
         ]
 
