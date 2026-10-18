@@ -56,6 +56,9 @@ const Faqs = lazy(() =>
 const DILGDashboard = lazy(() =>
     import("./pages/admin/DILGDashboard").then(({ DILGDashboard }) => ({ default: DILGDashboard })),
 );
+const DILGAccountSupport = lazy(() =>
+    import("./pages/admin/DILGAccountSupport").then(({ DILGAccountSupport }) => ({ default: DILGAccountSupport })),
+);
 const BarangaySettings = lazy(() =>
     import("./pages/admin/BarangaySettings").then(({ BarangaySettings }) => ({ default: BarangaySettings })),
 );
@@ -160,6 +163,7 @@ export function App() {
                                     <Route path="/dilg-analytics" element={<DILGDashboard />} />
                                     <Route element={<ProtectedRoute allowedRoles={['DILG_ADMIN']} />}>
                                         <Route path="/dilg-applications" element={<BarangayApplications />} />
+                                        <Route path="/dilg-accounts" element={<DILGAccountSupport />} />
                                     </Route>
                                     <Route path="/queue" element={<LiveQueue />} />
                                     <Route path="/documents" element={<DocumentRequests />} />
