@@ -22,7 +22,8 @@ interface LiveStatus {
 }
 
 interface UserTicket {
-    ticket_id: number;
+    id: number;
+    ticket_id?: number;
     ticket_number: string;
     service_type: string;
     status: string;
@@ -62,8 +63,12 @@ export const CitizenQueue: React.FC = () => {
             ]);
             const list = ticketsRes.data.results || ticketsRes.data || [];
             const current = list.find((t: UserTicket) => ['WAITING', 'SERVING'].includes(t.status.toUpperCase()));
+            const ticketId = current?.ticket_id ?? current?.id;
+            if (current && typeof ticketId !== 'number') {
+                throw new Error('Queue ticket response is missing its identifier.');
+            }
             setLiveStatus(statusRes.data);
-            setActiveTicket(current || null);
+            setActiveTicket(current ? { ...current, id: ticketId } : null);
             setLoadError(false);
         } catch {
             setLoadError(true);
@@ -267,7 +272,7 @@ export const CitizenQueue: React.FC = () => {
                                         <span>Waiting for your turn</span>
                                     </div>
                                     <button
-                                        onClick={() => handleCancelTicket(activeTicket.ticket_id)}
+                                        onClick={() => handleCancelTicket(activeTicket.id)}
                                         disabled={cancelling}
                                         className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 text-xs font-bold transition-all cursor-pointer"
                                         aria-label="Leave queue and cancel ticket"

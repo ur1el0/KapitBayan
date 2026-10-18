@@ -26,7 +26,7 @@ export const CitizenLayout: React.FC = () => {
     const barangayName = user?.barangay?.name || 'Barangay Ibabang Dupay';
 
     const navLinkClass = ({ isActive }: { isActive: boolean }) =>
-        `flex min-h-[44px] items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold transition-all touch-manipulation ${
+        `flex min-h-[44px] shrink-0 items-center gap-2 whitespace-nowrap rounded-xl px-2 py-2 text-sm font-semibold transition-all touch-manipulation ${
             isActive
                 ? 'bg-primary text-primary-foreground shadow-sm'
                 : 'text-primary-foreground opacity-75 hover:opacity-100 hover:bg-white/10'
@@ -60,26 +60,29 @@ export const CitizenLayout: React.FC = () => {
                         </div>
 
                         {/* Center: Main Navigation Tabs */}
-                        <nav className="hidden md:flex items-center gap-2 bg-white/5 p-1.5 rounded-2xl border border-white/10">
-                            <NavLink to="/portal/documents" className={navLinkClass}>
+                        <nav aria-label="Resident navigation" className="hidden xl:flex shrink-0 items-center gap-1 rounded-2xl border border-white/10 bg-white/5 p-1">
+                            <NavLink to="/portal/documents" aria-label="Documents & Clearances" className={navLinkClass}>
                                 <FileText className="w-4 h-4" />
-                                <span>Documents & Clearances</span>
+                                <span aria-hidden="true">Documents</span>
+                                <span className="sr-only">Documents &amp; Clearances</span>
                             </NavLink>
 
-                            <NavLink to="/portal/queue" className={navLinkClass}>
+                            <NavLink to="/portal/queue" aria-label="Live Queue Ticker" className={navLinkClass}>
                                 <ListOrdered className="w-4 h-4" />
-                                <span>Live Queue Ticker</span>
+                                <span aria-hidden="true">Queue</span>
+                                <span className="sr-only">Live Queue Ticker</span>
                             </NavLink>
 
-                            <NavLink to="/portal/bulletin" className={navLinkClass}>
+                            <NavLink to="/portal/bulletin" aria-label="Community Bulletin" className={navLinkClass}>
                                 <Radio className="w-4 h-4" />
-                                <span>Community Bulletin</span>
+                                <span aria-hidden="true">Bulletin</span>
+                                <span className="sr-only">Community Bulletin</span>
                             </NavLink>
-                            <NavLink to="/portal/aid" className={navLinkClass}>
+                            <NavLink to="/portal/aid" aria-label="Assistance" className={navLinkClass}>
                                 <HandHeart className="w-4 h-4" />
                                 <span>Assistance</span>
                             </NavLink>
-                            <NavLink to="/portal/help" className={navLinkClass}>
+                            <NavLink to="/portal/help" aria-label="FAQs" className={navLinkClass}>
                                 <CircleHelp className="w-4 h-4" aria-hidden="true" />
                                 <span>FAQs</span>
                             </NavLink>
@@ -115,7 +118,7 @@ export const CitizenLayout: React.FC = () => {
                 </div>
 
                 {/* Mobile Navigation Row (for smaller screens & kiosks) */}
-                <div className="md:hidden flex gap-1 overflow-x-auto border-t border-white/10 px-2 py-1.5">
+                <nav aria-label="Resident navigation" className="xl:hidden flex gap-1 overflow-x-auto border-t border-white/10 px-2 py-1.5">
                     <NavLink to="/portal/documents" className={navLinkClass}>
                         <FileText className="w-4 h-4" />
                         <span className="text-xs">Documents</span>
@@ -136,7 +139,7 @@ export const CitizenLayout: React.FC = () => {
                         <CircleHelp className="w-4 h-4" aria-hidden="true" />
                         <span className="text-xs">FAQs</span>
                     </NavLink>
-                </div>
+                </nav>
             </header>
 
             {/* Main Content Viewport */}
