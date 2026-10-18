@@ -92,6 +92,9 @@ const ResidentHelp = lazy(() =>
 const ResidentTutorial = lazy(() =>
     import("./pages/citizen/ResidentTutorial").then(({ ResidentTutorial }) => ({ default: ResidentTutorial })),
 );
+const ResidentProfileSettings = lazy(() =>
+    import("./pages/citizen/ResidentProfileSettings").then(({ ResidentProfileSettings }) => ({ default: ResidentProfileSettings })),
+);
 
 function RootRedirect() {
     const { isAuthenticated, isAuthReady, user } = useAuth();
@@ -192,6 +195,7 @@ export function App() {
                                     <Route path="/portal/aid" element={<AidRequests />} />
                                     <Route path="/portal/help" element={<ResidentHelp />} />
                                     <Route path="/portal/tutorial" element={<ResidentTutorial />} />
+                                    <Route path="/portal/profile" element={<ResidentProfileSettings />} />
                                 </Route>
                             </Route>
 
