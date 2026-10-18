@@ -1,4 +1,6 @@
 import logging
+
+import firebase_admin
 from django.conf import settings
 from django.core.mail import send_mail
 from firebase_admin import messaging
@@ -6,15 +8,13 @@ from firebase_admin import messaging
 logger = logging.getLogger(__name__)
 
 
-def send_fcm_notification(token, title, body, data=None):
-    """
-    Sends a push notification to a specific device registration token.
-    """
-    
+def send_fcm_notification(device, title, body, data=None):
+    """Send a push notification to one registered device."""
+    token = device.token
     if not token:
         logger.warning("FCM token is empty, skipping notification.")
         return None
-        
+
     formatted_data = None
     
     if data and isinstance(data, dict):
@@ -31,9 +31,36 @@ def send_fcm_notification(token, title, body, data=None):
         response = messaging.send(message)
         logger.info(f"Successfully sent FCM notification: {response}")
         return response
+    except messaging.UnregisteredError:
+        # FCM has permanently invalidated this registration token; remove only
+        # the corresponding device so future notifications do not retry it.
+        try:
+            device.delete()
+        except Exception as cleanup_exc:
+            logger.error(
+                "Could not remove an unregistered FCM device token (%s).",
+                type(cleanup_exc).__name__,
+            )
+        else:
+            logger.warning("Removed an unregistered FCM device token.")
+        return None
+    except messaging.SenderIdMismatchError:
+        # This can indicate either a stale token or a server/client project
+        # mismatch. Keep the record until the active server project is verified.
+        try:
+            server_project = firebase_admin.get_app().project_id or "unknown"
+        except Exception:
+            server_project = "unknown"
+        logger.error(
+            "FCM device notification delivery failed (SenderIdMismatchError; "
+            "server_project=%s). Verify the server and mobile Firebase projects.",
+            server_project,
+        )
+        return None
     except Exception as exc:
         logger.error("FCM device notification delivery failed (%s).", type(exc).__name__)
         return None
+
 
 def send_notification_to_user(user, title, body, data=None):
     """
@@ -51,7 +78,7 @@ def send_notification_to_user(user, title, body, data=None):
 
     responses = []
     for device in devices:
-        response = send_fcm_notification(device.token, title, body, data)
+        response = send_fcm_notification(device, title, body, data)
         if response:
             responses.append(response)
     return responses

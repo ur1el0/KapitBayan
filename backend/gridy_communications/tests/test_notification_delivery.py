@@ -1,6 +1,7 @@
 from unittest.mock import patch
 
 from django.test import TestCase
+from firebase_admin import messaging
 
 from gridy_auth.models import Barangay, User
 from gridy_communications.models import FCMDevice
@@ -34,7 +35,7 @@ class NotificationPreferenceDeliveryTests(TestCase):
 
         self.assertEqual(responses, ["message-id"])
         send_fcm.assert_called_once_with(
-            self.device.token,
+            self.device,
             "Queue update",
             "Please proceed.",
             None,
@@ -49,6 +50,50 @@ class NotificationPreferenceDeliveryTests(TestCase):
             [],
         )
         send_fcm.assert_not_called()
+
+    @patch("gridy_communications.services.messaging.send")
+    def test_unregistered_device_is_removed_and_other_devices_are_still_sent(self, send):
+        other_device = FCMDevice.objects.create(
+            user=self.user,
+            token="second-notification-device-token",
+        )
+
+        def send_to_device(message):
+            if message.token == self.device.token:
+                raise messaging.UnregisteredError("Token is no longer registered")
+            return "other-device-message-id"
+
+        send.side_effect = send_to_device
+
+        responses = send_notification_to_user(self.user, "Queue update", "Please proceed.")
+
+        self.assertEqual(responses, ["other-device-message-id"])
+        self.assertFalse(FCMDevice.objects.filter(pk=self.device.pk).exists())
+        self.assertTrue(FCMDevice.objects.filter(pk=other_device.pk).exists())
+        self.assertEqual(send.call_count, 2)
+
+    @patch("firebase_admin.get_app")
+    @patch("gridy_communications.services.messaging.send")
+    def test_sender_mismatch_logs_server_project_without_removing_device(
+        self,
+        send,
+        get_firebase_app,
+    ):
+        get_firebase_app.return_value.project_id = "device-streaming-aca41bd3"
+        send.side_effect = messaging.SenderIdMismatchError("Wrong sender")
+
+        with self.assertLogs("gridy_communications.services", level="ERROR") as logs:
+            responses = send_notification_to_user(
+                self.user,
+                "Queue update",
+                "Please proceed.",
+            )
+
+        self.assertEqual(responses, [])
+        self.assertTrue(FCMDevice.objects.filter(pk=self.device.pk).exists())
+        self.assertTrue(
+            any("server_project=device-streaming-aca41bd3" in line for line in logs.output)
+        )
 
     @patch("gridy_communications.services.send_mail", return_value=1)
     def test_email_delivery_requires_opt_in_and_address(self, send_mail):
