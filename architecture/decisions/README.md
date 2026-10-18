@@ -23,6 +23,7 @@ This index lists the decision records present in this repository snapshot. Read 
 | [017](017-manual-epayment-evidence-and-verification.md) | Manual e-payment evidence and verification |
 | [018](018-explicit-document-fee-assessment-and-waiver-provenance.md) | Explicit fee assessment and waiver provenance |
 | [019](019-public-information-ai-navigator-boundary.md) | Retired: former Public Information AI Navigator boundary |
+| [020](020-dilg-account-support-boundary.md) | Bounded DILG account support and recovery |
 
 ## Implementation notes
 

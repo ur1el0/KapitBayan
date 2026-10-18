@@ -14,6 +14,7 @@ import {
     Building,
     HandHeart,
     ClipboardCheck,
+    UserRoundCog,
 } from 'lucide-react';
 import kapitBayanSymbol from '../../assets/kapitbayan/symbol.png';
 
@@ -76,6 +77,19 @@ export const Sidebar: React.FC<SidebarProps> = ({ compact = false, onNavigate })
                                     >
                                         <ClipboardCheck className="h-5 w-5 text-primary-text" />
                                         <span>Barangay Applications</span>
+                                    </NavLink>
+                                </li>
+                                <li>
+                                    <NavLink
+                                        to="/dilg-accounts"
+                                        onClick={onNavigate}
+                                        aria-current={location.pathname === '/dilg-accounts' ? 'page' : undefined}
+                                        className={({ isActive }) => `flex min-h-[44px] items-center gap-3.5 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150 group ${
+                                            isActive ? 'bg-primary/10 text-primary-text font-bold shadow-xs' : 'text-[#475569] font-medium hover:bg-[#EEF3FA] hover:text-[#0f172a]'
+                                        } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40`}
+                                    >
+                                        <UserRoundCog className="h-5 w-5 text-primary-text" aria-hidden="true" />
+                                        <span>Account Support</span>
                                     </NavLink>
                                 </li>
                                 <li>

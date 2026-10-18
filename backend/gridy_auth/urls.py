@@ -18,6 +18,7 @@ from .views import (
     BarangayApplicationViewSet,
     PublicBarangayDirectoryView,
     StaffManagementViewSet,
+    DILGAccountSupportViewSet,
 )
 from .views.resident_media import ResidentPrivateMediaView
 
@@ -27,6 +28,7 @@ router.register(r'barangay', BarangayViewSet, basename='barangay')
 router.register(r"sessions", SessionViewSet, basename="session")
 router.register(r"barangay-applications", BarangayApplicationViewSet, basename="barangay-application")
 router.register(r"staff", StaffManagementViewSet, basename="staff")
+router.register(r"dilg/accounts", DILGAccountSupportViewSet, basename="dilg-account-support")
 
 
 urlpatterns = [

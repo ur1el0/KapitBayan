@@ -11,7 +11,9 @@ The API uses JWT access credentials and server-managed refresh sessions/cookies 
 - `RESIDENT`: access to the authenticated resident's own profile and service records.
 - `ADMIN`: barangay staff operations limited to the assigned barangay.
 - `FIELD_OFFICIAL`: mobile-oriented staff permissions defined per endpoint and limited to the assigned barangay.
-- `DILG_ADMIN`: explicitly scoped oversight/onboarding functions; not a general tenant bypass.
+- `DILG_ADMIN`: explicitly scoped oversight/onboarding and bounded account-recovery functions; not a general tenant bypass.
+
+The DILG account-support endpoint may search minimal account directory fields for residents, field officials, and barangay administrators across tenants, including legacy unassigned accounts. It excludes DILG accounts and superusers, cannot change roles or barangay assignments, and supports only audited email correction/recovery-link dispatch and account activation state changes. Email corrections and recovery-link dispatch require DILG's external contact-verification attestation. See [ADR 020](decisions/020-dilg-account-support-boundary.md).
 
 Each sensitive list, detail, create, update, deletion, and media operation must enforce its endpoint-specific role and tenant scope. Tenant ownership should come from the authenticated user and persisted record, not an unchecked client-supplied barangay ID. Object absence and authorization responses must follow the endpoint's documented information-disclosure contract.
 

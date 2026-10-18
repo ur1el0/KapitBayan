@@ -28,3 +28,4 @@ from .residents import (
 )
 from .onboarding import BarangayApplicationViewSet, PublicBarangayDirectoryView
 from .staff import StaffManagementViewSet
+from .account_support import DILGAccountSupportViewSet
