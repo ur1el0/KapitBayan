@@ -121,3 +121,28 @@ class QueueResidentNotificationAPITests(ServiceAPIBaseTestCase):
 
         self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
         self.assertFalse(ResidentNotification.objects.exists())
+
+    @patch("gridy_services.views.queue.send_notification_to_user_task.delay")
+    def test_next_ticket_advances_resident_ticket_without_enabled_channels(
+        self,
+        send_notification,
+    ):
+        self.resident.push_alerts = False
+        self.resident.email_alerts = False
+        self.resident.save(update_fields=["push_alerts", "email_alerts"])
+        waiting_ticket = QueueTicket.objects.create(
+            barangay=self.barangay,
+            user=self.resident,
+            ticket_number="P-002",
+            service_type="DOCUMENT",
+            status=QueueTicket.Status.WAITING,
+        )
+
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.post(reverse("ticket-next-ticket"))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["current_ticket"], waiting_ticket.ticket_number)
+        waiting_ticket.refresh_from_db()
+        self.assertEqual(waiting_ticket.status, QueueTicket.Status.SERVING)
+        send_notification.assert_not_called()
