@@ -251,7 +251,7 @@ CORS_ALLOWED_ORIGIN_REGEXES = get_cors_allowed_origin_regexes(DEBUG)
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'gridy_auth.authentication.ProductionSafeJWTAuthentication',
         'rest_framework.authentication.SessionAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': (
@@ -289,9 +289,23 @@ SIMPLE_JWT = {
     'ALGORITHM': 'HS256',
     'SIGNING_KEY': SECRET_KEY,
     'AUTH_HEADER_TYPES': ('Bearer',),
+    'USER_AUTHENTICATION_RULE': 'gridy_auth.authentication.production_user_authentication_rule',
 }
 
 AUTH_USER_MODEL = 'gridy_auth.User'
+
+# A private, production-only comma-separated list. Keep manually created
+# production operator accounts out of this list. Local demo accounts remain
+# usable when DEBUG=True.
+BLOCKED_PRODUCTION_LOGIN_USERNAMES = tuple(
+    username.strip().casefold()
+    for username in env.list('BLOCKED_PRODUCTION_LOGIN_USERNAMES', default=[])
+    if username.strip()
+)
+
+AUTHENTICATION_BACKENDS = (
+    'gridy_auth.authentication.ProductionSafeModelBackend',
+)
 
 CLOUDINARY_CLOUD_NAME = env('CLOUDINARY_CLOUD_NAME', default='')
 CLOUDINARY_API_KEY = env('CLOUDINARY_API_KEY', default='')
