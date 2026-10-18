@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 
+import '../core/navigation/app_navigation_keys.dart';
 import 'hotlines_screen.dart';
 import 'report_issue_screen.dart';
 import '../services/push_notification_service.dart';
@@ -30,6 +31,34 @@ import 'my_issues_screen.dart';
 import 'announcements_screen.dart';
 import 'aid_requests_screen.dart';
 import 'resident_help_screen.dart';
+
+void _openNotificationDestination(RemoteMessage message) {
+  final navigator = appNavigatorKey.currentState;
+  if (navigator == null) return;
+
+  final data = message.data;
+  final type =
+      data['type']?.toString() ??
+      (data.containsKey('ticket_id')
+          ? 'queue'
+          : data.containsKey('request_id')
+          ? 'document'
+          : data.containsKey('report_id')
+          ? 'issue'
+          : data.containsKey('announcement_id')
+          ? 'announcement'
+          : '');
+  final Widget? destination = switch (type) {
+    'queue' => const QueueScreen(),
+    'document' => const DocumentsScreen(),
+    'issue' => const MyIssuesScreen(),
+    'announcement' => const AnnouncementsScreen(),
+    _ => null,
+  };
+  if (destination == null) return;
+
+  navigator.push(MaterialPageRoute<void>(builder: (_) => destination));
+}
 
 class DashboardScreen extends StatefulWidget {
   final DashboardService? dashboardService;
@@ -89,7 +118,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
 
     // Keep push listeners alive while the resident navigates through the app.
-    _pushNotificationService = PushNotificationService(apiClient: apiClient);
+    _pushNotificationService = PushNotificationService.shared(apiClient: apiClient);
     unawaited(
       _pushNotificationService!.initialize(
         onNotificationOpened: _openNotificationDestination,
@@ -99,38 +128,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     await _loadDashboardData();
   }
 
-  void _openNotificationDestination(RemoteMessage message) {
-    if (!mounted) return;
-
-    final data = message.data;
-    final type =
-        data['type']?.toString() ??
-        (data.containsKey('ticket_id')
-            ? 'queue'
-            : data.containsKey('request_id')
-            ? 'document'
-            : data.containsKey('report_id')
-            ? 'issue'
-            : data.containsKey('announcement_id')
-            ? 'announcement'
-            : '');
-    final Widget? destination = switch (type) {
-      'queue' => const QueueScreen(),
-      'document' => const DocumentsScreen(),
-      'issue' => const MyIssuesScreen(),
-      'announcement' => const AnnouncementsScreen(),
-      _ => null,
-    };
-    if (destination == null) return;
-
-    Navigator.of(
-      context,
-    ).push(MaterialPageRoute<void>(builder: (_) => destination));
-  }
-
   @override
   void dispose() {
-    unawaited(_pushNotificationService?.dispose());
     super.dispose();
   }
 
