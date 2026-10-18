@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/auth-context';
 import { axiosPublic } from '../../api/axios';
 import { getSafeApiErrorMessage } from '../../api/error-message';
@@ -10,10 +10,10 @@ export const Login: React.FC = () => {
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
-    const [isAdminMode, setIsAdminMode] = useState(false);
-
     const { login, logout } = useAuth();
+    const location = useLocation();
     const navigate = useNavigate();
+    const isAdminMode = location.pathname === '/official-login';
 
     const handleLogin = async (e: React.SubmitEvent<HTMLElement>) => {
         e.preventDefault();
@@ -45,7 +45,7 @@ export const Login: React.FC = () => {
                 if (userData?.role === 'FIELD_OFFICIAL') {
                     setError('Field Official accounts must use the KapitBayan mobile app. Web access is not available for this role.');
                 } else if (!isAdminMode) {
-                    setError('Official accounts cannot log in through the Resident Portal. Press Shift + \\ to switch.');
+                    setError('Administrative officials must sign in through the official sign-in page.');
                 } else {
                     setError('Resident accounts are not authorized to access the Barangay Authority Command.');
                 }
@@ -93,27 +93,11 @@ export const Login: React.FC = () => {
                     </svg>
                 </div>
 
-                {/* Top Logo & Interactive Touch Mode Badge */}
+                {/* Brand header */}
                 <div className="relative z-10 flex items-center justify-between">
                     <span className="font-bold text-lg tracking-tight text-white sm:text-2xl">
                         KapitBayan
                     </span>
-                    <button
-                        type="button"
-                        onClick={() => {
-                            setError('');
-                            setIsAdminMode((prev) => !prev);
-                        }}
-                        className={`px-3 py-1.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider cursor-pointer flex items-center gap-1.5 transition-all active:scale-95 select-none ${
-                            isAdminMode
-                                ? 'bg-amber-400 text-slate-900 shadow-sm hover:bg-amber-300'
-                                : 'bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm'
-                        }`}
-                        title="Tap to switch between Citizen and Official mode"
-                    >
-                        <span>{isAdminMode ? 'Barangay Official' : 'Resident Portal'}</span>
-                        <span className="text-[11px] opacity-75 font-bold">⇄</span>
-                    </button>
                 </div>
 
                 {/* Middle Main Content (Hidden on mobile, visible on tablet/desktop) */}
@@ -301,36 +285,18 @@ export const Login: React.FC = () => {
                             </button>
                         </div>
                         
-                        {/* Mobile-Friendly Mode Switch Link */}
-                        <div className="text-center pt-2">
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setError('');
-                                    setIsAdminMode((prev) => !prev);
-                                }}
-                                className="text-xs font-medium text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
-                            >
-                                {isAdminMode ? (
-                                    <span>Resident? <span className="text-[#0284C7] font-bold underline">Switch to Resident Portal</span></span>
-                                ) : (
-                                    <span>Barangay Official? <span className="text-slate-900 font-bold underline">Switch to Staff Sign In</span></span>
-                                )}
-                            </button>
-                        </div>
-                        
                         {/* Dynamic Register Link */}
                         <div className="text-center pt-3">
                             <p className="text-xs text-slate-500 font-medium">
-                                Don't have an account?{' '}
                                 {isAdminMode ? (
-                                    <Link to="/register" state={{ initialMode: 'admin' }} className="font-bold text-slate-900 hover:text-[#091B35] hover:underline transition-colors">
-                                        Register as Official
-                                    </Link>
+                                    'Official accounts are provisioned through DILG onboarding.'
                                 ) : (
-                                    <Link to="/register" className="font-bold text-slate-900 hover:text-[#0284C7] hover:underline transition-colors">
-                                        Register as Resident
-                                    </Link>
+                                    <>
+                                        Don't have an account?{' '}
+                                        <Link to="/register" className="font-bold text-slate-900 hover:text-[#0284C7] hover:underline transition-colors">
+                                            Register as Resident
+                                        </Link>
+                                    </>
                                 )}
                             </p>
                         </div>

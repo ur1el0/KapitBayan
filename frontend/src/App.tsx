@@ -150,6 +150,7 @@ export function App() {
 
                             {/* Public Auth Routes */}
                             <Route path="/login" element={<Login />} />
+                            <Route path="/official-login" element={<Login />} />
                             <Route path="/field-official-mobile" element={<FieldOfficialWebNotice />} />
                             <Route path="/register" element={<Register />} />
                             <Route path="/register/official" element={<OfficialRegistration />} />
