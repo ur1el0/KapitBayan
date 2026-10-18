@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, type ReactNode } from "react";
+import React, { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { AuthContext, type User } from "./auth-context";
 import { axiosPrivate } from "../api/axios";
 import {
@@ -223,6 +223,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, restoreSes
         setUser(authenticatedUser);
     };
 
+    const updateUser = useCallback((updates: Partial<User>) => {
+        setUser((currentUser) =>
+            currentUser ? { ...currentUser, ...updates } : currentUser,
+        );
+    }, []);
+
     const updateBarangayPrimaryColor = (primaryColor: string) => {
         setUser((currentUser) => {
             if (!currentUser) return currentUser;
@@ -264,6 +270,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, restoreSes
                 isAuthenticated: !!user,
                 isAuthReady,
                 updateBarangayPrimaryColor,
+                updateUser,
             }}
         >
             {children}
