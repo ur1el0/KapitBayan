@@ -41,7 +41,7 @@ class PushNotificationService {
       });
       _tokenRefreshSubscription = _messaging.onTokenRefresh.listen((token) {
         if (_pushEnabled) {
-          unawaited(_registerTokenOnBackend(token));
+          unawaited(registerDeviceToken(token));
         }
       });
       _initialized = true;
@@ -94,8 +94,7 @@ class PushNotificationService {
         vapidKey: kIsWeb ? _webVapidKey : null,
       );
       if (token == null || token.isEmpty) return false;
-      await _registerTokenOnBackend(token);
-      return true;
+      return await registerDeviceToken(token);
     } catch (error) {
       debugPrint('Push device registration failed: ${error.runtimeType}');
       return false;
@@ -106,12 +105,24 @@ class PushNotificationService {
     _pushEnabled = enabled;
   }
 
-  Future<void> _registerTokenOnBackend(String token) async {
-    await apiClient.post(
-      '/devices/',
-      body: {'token': token},
-      requiresAuth: true,
-    );
+  Future<bool> registerDeviceToken(String token) async {
+    try {
+      final response = await apiClient.post(
+        '/devices/',
+        body: {'token': token},
+        requiresAuth: true,
+      );
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return true;
+      }
+      debugPrint(
+        'Push device registration rejected by API '
+        '(${response.statusCode}).',
+      );
+    } catch (error) {
+      debugPrint('Push device registration failed: ${error.runtimeType}');
+    }
+    return false;
   }
 
   void _showForegroundMessage(RemoteMessage message) {
