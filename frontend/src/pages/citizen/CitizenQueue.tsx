@@ -23,6 +23,7 @@ interface LiveStatus {
 
 interface UserTicket {
     id: number;
+    ticket_id?: number;
     ticket_number: string;
     service_type: string;
     status: string;
@@ -62,8 +63,12 @@ export const CitizenQueue: React.FC = () => {
             ]);
             const list = ticketsRes.data.results || ticketsRes.data || [];
             const current = list.find((t: UserTicket) => ['WAITING', 'SERVING'].includes(t.status.toUpperCase()));
+            const ticketId = current?.ticket_id ?? current?.id;
+            if (current && typeof ticketId !== 'number') {
+                throw new Error('Queue ticket response is missing its identifier.');
+            }
             setLiveStatus(statusRes.data);
-            setActiveTicket(current || null);
+            setActiveTicket(current ? { ...current, id: ticketId } : null);
             setLoadError(false);
         } catch {
             setLoadError(true);
