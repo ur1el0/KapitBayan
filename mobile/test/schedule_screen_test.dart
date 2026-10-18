@@ -1,3 +1,4 @@
+import 'package:add_2_calendar/add_2_calendar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -7,6 +8,7 @@ import 'package:mobile/models/activity_schedule_model.dart';
 import 'package:mobile/models/document_request_model.dart';
 import 'package:mobile/models/user_model.dart';
 import 'package:mobile/screens/schedule_screen.dart';
+import 'package:mobile/services/activity_calendar_service.dart';
 import 'package:mobile/services/schedule_service.dart';
 import 'package:mobile/services/storage_service.dart';
 import 'package:mobile/widgets/appointment_schedule_card.dart';
@@ -67,11 +69,15 @@ void main() {
     });
   });
 
-  Widget createScheduleScreenTestWidget(ScheduleService service) {
+  Widget createScheduleScreenTestWidget(
+    ScheduleService service, {
+    ActivityCalendarService? calendarService,
+  }) {
     return MaterialApp(
       theme: AppTheme.lightTheme,
       home: ScheduleScreen(
         scheduleService: service,
+        calendarService: calendarService,
       ),
     );
   }
@@ -109,11 +115,21 @@ void main() {
     expect(find.text('DOCUMENTS'), findsOneWidget);
   });
 
-  testWidgets('Tapping Add to Calendar triggers snackbar reminder confirmation', (WidgetTester tester) async {
+  testWidgets('Add to Calendar launches the event form and asks resident to save', (WidgetTester tester) async {
     final storage = await StorageService.init();
     final mockService = MockScheduleService(storage: storage);
+    Event? launchedEvent;
+    final calendarService = ActivityCalendarService(
+      addEvent: (event) async {
+        launchedEvent = event;
+        return true;
+      },
+    );
 
-    await tester.pumpWidget(createScheduleScreenTestWidget(mockService));
+    await tester.pumpWidget(createScheduleScreenTestWidget(
+      mockService,
+      calendarService: calendarService,
+    ));
     await tester.pumpAndSettle();
 
     // Find the Add to Calendar button and scroll to it
@@ -124,8 +140,33 @@ void main() {
     await tester.tap(addBtn);
     await tester.pumpAndSettle();
 
-    // Verify feedback message
-    expect(find.textContaining('Added "Mobile Health Clinic" to device calendar'), findsOneWidget);
+    final event = launchedEvent;
+    expect(event, isNotNull);
+    expect(event!.title, 'Mobile Health Clinic');
+    expect(event.description, contains('Free check-ups'));
+    expect(event.location, 'Community Covered Court');
+    expect(find.text('Calendar opened. Review and save the event there.'), findsOneWidget);
+  });
+
+  testWidgets('Add to Calendar shows failure when the plugin throws', (WidgetTester tester) async {
+    final storage = await StorageService.init();
+    final mockService = MockScheduleService(storage: storage);
+    final calendarService = ActivityCalendarService(
+      addEvent: (_) async => throw StateError('No calendar handler'),
+    );
+
+    await tester.pumpWidget(createScheduleScreenTestWidget(
+      mockService,
+      calendarService: calendarService,
+    ));
+    await tester.pumpAndSettle();
+
+    final addBtn = find.text('Add to Calendar').first;
+    await tester.ensureVisible(addBtn);
+    await tester.tap(addBtn);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Could not open your device calendar.'), findsOneWidget);
   });
 
   testWidgets('API failure displays visible retry state and recovers on retry', (WidgetTester tester) async {
