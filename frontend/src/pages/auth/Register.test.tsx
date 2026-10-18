@@ -45,7 +45,7 @@ describe('Register Component (Dual-Mode)', () => {
         expect(screen.getByRole('link', { name: /log in here/i })).toHaveAttribute('href', '/login');
     });
 
-    it('toggles to Administrative Registration when clicking the mode switch button', async () => {
+    it('navigates to separate Official Registration from the banner switch', async () => {
         render(
             <BrowserRouter>
                 <Register />
@@ -61,21 +61,7 @@ describe('Register Component (Dual-Mode)', () => {
         expect(toggleButton).toHaveTextContent('Resident Registration');
         fireEvent.click(toggleButton);
 
-        // Verify Admin Headings and Features
-        expect(screen.getByRole('heading', { level: 2, name: 'Administrative Registration' })).toBeInTheDocument();
-        const switchToResidentButton = screen.getByRole('button', {
-            name: 'Staff Registration, switch to resident registration',
-        });
-        expect(switchToResidentButton).toHaveTextContent('Staff Registration');
-        expect(screen.getByText('CREDENTIALS VERIFICATION')).toBeInTheDocument();
-        expect(screen.getByText('ADMIN ACCESS TIERS')).toBeInTheDocument();
-        expect(screen.getByText('SECURITY AUDIT COMPLIANCE')).toBeInTheDocument();
-
-        // Verify DILG Guidance and Link per ADR 011
-        expect(screen.getByRole('heading', { level: 3, name: 'DILG-Reviewed Staff Onboarding' })).toBeInTheDocument();
-        expect(screen.getByText(/unauthenticated public registration for barangay administrative accounts is disabled/i)).toBeInTheDocument();
-        const onboardingLink = screen.getByRole('link', { name: 'Apply for Barangay Onboarding' });
-        expect(onboardingLink).toHaveAttribute('href', '/register/barangay');
+        expect(window.location.pathname).toBe('/register/official');
     });
 
     it('blocks registration when the approved barangay directory is unavailable', async () => {
@@ -184,7 +170,7 @@ describe('Register Component (Dual-Mode)', () => {
         expect(await screen.findByText('Passwords do not match.')).toBeInTheDocument();
     });
 
-    it('allows toggling between Resident and Administrative modes via the bottom links', async () => {
+    it('links to separate Official Registration from the resident form', async () => {
         render(
             <BrowserRouter>
                 <Register />
@@ -192,22 +178,12 @@ describe('Register Component (Dual-Mode)', () => {
         );
 
         // Click bottom link to switch to official registration
-        const switchToAdminLink = screen.getByRole('button', {
+        const switchToAdminLink = screen.getByRole('link', {
             name: /Barangay Personnel\? Switch to Official Registration/i,
         });
+        expect(switchToAdminLink).toHaveAttribute('href', '/register/official');
         fireEvent.click(switchToAdminLink);
-
-        expect(screen.getByRole('heading', { level: 2, name: 'Administrative Registration' })).toBeInTheDocument();
-        expect(screen.getByRole('link', { name: 'Apply for Barangay Onboarding' })).toHaveAttribute('href', '/register/barangay');
-
-        // Click bottom link to switch back to resident sign up
-        const switchToResidentLink = screen.getByRole('button', {
-            name: /Registering as a Resident\? Switch to Resident Sign Up/i,
-        });
-        fireEvent.click(switchToResidentLink);
-
-        expect(screen.getByRole('heading', { level: 2, name: 'Resident Registration' })).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: /create resident account/i })).toBeInTheDocument();
+        expect(window.location.pathname).toBe('/register/official');
     });
 
     it('sends accepted privacy consent with resident registration', async () => {
