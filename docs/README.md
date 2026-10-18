@@ -35,9 +35,14 @@ Use this page to find current system guidance. Source code, migrations, generate
 - [Firebase Cloud Messaging](walkthrough/firebase_fcm_setup.md)
 - [In-process background work](walkthrough/async_tasks_setup.md)
 - [Deployment and observability](walkthrough/deployment_observability.md)
+- [Brevo SMTP email setup and troubleshooting](walkthrough/brevo-email-setup.md)
 - [Nginx and web container](walkthrough/nginx_web_server_setup.md)
 - [System verification](walkthrough/system_verification_playbook.md)
 - [Mobile barangay pilot test flow](testing/mobile-barangay-pilot-flow.md)
+
+## Demonstration guides
+
+- [KapitBayan system demo flow](presentations/system-demo-flow.md) ([PDF](presentations/system-demo-flow.pdf))
 
 ## Domain and architecture guidance
 

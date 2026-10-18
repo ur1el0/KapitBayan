@@ -30,8 +30,10 @@ Compose uses a one-shot migration service and blocks backend startup if it fails
 
 ## Hosted environment status
 
-Verify provider dashboards, deployed commit, secrets, domains, and live health before claiming production or preview status. The checked-in Vercel rewrite points to `gridy.onrender.com`, while the backend environment example uses `gridy-backend.onrender.com`; align and verify these values before release. Azure remains a separately gated proposal. See [Deployment and CI/CD](../../architecture/11-deployment-and-ci-cd.md).
+Verify provider dashboards, deployed commit, secrets, domains, and live health before claiming production or preview status. The checked-in Vercel rewrite points to `gridy.onrender.com`, while the backend environment example uses `gridy-backend.onrender.com`; align and verify these values before release. Azure remains a separately gated proposal. The deployed email configuration uses Brevo SMTP; a health endpoint does not verify SMTP credentials or message delivery. For a controlled delivery check, request a password reset for a test account you own, then compare the Render application logs with Brevo's transactional email logs. See [Brevo email setup](brevo-email-setup.md) and [Deployment and CI/CD](../../architecture/11-deployment-and-ci-cd.md).
 
 ## Delivery and throttling caveats
 
 Push/email work is in-process and best-effort; there is no persistent queue or retry. Scoped API throttle windows are stored in PostgreSQL and shared across workers, while Django's general-purpose `LocMemCache` remains process-local. Apply the throttle migration before deploying the code; PostgreSQL concurrency tests are needed because SQLite cannot verify row-lock behavior. These limits are not a volumetric DDoS defense. See [ADR 013](../../architecture/decisions/013-pilot-notification-and-throttle-guardrails.md) and [ADR 016](../../architecture/decisions/016-shared-database-api-throttling.md).
+
+The password-reset endpoint deliberately uses a generic success response. A matching account does not prove that a message was sent; delivery depends on an unambiguous account match, throttling, background dispatch, and the email provider. Check provider logs before retrying repeatedly.
