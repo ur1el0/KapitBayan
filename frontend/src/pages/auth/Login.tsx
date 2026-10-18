@@ -291,7 +291,14 @@ export const Login: React.FC = () => {
                         <div className="text-center pt-3">
                             <p className="text-xs text-slate-500 font-medium">
                                 {isAdminMode ? (
-                                    'Barangay staff accounts are managed by their Barangay Administrator.'
+                                    <>
+                                        Barangay staff accounts are managed by their Barangay Administrator.
+                                        <br />
+                                        Is your Barangay new to KapitBayan?{' '}
+                                        <Link to="/register/barangay" className="font-bold text-slate-900 hover:text-primary hover:underline transition-colors">
+                                            Request onboarding
+                                        </Link>
+                                    </>
                                 ) : (
                                     <>
                                         Don't have an account?{' '}

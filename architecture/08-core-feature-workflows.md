@@ -2,6 +2,10 @@
 
 This page summarizes current workflow boundaries. Exact transition rules live in the relevant backend services, models, serializers, and regression tests.
 
+## New Barangay onboarding
+
+An official submits a public application with the Barangay locality and proposed first Admin details. The request remains pending and creates no account or tenant. An active Django superuser independently verifies the official and locality, then approves or rejects the application with an audit record. Approval provisions the Barangay and an Admin with no usable password, then requests a private Set Password email. Existing Barangay Admins invite additional Admins only within their own Barangay. See [ADR 022](decisions/022-reviewed-new-barangay-onboarding.md).
+
 ## Document request and treasury workflow
 
 1. A resident submits a request, or authorized staff records an in-person walk-in without creating a synthetic resident account.

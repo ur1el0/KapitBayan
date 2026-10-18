@@ -1,6 +1,6 @@
 # ADR 021: Barangay-Only Product Scope and Platform Recovery
 
-- **Status:** Accepted
+- **Status:** Accepted; onboarding decision superseded in part by [ADR 022](022-reviewed-new-barangay-onboarding.md)
 - **Date:** 2026-10-18
 - **Supersedes:** The active product-scope portions of ADR 011 and ADR 020. Historical records remain unchanged.
 

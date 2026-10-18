@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { Link } from 'react-router-dom';
 import { AlertTriangle, KeyRound, LogOut, Search, ShieldCheck, UserRoundCog } from 'lucide-react';
 import { InlineErrorState } from '../../components/ui/InlineErrorState';
 import { useAuth } from '../../context/auth-context';
@@ -209,14 +210,19 @@ export function PlatformAccountSupport() {
                     Find barangay accounts, including legacy unassigned accounts, correct a verified contact address, send a private setup/reset link, or suspend access. These actions are audited.
                 </p>
                 </div>
-                <button
-                    type="button"
-                    onClick={() => void logout()}
-                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                >
-                    <LogOut className="h-4 w-4" aria-hidden="true" />
-                    Log out
-                </button>
+                <div className="flex flex-wrap gap-2">
+                    <Link to="/platform/barangay-applications" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                        <ShieldCheck className="h-4 w-4" aria-hidden="true" /> Barangay applications
+                    </Link>
+                    <button
+                        type="button"
+                        onClick={() => void logout()}
+                        className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                    >
+                        <LogOut className="h-4 w-4" aria-hidden="true" />
+                        Log out
+                    </button>
+                </div>
             </header>
 
             <aside className="flex gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">

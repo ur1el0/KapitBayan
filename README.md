@@ -2,7 +2,7 @@
 
 KapitBayan is a web and mobile information and service system for barangays. The repository contains a Django REST API, a React web application for staff and resident use, and a Flutter mobile application for residents and field personnel. Internal Django package names such as `gridy_auth` remain part of the migration history and are not product names.
 
-The platform supports resident document requests, manual fee assessment and treasury verification, queue services, assistance requests, incident reporting, communications, and public information. It records out-of-band payments but does not process funds through a payment gateway. Staff make service decisions; assistance eligibility and document approval are not automated.
+The platform supports resident document requests, manual fee assessment and treasury verification, queue services, assistance requests, incident reporting, communications, and public information. A new Barangay can request onboarding through a reviewed application; a platform operator provisions its first Admin after independent verification, and that Admin can invite peers within the Barangay. It records out-of-band payments but does not process funds through a payment gateway. Staff make service decisions; assistance eligibility and document approval are not automated.
 
 ## Architecture and API
 
@@ -25,7 +25,7 @@ The web client is configured for a same-origin API proxy, while mobile clients c
 
 ## Documentation
 
-Start at the [documentation index](docs/README.md) for current architecture, decision records, feature guides, and walkthroughs. The [system presentation flow](docs/presentations/system-demo-flow.md) gives a short product overview; the [barangay demo and training flow](docs/presentations/barangay-demo-and-training-flow.md) walks admins, staff, field officials, and residents through actual tasks. Printable copies are available for the [system overview](docs/presentations/system-demo-flow.pdf) and [barangay training flow](docs/presentations/barangay-demo-and-training-flow.pdf). The [Brevo email setup guide](docs/walkthrough/brevo-email-setup.md) covers deployed SMTP configuration and delivery checks. The [ADR index](architecture/decisions/README.md) records the accepted architectural decisions. Use the generated OpenAPI schema for exact request/response details.
+Start at the [documentation index](docs/README.md) for current architecture, decision records, feature guides, and walkthroughs. The [system presentation flow](docs/presentations/system-demo-flow.md) gives a short product overview; the [barangay demo and training flow](docs/presentations/barangay-demo-and-training-flow.md) walks admins, staff, field officials, and residents through actual tasks. The [barangay training flow PDF](docs/presentations/barangay-demo-and-training-flow.pdf) is available to print. The system overview PDF is an older export; use its current [Markdown source](docs/presentations/system-demo-flow.md) for the updated Barangay onboarding steps. The [Brevo email setup guide](docs/walkthrough/brevo-email-setup.md) covers deployed SMTP configuration and delivery checks. The [ADR index](architecture/decisions/README.md) records the accepted architectural decisions. Use the generated OpenAPI schema for exact request/response details.
 
 ## Local development with Docker Compose
 

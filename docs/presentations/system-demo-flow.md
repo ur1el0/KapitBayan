@@ -3,7 +3,7 @@
 **Audience:** Barangay stakeholders, advisers, and pilot testers
 
 **Suggested duration:** 18–22 minutes
-**Companion:** [Printable PDF](system-demo-flow.pdf)
+**Companion:** [Printable PDF](system-demo-flow.pdf) (older export; this Markdown is current for Barangay onboarding)
 
 For hands-on barangay training, see the [barangay demo and user-training flow](barangay-demo-and-training-flow.md) ([PDF](barangay-demo-and-training-flow.pdf)).
 
@@ -40,9 +40,11 @@ Show the path:
 
 State that eligibility, document approval, payment verification, and service decisions remain with authorized staff. Electronic payment references are evidence for manual review; the system does not process payments through a gateway. The mobile app requires a network connection for server-backed workflows and is not fully offline.
 
-## 2. Operator account recovery (optional; outside the barangay user workflow)
+## 2. New Barangay onboarding and operator account recovery (optional)
 
-KapitBayan does not expose a government-wide oversight dashboard or public Barangay onboarding workflow. Initial tenant and first-administrator setup is performed by an authorized deployment operator. If account recovery must be demonstrated, a Django superuser may use the isolated **Platform Account Support** page to find an eligible account, attest that contact was independently verified, and request a private recovery link. The tool cannot change account roles or Barangay assignments, create/delete accounts, or reveal passwords.
+For a Barangay that is not in KapitBayan yet, open **Official sign in → Request onboarding** and submit its locality and proposed first Admin's contact details. Explain that the form creates only a pending request. An active Django superuser opens **Barangay applications**, independently verifies the official and Barangay through an official channel, then approves or rejects with a recorded reason. Approval creates the tenant and first Admin without a password and requests a private Set Password email. Existing Barangay Admins invite their peers from staff management instead.
+
+For account recovery, a Django superuser may use **Platform Account Support** to find an eligible account, attest that contact was independently verified, and request a private recovery link. The tool cannot change account roles or Barangay assignments, create/delete accounts, or reveal passwords. Do not show applicant contact details or operate on a real deployed account during the demo unless authorized.
 
 Do not alter a real deployed account or send a recovery email during the demo unless the account owner has asked for it.
 
