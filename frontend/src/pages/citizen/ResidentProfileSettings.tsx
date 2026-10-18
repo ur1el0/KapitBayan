@@ -169,7 +169,7 @@ export function ResidentProfileSettings() {
                 <div>
                     <p className="text-sm font-bold uppercase tracking-[0.14em] text-primary-text">Resident account</p>
                     <h1 className="mt-1 text-3xl font-extrabold tracking-tight text-slate-900">My Profile &amp; Settings</h1>
-                    <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">Review your resident details and choose how KapitBayan sends service updates.</p>
+                    <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">Review your resident details and manage service update emails.</p>
                 </div>
                 {!isEditing && (
                     <button type="button" onClick={() => { setDraft(toDraft(account)); setIsEditing(true); setFeedback(null); }} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground shadow-sm hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
@@ -242,8 +242,8 @@ export function ResidentProfileSettings() {
                 <div className="flex items-center gap-3 border-b border-slate-100 p-5 sm:p-6">
                     <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-50 text-amber-700"><Bell className="h-5 w-5" aria-hidden="true" /></span>
                     <div>
-                        <h2 id="resident-notifications-heading" className="text-lg font-bold text-slate-900">Notification preferences</h2>
-                        <p className="text-sm text-slate-600">Choose where you want to receive service updates.</p>
+                        <h2 id="resident-notifications-heading" className="text-lg font-bold text-slate-900">Email preferences</h2>
+                        <p className="text-sm text-slate-600">Manage the service update emails sent to your account.</p>
                     </div>
                 </div>
                 <div className="divide-y divide-slate-100 px-5 sm:px-6">
@@ -254,13 +254,10 @@ export function ResidentProfileSettings() {
                         </span>
                         <input type="checkbox" role="switch" aria-label="Email updates" checked={account.email_alerts ?? true} disabled={savingPreference !== null || !account.email} onChange={(event) => void handlePreferenceChange('email_alerts', event.target.checked)} className="h-5 w-5 shrink-0 accent-primary disabled:opacity-50" />
                     </label>
-                    <label className="flex min-h-[76px] cursor-pointer items-center justify-between gap-4 py-4">
-                        <span className="min-w-0">
-                            <span className="block font-semibold text-slate-900">Push notifications</span>
-                            <span className="mt-1 block text-sm leading-5 text-slate-600">Queue calls and service alerts on mobile devices registered to your account. Allow notifications in Android and the KapitBayan app.</span>
-                        </span>
-                        <input type="checkbox" role="switch" aria-label="Push notifications for registered mobile devices" checked={account.push_alerts ?? false} disabled={savingPreference !== null} onChange={(event) => void handlePreferenceChange('push_alerts', event.target.checked)} className="h-5 w-5 shrink-0 accent-primary disabled:opacity-50" />
-                    </label>
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                        <p className="font-semibold text-slate-900">Mobile push alerts</p>
+                        <p className="mt-1 text-sm leading-5 text-slate-600">Push preferences are managed in the KapitBayan mobile app. This web page does not register a phone for push alerts.</p>
+                    </div>
                 </div>
             </section>
         </div>
