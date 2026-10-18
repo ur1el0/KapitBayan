@@ -61,10 +61,7 @@ class DashboardService {
   final ApiClient apiClient;
   final StorageService storageService;
 
-  DashboardService({
-    required this.apiClient,
-    required this.storageService,
-  });
+  DashboardService({required this.apiClient, required this.storageService});
 
   /// Fetches all dashboard datasets concurrently from the backend APIs
   Future<DashboardData> fetchDashboardData() async {
@@ -83,6 +80,7 @@ class DashboardService {
       _fetchDocumentRequests(),
       _fetchActivities(),
       _fetchLiveQueue(),
+      _fetchResidentNotifications(),
     ]);
 
     if (results[0] != null) currentUser = results[0] as UserModel;
@@ -93,26 +91,40 @@ class DashboardService {
     documentRequests = docResult.data ?? [];
     activities = results[3] as List<ActivityScheduleModel>;
     queueStatus = results[4] as Map<String, dynamic>?;
+    final residentNotificationResult =
+        results[5] as _FetchResult<List<NotificationItemModel>>;
 
-    final bool hasNotificationsError = annResult.failed || docResult.failed;
-    String? notificationsErrorMessage;
+    final bool hasNotificationsError =
+        annResult.failed ||
+        docResult.failed ||
+        residentNotificationResult.failed;
+    final List<String> notificationErrors = [];
     if (annResult.failed && docResult.failed) {
-      notificationsErrorMessage =
-          'Unable to load announcements (${annResult.errorMessage}) and document updates (${docResult.errorMessage})';
+      notificationErrors.add(
+        'Unable to load announcements (${annResult.errorMessage}) and document updates (${docResult.errorMessage})',
+      );
     } else if (annResult.failed) {
-      notificationsErrorMessage =
-          'Unable to load announcements (${annResult.errorMessage})';
+      notificationErrors.add(
+        'Unable to load announcements (${annResult.errorMessage})',
+      );
     } else if (docResult.failed) {
-      notificationsErrorMessage =
-          'Unable to load document request updates (${docResult.errorMessage})';
+      notificationErrors.add(
+        'Unable to load document request updates (${docResult.errorMessage})',
+      );
+    }
+    if (residentNotificationResult.failed) {
+      notificationErrors.add(
+        'Unable to load saved alerts (${residentNotificationResult.errorMessage})',
+      );
     }
 
-    // Synthesize notifications list from document status and announcements
+    // Merge persistent queue alerts with existing document/announcement alerts.
     final notifications = hasNotificationsError
         ? <NotificationItemModel>[]
         : _generateNotifications(
             documentRequests: documentRequests,
             announcements: announcements,
+            residentNotifications: residentNotificationResult.data ?? [],
           );
 
     return DashboardData(
@@ -123,7 +135,9 @@ class DashboardService {
       notifications: notifications,
       queueStatus: queueStatus,
       hasNotificationsError: hasNotificationsError,
-      notificationsErrorMessage: notificationsErrorMessage,
+      notificationsErrorMessage: notificationErrors.isEmpty
+          ? null
+          : notificationErrors.join('; '),
       hasAnnouncementsError: annResult.failed,
       hasDocumentRequestsError: docResult.failed,
     );
@@ -132,7 +146,9 @@ class DashboardService {
   Future<UserModel?> _fetchUserProfile() async {
     try {
       final response = await apiClient.get('/auth/me/', requiresAuth: true);
-      final Map<String, dynamic> data = jsonDecode(utf8.decode(response.bodyBytes));
+      final Map<String, dynamic> data = jsonDecode(
+        utf8.decode(response.bodyBytes),
+      );
       final user = UserModel.fromJson(data);
       await storageService.saveUser(user);
       return user;
@@ -143,11 +159,20 @@ class DashboardService {
 
   Future<_FetchResult<List<AnnouncementModel>>> _fetchAnnouncements() async {
     try {
-      final response = await apiClient.get('/announcements/', requiresAuth: true);
+      final response = await apiClient.get(
+        '/announcements/',
+        requiresAuth: true,
+      );
       if (response.statusCode == 200) {
         final data = jsonDecode(utf8.decode(response.bodyBytes));
-        final List<dynamic> list = (data is Map<String, dynamic> ? data['results'] : data) ?? [];
-        final items = list.map((item) => AnnouncementModel.fromJson(item as Map<String, dynamic>)).toList();
+        final List<dynamic> list =
+            (data is Map<String, dynamic> ? data['results'] : data) ?? [];
+        final items = list
+            .map(
+              (item) =>
+                  AnnouncementModel.fromJson(item as Map<String, dynamic>),
+            )
+            .toList();
         return _FetchResult(data: items);
       } else {
         return _FetchResult(
@@ -159,7 +184,9 @@ class DashboardService {
       }
     } catch (e) {
       final int? statusCode = e is ApiException ? e.statusCode : null;
-      final String msg = e is ApiException && e.statusCode != null ? 'HTTP ${e.statusCode}' : e.toString();
+      final String msg = e is ApiException && e.statusCode != null
+          ? 'HTTP ${e.statusCode}'
+          : e.toString();
       return _FetchResult(
         data: [],
         failed: true,
@@ -169,13 +196,23 @@ class DashboardService {
     }
   }
 
-  Future<_FetchResult<List<DocumentRequestModel>>> _fetchDocumentRequests() async {
+  Future<_FetchResult<List<DocumentRequestModel>>>
+  _fetchDocumentRequests() async {
     try {
-      final response = await apiClient.get('/document-requests/', requiresAuth: true);
+      final response = await apiClient.get(
+        '/document-requests/',
+        requiresAuth: true,
+      );
       if (response.statusCode == 200) {
         final data = jsonDecode(utf8.decode(response.bodyBytes));
-        final List<dynamic> list = (data is Map<String, dynamic> ? data['results'] : data) ?? [];
-        final items = list.map((item) => DocumentRequestModel.fromJson(item as Map<String, dynamic>)).toList();
+        final List<dynamic> list =
+            (data is Map<String, dynamic> ? data['results'] : data) ?? [];
+        final items = list
+            .map(
+              (item) =>
+                  DocumentRequestModel.fromJson(item as Map<String, dynamic>),
+            )
+            .toList();
         return _FetchResult(data: items);
       } else {
         return _FetchResult(
@@ -187,12 +224,69 @@ class DashboardService {
       }
     } catch (e) {
       final int? statusCode = e is ApiException ? e.statusCode : null;
-      final String msg = e is ApiException && e.statusCode != null ? 'HTTP ${e.statusCode}' : e.toString();
+      final String msg = e is ApiException && e.statusCode != null
+          ? 'HTTP ${e.statusCode}'
+          : e.toString();
       return _FetchResult(
         data: [],
         failed: true,
         statusCode: statusCode,
         errorMessage: msg,
+      );
+    }
+  }
+
+  Future<_FetchResult<List<NotificationItemModel>>>
+  _fetchResidentNotifications() async {
+    try {
+      final response = await apiClient.get(
+        '/resident-notifications/',
+        requiresAuth: true,
+      );
+      if (response.statusCode != 200) {
+        return _FetchResult(
+          data: [],
+          failed: true,
+          statusCode: response.statusCode,
+          errorMessage: 'HTTP ${response.statusCode}',
+        );
+      }
+
+      final decoded = jsonDecode(utf8.decode(response.bodyBytes));
+      final List<dynamic> results =
+          (decoded is Map<String, dynamic> ? decoded['results'] : decoded) ??
+          [];
+      final items = results.map((raw) {
+        final item = raw as Map<String, dynamic>;
+        final createdAt = DateTime.tryParse(
+          item['created_at'] as String? ?? '',
+        );
+        final type = item['notification_type'] == 'queue'
+            ? NotificationType.queue
+            : NotificationType.info;
+        return NotificationItemModel(
+          id: 'resident-${item['id']}',
+          title: item['title'] as String? ?? 'KapitBayan update',
+          category: type == NotificationType.queue
+              ? 'Queue Alert'
+              : 'Service Update',
+          description: item['message'] as String?,
+          timestamp: createdAt ?? DateTime.now(),
+          type: type,
+          actionRoute: type == NotificationType.queue ? 'queue' : null,
+        );
+      }).toList();
+      return _FetchResult(data: items);
+    } catch (error) {
+      final int? statusCode = error is ApiException ? error.statusCode : null;
+      final String message = error is ApiException && error.statusCode != null
+          ? 'HTTP ${error.statusCode}'
+          : error.runtimeType.toString();
+      return _FetchResult(
+        data: [],
+        failed: true,
+        statusCode: statusCode,
+        errorMessage: message,
       );
     }
   }
@@ -201,8 +295,14 @@ class DashboardService {
     try {
       final response = await apiClient.get('/activities/', requiresAuth: true);
       final data = jsonDecode(utf8.decode(response.bodyBytes));
-      final List<dynamic> list = (data is Map<String, dynamic> ? data['results'] : data) ?? [];
-      return list.map((item) => ActivityScheduleModel.fromJson(item as Map<String, dynamic>)).toList();
+      final List<dynamic> list =
+          (data is Map<String, dynamic> ? data['results'] : data) ?? [];
+      return list
+          .map(
+            (item) =>
+                ActivityScheduleModel.fromJson(item as Map<String, dynamic>),
+          )
+          .toList();
     } catch (_) {
       return [];
     }
@@ -210,8 +310,12 @@ class DashboardService {
 
   Future<Map<String, dynamic>?> _fetchLiveQueue() async {
     try {
-      final response = await apiClient.get('/tickets/live-status/', requiresAuth: true);
-      return jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>?;
+      final response = await apiClient.get(
+        '/tickets/live-status/',
+        requiresAuth: true,
+      );
+      return jsonDecode(utf8.decode(response.bodyBytes))
+          as Map<String, dynamic>?;
     } catch (_) {
       return null;
     }
@@ -221,8 +325,9 @@ class DashboardService {
   List<NotificationItemModel> _generateNotifications({
     required List<DocumentRequestModel> documentRequests,
     required List<AnnouncementModel> announcements,
+    required List<NotificationItemModel> residentNotifications,
   }) {
-    final List<NotificationItemModel> list = [];
+    final List<NotificationItemModel> list = [...residentNotifications];
 
     // Map document status updates
     for (final doc in documentRequests) {

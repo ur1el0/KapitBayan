@@ -15,6 +15,7 @@ from gridy_communications.models import (
     EmergencyHotline,
     FAQ,
     AdminNotification,
+    ResidentNotification,
 )
 from gridy_communications.serializers import (
     AnnouncementSerializer,
@@ -24,6 +25,7 @@ from gridy_communications.serializers import (
     EmergencyHotlineSerializer,
     FAQSerializer,
     AdminNotificationSerializer,
+    ResidentNotificationSerializer,
 )
 from gridy_communications.tasks import send_announcement_notification_task
 
@@ -333,3 +335,16 @@ class AdminNotificationViewSet(viewsets.ModelViewSet):
         # Custom endpoint to clear the notification bell badge
         self.get_queryset().filter(is_read=False).update(is_read=True)
         return Response({"status": "success", "message": "All notifications marked as read."})
+
+
+class ResidentNotificationViewSet(viewsets.ReadOnlyModelViewSet):
+    """Expose only the authenticated user's persisted resident alerts."""
+
+    serializer_class = ResidentNotificationSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    pagination_class = None
+
+    def get_queryset(self):
+        return ResidentNotification.objects.filter(
+            user=self.request.user,
+        ).order_by('-created_at', '-id')[:100]

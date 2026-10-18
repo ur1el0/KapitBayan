@@ -13,6 +13,7 @@ from gridy_audit.models import AuditLog
 from gridy_audit.services import log_action
 from gridy_auth.models import Barangay, User
 from gridy_auth.permissions import IsBarangayOfficial, IsBarangayOfficialOrField
+from gridy_communications.models import ResidentNotification
 from gridy_communications.tasks import send_notification_to_user_task
 from gridy_services.models import MANILA_TIME_ZONE, QueueTicket
 from gridy_services.serializers import (
@@ -90,12 +91,6 @@ class QueueTicketViewSet(viewsets.ModelViewSet):
     def perform_update(self, serializer):
         serializer.save()
 
-    @staticmethod
-    def _has_notification_channel(user):
-        has_email = bool(user.email_alerts and user.email)
-        has_push = bool(user.push_alerts and user.fcm_devices.exists())
-        return has_email or has_push
-
     @action(
         detail=True,
         methods=['post'],
@@ -115,25 +110,29 @@ class QueueTicketViewSet(viewsets.ModelViewSet):
                 {"detail": "Only the currently serving ticket can be paged."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        if ticket.user_id is None:
+        if ticket.user_id is None or ticket.user.role != User.Role.RESIDENT:
             return Response(
                 {"detail": "This ticket is not linked to a resident account."},
                 status=status.HTTP_409_CONFLICT,
             )
-        if not self._has_notification_channel(ticket.user):
-            return Response(
-                {
-                    "detail": (
-                        "The resident has no enabled notification channel. Ask them "
-                        "to enable push notifications or email in their profile."
-                    )
-                },
-                status=status.HTTP_409_CONFLICT,
-            )
-
         ticket_id = ticket.pk
         resident_id = ticket.user_id
         ticket_number = ticket.ticket_number
+        message = (
+            f"Your ticket {ticket_number} is still being served. "
+            "Please proceed to the service counter."
+        )
+        notification = ResidentNotification.objects.create(
+            user=ticket.user,
+            notification_type=ResidentNotification.Type.QUEUE,
+            title=f"Queue ticket {ticket_number} is still being served",
+            message=message,
+            data={
+                "type": "queue",
+                "ticket_id": str(ticket_id),
+                "ticket_number": ticket_number,
+            },
+        )
         log_action(
             user=official,
             action_type=AuditLog.ActionType.QUEUE_ACTION,
@@ -147,17 +146,18 @@ class QueueTicketViewSet(viewsets.ModelViewSet):
             lambda: send_notification_to_user_task.delay(
                 user_id=resident_id,
                 title="Queue Paging Alert",
-                body=(
-                    f"Your ticket {ticket_number} is still being served. "
-                    "Please proceed to the service counter."
-                ),
+                body=message,
                 data={"type": "queue", "ticket_id": str(ticket_id)},
             )
         )
         return Response(
             {
-                "detail": "Paging notification accepted for delivery.",
+                "detail": (
+                    "Paging alert saved for the resident. Push and email delivery "
+                    "are attempted when enabled in the resident's preferences."
+                ),
                 "ticket_number": ticket_number,
+                "notification_id": notification.pk,
             },
             status=status.HTTP_202_ACCEPTED,
         )
