@@ -105,6 +105,11 @@ export const CitizenQueue: React.FC = () => {
     };
 
     const handleCancelTicket = async (id: number) => {
+        if (!Number.isSafeInteger(id) || id < 1) {
+            toast.error("We couldn't identify your queue ticket. Refresh and try again.");
+            return;
+        }
+
         if (!window.confirm('Are you sure you want to cancel your queue ticket and leave the line?')) {
             return;
         }

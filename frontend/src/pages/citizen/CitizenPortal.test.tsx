@@ -170,7 +170,7 @@ describe('Resident Portal Components', () => {
                     data: {
                         results: [
                             {
-                                id: 77,
+                                ticket_id: 77,
                                 ticket_number: 'T008',
                                 service_type: 'Barangay Clearance',
                                 status: 'WAITING',
