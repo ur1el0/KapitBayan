@@ -12,7 +12,9 @@ The mobile client can register a Firebase device token and the backend may send 
 
 ## Email
 
-Email uses Django's configured email backend. Local development defaults to SMTP. Render Free blocks outbound SMTP ports 25, 465, and 587, so production can use the built-in `config.email_backends.ResendEmailBackend` over HTTPS. Configure `RESEND_API_KEY` and a `DEFAULT_FROM_EMAIL` address on a domain verified with Resend. The app's email and push jobs remain best-effort daemon-thread tasks; an accepted API response does not prove provider delivery.
+Email uses Django's configured email backend. The deployed Render service is configured for Brevo SMTP at `smtp-relay.brevo.com:2525` with TLS. Configure the Brevo SMTP login and SMTP key as secrets, and use a sender address verified in Brevo for `DEFAULT_FROM_EMAIL`. The Brevo SMTP key is distinct from a Brevo API key. Local development defaults to Django SMTP. If SMTP cannot connect in the hosting environment, the built-in `config.email_backends.ResendEmailBackend` is an HTTPS alternative; it requires `RESEND_API_KEY` and a sender verified with Resend. See the [Brevo email setup guide](../docs/walkthrough/brevo-email-setup.md).
+
+The app's email and push jobs run as best-effort in-process background work; an accepted API response does not prove provider delivery. Check application logs and the provider's transactional email logs when diagnosing delivery.
 
 ## Deliberate infrastructure limits
 

@@ -13,7 +13,7 @@ The platform supports resident document requests, manual fee assessment and trea
 - Database: PostgreSQL in hosted and Docker environments. The production database is Neon; tests may use SQLite where configured.
 - Media storage: Cloudinary stores uploaded evidence and documents; private evidence is served through authenticated backend views.
 - Push notifications: Firebase Cloud Messaging (FCM), using Firebase Messaging in the mobile app and Firebase Admin in Django.
-- Email: Django SMTP is available for local development; production Render Free deployments can use the Resend HTTPS API backend because Render blocks outbound SMTP ports.
+- Email: the deployed Render service uses the Brevo SMTP relay on port 2525 with TLS. The built-in Resend HTTPS backend remains an alternative if SMTP is unavailable; local development defaults to Django SMTP.
 - Error monitoring: Sentry SDK support, enabled when `SENTRY_DSN` is configured.
 - Production hosting: Vercel hosts the web app and rewrites `/api/v1` to the Django API on Render. The API connects to Neon through `DATABASE_URL`.
 - Local services: Docker Compose runs the development database and application services; Nginx serves the local web build and proxies API requests.
@@ -25,7 +25,7 @@ The web client is configured for a same-origin API proxy, while mobile clients c
 
 ## Documentation
 
-Start at the [documentation index](docs/README.md) for current architecture, decision records, feature guides, and walkthroughs. The [ADR index](architecture/decisions/README.md) records the accepted architectural decisions. Use the generated OpenAPI schema for exact request/response details.
+Start at the [documentation index](docs/README.md) for current architecture, decision records, feature guides, and walkthroughs. The [system presentation flow](docs/presentations/system-demo-flow.md) is a role-by-role live demo script, with a [PDF copy](docs/presentations/system-demo-flow.pdf). The [Brevo email setup guide](docs/walkthrough/brevo-email-setup.md) covers deployed SMTP configuration and delivery checks. The [ADR index](architecture/decisions/README.md) records the accepted architectural decisions. Use the generated OpenAPI schema for exact request/response details.
 
 ## Local development with Docker Compose
 
