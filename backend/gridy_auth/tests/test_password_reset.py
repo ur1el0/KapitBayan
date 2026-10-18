@@ -37,6 +37,26 @@ class PasswordResetTests(IsolatedAuthAPITestCase):
             self.assertEqual(call_args[0], self.user.email)
             self.assertIn("reset-password?uidb64=", call_args[1])
 
+    def test_password_reset_ignores_inactive_duplicate_email(self):
+        User.objects.create_user(
+            username="inactive_admin_same_email",
+            email=self.user.email,
+            password="OldPassword123!",
+            role=User.Role.ADMIN,
+            is_active=False,
+        )
+
+        with patch('gridy_auth.views.password_reset.send_password_reset_email.delay') as mock_task:
+            response = self.client.post(
+                reverse("password_reset_request"),
+                {"email": self.user.email},
+                format="json",
+            )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        mock_task.assert_called_once()
+        self.assertEqual(mock_task.call_args.args[0], self.user.email)
+
     def test_password_reset_request_unmatched_email_does_not_dispatch_task(self):
         with patch('gridy_auth.views.password_reset.send_password_reset_email.delay') as mock_task:
             response = self.client.post(
