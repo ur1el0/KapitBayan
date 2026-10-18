@@ -91,6 +91,12 @@ class QueueTicketViewSet(viewsets.ModelViewSet):
     def perform_update(self, serializer):
         serializer.save()
 
+    @staticmethod
+    def _has_notification_channel(user):
+        has_email = bool(user.email_alerts and user.email)
+        has_push = bool(user.push_alerts and user.fcm_devices.exists())
+        return has_email or has_push
+
     @action(
         detail=True,
         methods=['post'],
