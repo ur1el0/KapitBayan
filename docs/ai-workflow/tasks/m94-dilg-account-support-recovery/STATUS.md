@@ -92,7 +92,7 @@ git diff --check FETCH_HEAD..HEAD
 **Not run:** Backend or frontend tests. The task plan calls for regression suites, but they remain an explicit merge gate and their behavior is not verified by the checks above.
 
 ## Hygiene and delivery state
-- Published PR head: `e715a84` (`feat/dilg): add bounded account support and recovery`.
+- Implementation commit: `e715a84`; it is included in PR #245 together with this delivery-status update.
 - No production mutation or deployment was made.
 - Primary checkout remained clean at `96b5e81`.
 - Draft PR [#245](https://github.com/ur1el0/KapitBayan/pull/245) is open. Backend and frontend tests have not been run; keep the PR in draft.
