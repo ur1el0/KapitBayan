@@ -2,7 +2,7 @@
 
 ## State
 
-- Status: Implementation and local verification complete; commit created locally, push pending
+- Status: Implementation and local verification complete; pushed to origin on `fix/barangay-only-scope-no-dilg`
 - Worktree: /tmp/gridy-onboarding-fix-full
 - Branch: fix/barangay-only-scope-no-dilg
 - Base: Partner branch 04a9e591 merged with latest fetched main
@@ -33,6 +33,12 @@
 - `git diff --check` — clean, exit 0. `git diff --cached --name-only` — empty; no files staged.
 - Primary checkout safety check: `/home/dokja/vsc-fedora/all/Projects/django-projects/Gridy` still shows only the same three pre-existing unstaged Login files (`frontend/src/App.tsx`, `frontend/src/pages/auth/Login.test.tsx`, `frontend/src/pages/auth/Login.tsx`); this task did not edit them. No production database or deployment operation occurred.
 
+## Delivery
+
+- Implementation commit: `299cc64` (`feat: restore barangay-only scope and platform recovery`).
+- Push: `git push -u origin fix/barangay-only-scope-no-dilg` succeeded; branch tracks `origin/fix/barangay-only-scope-no-dilg`.
+- No pull request was opened.
+
 ## Decisions / Risks
 
 - Existing DILG_ADMIN database values and historical migration/ADR references must remain available for audit continuity, but the role must not authenticate or authorize active product access.
@@ -46,4 +52,4 @@
 - Hindsight search/list/capture calls were attempted before implementation, but the local service returned `ECONNREFUSED 127.0.0.1:9077`; decisions are grounded in repository docs and code instead.
 - The `DILG_ADMIN` label remains in immutable historical migration and ADR text and in negative regression fixtures. Existing stored legacy role values are deliberately not rewritten or deleted; login, refresh, token authentication, application routes, and tenant service authorization reject them.
 - The OpenAPI generator's 13 non-fatal serializer inference errors and 131 warnings are recorded above. The generated schema matches the current API, but generator diagnostics need a separately scoped cleanup if a warning-free schema is required.
-- The commit `feat: restore barangay-only scope and platform recovery` contains the verified implementation. It is local pending push; no PR has been created.
+- Commit `299cc64` contains the verified implementation and is published on its feature branch. No PR has been created.
