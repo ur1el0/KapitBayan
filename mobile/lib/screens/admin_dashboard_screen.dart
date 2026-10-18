@@ -4,7 +4,6 @@ import '../core/network/api_client.dart';
 import '../core/theme/app_colors.dart';
 import '../models/user_model.dart';
 import '../services/storage_service.dart';
-import 'dashboard_screen.dart';
 import 'field_official_screen.dart';
 import 'login_screen.dart';
 import 'queue_screen.dart';
@@ -118,7 +117,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Persona Switcher Bar
+                    // Show the current admin mode without offering resident-view switching.
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       decoration: BoxDecoration(
@@ -126,27 +125,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(color: const Color(0xFFE2E8F0)),
                       ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      child: const Row(
                         children: [
-                          const Row(
-                            children: [
-                              Icon(Icons.admin_panel_settings_rounded, color: AppColors.primaryNavy, size: 20),
-                              SizedBox(width: 8),
-                              Text(
-                                'Executive Mode Active',
-                                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: AppColors.textPrimary),
-                              ),
-                            ],
-                          ),
-                          TextButton(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (_) => const DashboardScreen()),
-                              );
-                            },
-                            child: const Text('Resident View', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                          Icon(Icons.admin_panel_settings_rounded, color: AppColors.primaryNavy, size: 20),
+                          SizedBox(width: 8),
+                          Text(
+                            'Executive Mode Active',
+                            style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: AppColors.textPrimary),
                           ),
                         ],
                       ),
