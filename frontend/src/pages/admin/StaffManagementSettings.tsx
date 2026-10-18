@@ -33,6 +33,8 @@ function getApiErrorMessage(error: unknown, fallback: string) {
 
 export function StaffManagementSettings() {
     const [staffList, setStaffList] = useState<StaffMember[]>([]);
+    const [adminList, setAdminList] = useState<StaffMember[]>([]);
+    const [accountRole, setAccountRole] = useState<'FIELD_OFFICIAL' | 'ADMIN'>('FIELD_OFFICIAL');
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
     const [username, setUsername] = useState('');
@@ -41,6 +43,7 @@ export function StaffManagementSettings() {
     const [loading, setLoading] = useState(true);
     const [retrying, setRetrying] = useState(false);
     const [loadError, setLoadError] = useState(false);
+    const [adminLoadError, setAdminLoadError] = useState(false);
     const [saving, setSaving] = useState(false);
     const [togglingId, setTogglingId] = useState<number | null>(null);
     const [editingStaffId, setEditingStaffId] = useState<number | null>(null);
@@ -63,6 +66,14 @@ export function StaffManagementSettings() {
         } catch {
             setLoadError(true);
         } finally {
+            try {
+                const response = await axiosPrivate.get('/auth/staff/admins/');
+                const data = response.data.results || response.data;
+                setAdminList(Array.isArray(data) ? data : []);
+                setAdminLoadError(false);
+            } catch {
+                setAdminLoadError(true);
+            }
             setLoading(false);
             setRetrying(false);
         }
@@ -90,24 +101,29 @@ export function StaffManagementSettings() {
         setMessage(null);
 
         try {
-            const response = await axiosPrivate.post('/auth/staff/', {
+            const isAdmin = accountRole === 'ADMIN';
+            const response = await axiosPrivate.post(isAdmin ? '/auth/staff/admins/' : '/auth/staff/', {
                 first_name: firstName.trim(),
                 last_name: lastName.trim(),
                 username: username.trim(),
                 email: email.trim().toLowerCase(),
             });
-            setStaffList((current) => [response.data, ...current]);
+            if (isAdmin) {
+                setAdminList((current) => [response.data, ...current]);
+            } else {
+                setStaffList((current) => [response.data, ...current]);
+            }
             setFirstName('');
             setLastName('');
             setUsername('');
             setEmail('');
             setMessage({
-                text: `Field official account created. Setup instructions are being sent to ${response.data.email}. If the email does not arrive or the link expires, they can use Forgot Password.`,
+                text: `${isAdmin ? 'Barangay Admin' : 'Field Official'} account created. Setup instructions are being sent to ${response.data.email}. If the email does not arrive or the link expires, they can use Forgot Password.`,
                 type: 'success',
             });
         } catch (err: unknown) {
             setMessage({
-                text: getApiErrorMessage(err, 'Could not create field official account. Please check the inputs.'),
+                text: getApiErrorMessage(err, `Could not create ${accountRole === 'ADMIN' ? 'Barangay Admin' : 'Field Official'} account. Please check the inputs.`),
                 type: 'error',
             });
         } finally {
@@ -192,10 +208,14 @@ export function StaffManagementSettings() {
                 <div>
                     <h2 className="text-xl font-bold text-slate-900">Barangay Field Officials & Staff</h2>
                     <p className="mt-0.5 text-sm leading-6 text-slate-600">
-                        Create mobile operations accounts for Barangay Tanods, field officers, and desk inspectors. Field officials set their own password using the emailed setup link and use the KapitBayan mobile app for their work. They do not have an admin web workspace.
+                        Create same-barangay accounts for peer Barangay Admins and mobile operations staff. Recipients set their password through an emailed setup link. Field Officials use the mobile app and do not have an admin web workspace.
                     </p>
                 </div>
             </div>
+
+            <p className="mt-4 rounded-lg border border-blue-100 bg-blue-50 p-3 text-sm leading-6 text-blue-900">
+                Public sign-up is for residents. An existing Barangay Admin can invite additional Admins here; the first Barangay Admin is created through protected system-operator setup.
+            </p>
 
             {message && (
                 <div
@@ -211,10 +231,22 @@ export function StaffManagementSettings() {
             <form onSubmit={submit} className="mt-6 rounded-lg border border-slate-100 bg-slate-50/50 p-5">
                 <div className="flex items-center gap-2 text-sm font-semibold text-slate-800 mb-4">
                     <UserPlus className="h-4 w-4 text-primary" aria-hidden="true" />
-                    <span>Add New Field Official</span>
+                    <span>Add Barangay Account</span>
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2">
+                    <label className="text-sm font-medium text-slate-700 sm:col-span-2">
+                        Account Type
+                        <select
+                            className={inputClass}
+                            value={accountRole}
+                            onChange={(event) => setAccountRole(event.target.value as 'FIELD_OFFICIAL' | 'ADMIN')}
+                            disabled={saving}
+                        >
+                            <option value="FIELD_OFFICIAL">Field Official</option>
+                            <option value="ADMIN">Barangay Admin</option>
+                        </select>
+                    </label>
                     <label className="text-sm font-medium text-slate-700">
                         First Name
                         <input
@@ -266,7 +298,7 @@ export function StaffManagementSettings() {
                         disabled={saving}
                         className="min-h-11 rounded-lg bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground outline-none disabled:opacity-50 hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 transition-colors sm:col-span-2"
                     >
-                        {saving ? 'Creating Account…' : 'Register Field Official'}
+                        {saving ? 'Creating Account…' : accountRole === 'ADMIN' ? 'Register Barangay Admin' : 'Register Field Official'}
                     </button>
                 </div>
             </form>
@@ -413,6 +445,42 @@ export function StaffManagementSettings() {
                                         </div>
                                     </div>
                                 )}
+                            </article>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            <div className="mt-8 space-y-3" aria-live="polite">
+                <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500">
+                    Barangay Administrators
+                </h3>
+                {adminLoadError ? (
+                    <InlineErrorState
+                        message="Could not load peer Barangay Admins. The provisioning API may need to be deployed."
+                        onRetry={() => void loadStaff(true)}
+                        retrying={retrying}
+                    />
+                ) : adminList.length === 0 ? (
+                    <div className="rounded-lg border border-dashed border-slate-300 p-5 text-center">
+                        <ShieldCheck className="mx-auto h-7 w-7 text-slate-400" aria-hidden="true" />
+                        <p className="mt-2 text-sm font-medium text-slate-700">No peer administrators yet</p>
+                        <p className="mt-1 text-xs text-slate-500">Use the account form above to invite another Admin to this Barangay.</p>
+                    </div>
+                ) : (
+                    <div className="divide-y divide-slate-100 rounded-lg border border-slate-200 overflow-hidden">
+                        {adminList.map((admin) => (
+                            <article key={admin.id} className="flex flex-wrap items-center justify-between gap-3 bg-white p-4">
+                                <div className="space-y-1">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <h4 className="text-sm font-semibold text-slate-900">{admin.full_name}</h4>
+                                        <span className="text-xs text-slate-400">@{admin.username}</span>
+                                    </div>
+                                    <p className="break-all text-xs text-slate-500">{admin.email}</p>
+                                </div>
+                                <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold ${admin.is_active ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-slate-100 text-slate-600'}`}>
+                                    {admin.is_active ? 'Active' : 'Deactivated'}
+                                </span>
                             </article>
                         ))}
                     </div>

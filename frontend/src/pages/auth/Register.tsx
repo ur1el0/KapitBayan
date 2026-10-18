@@ -402,6 +402,10 @@ export const Register: React.FC = () => {
                                 </Button>
                             </div>
 
+                            <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-center text-xs leading-5 text-slate-600">
+                                Barangay staff accounts are created by an existing Barangay Admin. First Admin setup is handled by the system operator.
+                            </p>
+
                             {/* Back to Login */}
                             <div className="text-center pt-1">
                                 <p className="text-xs text-slate-500 font-medium">

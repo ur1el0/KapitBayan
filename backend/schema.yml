@@ -1368,6 +1368,61 @@ paths:
           description: Validation error or duplicate credentials.
         '403':
           description: Restricted to Barangay Admins with assigned Barangay.
+  /api/v1/auth/staff/admins/:
+    get:
+      operationId: api_v1_auth_staff_admins_list
+      description: Lists peer administrators belonging to the authenticated Admin's
+        Barangay. The current administrator is not included.
+      summary: List peer Barangay Admins
+      tags:
+      - Staff Management
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/StaffUserList'
+          description: ''
+        '403':
+          description: Restricted to Barangay Admins with assigned Barangay.
+    post:
+      operationId: api_v1_auth_staff_admins_create
+      description: Creates a new ADMIN account in the authenticated Admin's Barangay.
+        The role and Barangay are selected by the server. The recipient sets their
+        password using a private setup link. First Admin setup remains an operator
+        bootstrap responsibility.
+      summary: Invite a Barangay Admin
+      tags:
+      - Staff Management
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BarangayAdminCreate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/BarangayAdminCreate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/BarangayAdminCreate'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StaffUserList'
+          description: ''
+        '400':
+          description: Validation error or duplicate credentials.
+        '403':
+          description: Restricted to Barangay Admins with assigned Barangay.
   /api/v1/auth/staff/{id}/:
     put:
       operationId: api_v1_auth_staff_update
@@ -5412,10 +5467,34 @@ components:
       - first_name
       - last_name
       - username
+    BarangayAdminCreate:
+      type: object
+      description: Validates identity fields for a peer Barangay Admin invitation.
+      properties:
+        username:
+          type: string
+          maxLength: 150
+          minLength: 3
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        first_name:
+          type: string
+          maxLength: 150
+          minLength: 1
+        last_name:
+          type: string
+          maxLength: 150
+          minLength: 1
+      required:
+      - email
+      - first_name
+      - last_name
+      - username
     StaffUserList:
       type: object
-      description: Represents an authorized Field Official belonging to the administrator's
-        Barangay.
+      description: Represents an authorized peer administrator or Field Official in the administrator's Barangay.
       properties:
         id:
           type: integer
