@@ -22,7 +22,7 @@ interface LiveStatus {
 }
 
 interface UserTicket {
-    id: number;
+    ticket_id: number;
     ticket_number: string;
     service_type: string;
     status: string;
@@ -100,6 +100,11 @@ export const CitizenQueue: React.FC = () => {
     };
 
     const handleCancelTicket = async (id: number) => {
+        if (!Number.isSafeInteger(id) || id < 1) {
+            toast.error("We couldn't identify your queue ticket. Refresh and try again.");
+            return;
+        }
+
         if (!window.confirm('Are you sure you want to cancel your queue ticket and leave the line?')) {
             return;
         }
@@ -262,7 +267,7 @@ export const CitizenQueue: React.FC = () => {
                                         <span>Waiting for your turn</span>
                                     </div>
                                     <button
-                                        onClick={() => handleCancelTicket(activeTicket.id)}
+                                        onClick={() => handleCancelTicket(activeTicket.ticket_id)}
                                         disabled={cancelling}
                                         className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 text-xs font-bold transition-all cursor-pointer"
                                         aria-label="Leave queue and cancel ticket"
