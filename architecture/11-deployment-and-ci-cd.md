@@ -47,7 +47,8 @@ Strict separation of configuration across environments:
 *   `DATABASE_URL` (PostgreSQL connection string)
 *   `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, & `CLOUDINARY_API_SECRET`
 *   `FIREBASE_SERVICE_ACCOUNT_JSON_PATH` (mounted as a Secret File on Render)
-*   `EMAIL_HOST`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, & `DEFAULT_FROM_EMAIL`
+*   For SMTP: `EMAIL_HOST`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, and `DEFAULT_FROM_EMAIL`.
+*   For Render Free email delivery: set `EMAIL_BACKEND=config.email_backends.ResendEmailBackend`, `RESEND_API_KEY`, and `DEFAULT_FROM_EMAIL` to a sender on a verified Resend domain. Render Free blocks outbound SMTP ports 25, 465, and 587; Resend's HTTPS API uses port 443.
 *   `VITE_API_BASE_URL` (leave unset or `/api/v1` for production same-origin builds; `http://127.0.0.1:8000/api/v1` for local development)
 *   `REFRESH_COOKIE_SAMESITE` (defaults to `Strict`)
 *   `BLOCKED_PRODUCTION_LOGIN_USERNAMES` (optional comma-separated exact usernames for test accounts that must not authenticate in production)
@@ -56,7 +57,7 @@ Set the denylist only in the production service's private environment settings. 
 
 ### Runtime guarantees and scale-out gates
 
-The current notification implementation starts daemon threads in the API process. An API success response means the work was accepted by the process, not that SMTP or FCM delivered it; process termination can interrupt the work and there is no persistent queue or retry. This is the low-dependency behavior selected by [ADR 009](decisions/009-simplification-to-defended-proposal-architecture.md) and bounded for pilot planning by [ADR 013](decisions/013-pilot-notification-and-throttle-guardrails.md). Treat notification delivery as best-effort unless a separate durable delivery design is reviewed and accepted by the responsible owner.
+The current notification implementation starts daemon threads in the API process. An API success response means the work was accepted by the process, not that the email provider or FCM delivered it; process termination can interrupt the work and there is no persistent queue or retry. This is the low-dependency behavior selected by [ADR 009](decisions/009-simplification-to-defended-proposal-architecture.md) and bounded for pilot planning by [ADR 013](decisions/013-pilot-notification-and-throttle-guardrails.md). Treat notification delivery as best-effort unless a separate durable delivery design is reviewed and accepted by the responsible owner.
 
 Resident private-evidence deletion uses a database-backed cleanup record because storage deletion happens after account erasure commits. File names are encrypted with `SECRET_KEY` before they are stored. Run `python manage.py cleanup_private_evidence` periodically from a single application environment to retry due records; failures remain queued with increasing retry delays. If `SECRET_KEY` is rotated while cleanup records remain, retain the old key in `SECRET_KEY_FALLBACKS` until those records have been deleted. This job uses the existing Django database and does not add Celery or Redis.
 

@@ -414,14 +414,17 @@ LOGGING = {
 }
 
 
-# Email Configuration (SMTP)
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+# Email Configuration
+SMTP_EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+RESEND_EMAIL_BACKEND = 'config.email_backends.ResendEmailBackend'
+EMAIL_BACKEND = env('EMAIL_BACKEND', default=SMTP_EMAIL_BACKEND).strip()
 EMAIL_HOST = env('EMAIL_HOST', default='smtp.gmail.com')
 EMAIL_PORT = env.int('EMAIL_PORT', default=587)
 EMAIL_USE_TLS = env.bool('EMAIL_USE_TLS', default=True)
 EMAIL_HOST_USER = env('EMAIL_HOST_USER', default='').strip()
 EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', default='')
 DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', default=EMAIL_HOST_USER).strip()
+RESEND_API_KEY = env('RESEND_API_KEY', default='').strip()
 
 if not DEBUG and not IS_TESTING:
     raw_database_url = os.environ.get('DATABASE_URL', '').strip()
@@ -446,15 +449,26 @@ if not DEBUG and not IS_TESTING:
             '(e.g. https://gridy.onrender.com).'
         )
 
-    missing_email_settings = [
-        name
-        for name, value in (
+    if EMAIL_BACKEND == SMTP_EMAIL_BACKEND:
+        email_settings = (
             ('EMAIL_HOST', EMAIL_HOST),
             ('EMAIL_HOST_USER', EMAIL_HOST_USER),
             ('EMAIL_HOST_PASSWORD', EMAIL_HOST_PASSWORD),
             ('DEFAULT_FROM_EMAIL', DEFAULT_FROM_EMAIL),
         )
-        if not value.strip()
+    elif EMAIL_BACKEND == RESEND_EMAIL_BACKEND:
+        email_settings = (
+            ('RESEND_API_KEY', RESEND_API_KEY),
+            ('DEFAULT_FROM_EMAIL', DEFAULT_FROM_EMAIL),
+        )
+    else:
+        raise ImproperlyConfigured(
+            'Production email backend must be Django SMTP or '
+            'config.email_backends.ResendEmailBackend.'
+        )
+
+    missing_email_settings = [
+        name for name, value in email_settings if not value.strip()
     ]
     if missing_email_settings:
         raise ImproperlyConfigured(

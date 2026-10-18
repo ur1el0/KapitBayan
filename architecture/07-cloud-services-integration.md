@@ -12,7 +12,7 @@ The mobile client can register a Firebase device token and the backend may send 
 
 ## Email
 
-Email uses the configured SMTP settings.
+Email uses Django's configured email backend. Local development defaults to SMTP. Render Free blocks outbound SMTP ports 25, 465, and 587, so production can use the built-in `config.email_backends.ResendEmailBackend` over HTTPS. Configure `RESEND_API_KEY` and a `DEFAULT_FROM_EMAIL` address on a domain verified with Resend. The app's email and push jobs remain best-effort daemon-thread tasks; an accepted API response does not prove provider delivery.
 
 ## Deliberate infrastructure limits
 

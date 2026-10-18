@@ -9,7 +9,7 @@ React web client ─┐
                   ├── Django REST API ── PostgreSQL
 Flutter app ──────┘          ├────────── private media storage
                              ├────────── Firebase Cloud Messaging (when configured)
-                             └────────── SMTP (when configured)
+                             └────────── Email provider (HTTPS; SMTP locally)
 ```
 
 The web client uses the API through the configured same-origin proxy in the intended production topology. The Flutter app connects to the configured API URL. Hosting details and checks that remain unverified are recorded in [Deployment](11-deployment-and-ci-cd.md); this diagram describes components, not a claim that every external integration is live.

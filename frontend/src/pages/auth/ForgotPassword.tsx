@@ -15,8 +15,8 @@ export const ForgotPassword = () => {
             await axiosPublic.post('/auth/password-reset/', { email })
             setStatus('success')
         } catch {
-            // We still show success even on error to prevent Email Enumeration attacks
-            setStatus('success')
+            // A transport/API failure does not reveal whether this address is registered.
+            setStatus('error')
         }
     }
 
@@ -40,7 +40,7 @@ export const ForgotPassword = () => {
                         </div>
                         <h3 className="text-lg font-bold text-slate-900 mb-2">Check your inbox</h3>
                         <p className="text-slate-500 text-sm mb-8">
-                            If <span className="font-semibold text-slate-700">{email}</span> exists in our system, we have sent a secure password reset link.
+                            If <span className="font-semibold text-slate-700">{email}</span> exists in our system, we have sent a secure password reset link. Check your spam folder too. If it does not arrive, contact your Barangay Admin or DILG account support to verify the email on your account.
                         </p>
                     </div>
                 ) : (
@@ -49,6 +49,11 @@ export const ForgotPassword = () => {
                             Enter your verified administrative email address and we will send you a secure link to reset your password.
                         </p>
                         <form onSubmit={handleSubmit} className="space-y-6">
+                            {status === 'error' && (
+                                <p role="alert" className="text-sm font-medium text-red-700">
+                                    We couldn't submit your request. Check your connection and try again.
+                                </p>
+                            )}
                             <div className="relative">
                                 <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
                                     <Mail className="w-5 h-5" />

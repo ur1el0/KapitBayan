@@ -13,7 +13,7 @@ The platform supports resident document requests, manual fee assessment and trea
 - Database: PostgreSQL in hosted and Docker environments. The production database is Neon; tests may use SQLite where configured.
 - Media storage: Cloudinary stores uploaded evidence and documents; private evidence is served through authenticated backend views.
 - Push notifications: Firebase Cloud Messaging (FCM), using Firebase Messaging in the mobile app and Firebase Admin in Django.
-- Email: SMTP for account and transactional email.
+- Email: Django SMTP is available for local development; production Render Free deployments can use the Resend HTTPS API backend because Render blocks outbound SMTP ports.
 - Error monitoring: Sentry SDK support, enabled when `SENTRY_DSN` is configured.
 - Production hosting: Vercel hosts the web app and rewrites `/api/v1` to the Django API on Render. The API connects to Neon through `DATABASE_URL`.
 - Local services: Docker Compose runs the development database and application services; Nginx serves the local web build and proxies API requests.
