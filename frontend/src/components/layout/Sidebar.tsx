@@ -76,7 +76,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ compact = false, onNavigate })
                                         } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40`}
                                     >
                                         <ClipboardCheck className="h-5 w-5 text-primary-text" />
-                                        <span>Barangay Applications</span>
+                                        <span>Official Applications</span>
                                     </NavLink>
                                 </li>
                                 <li>
