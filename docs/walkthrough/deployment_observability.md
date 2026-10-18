@@ -22,7 +22,7 @@ When Django runs directly on the host, the Compose hostname `db` is unavailable.
 - `GET /api/v1/health/ready/` checks configured dependencies and can return HTTP 503 when they are unavailable.
 - `GET /api/v1/health/` is a compatibility readiness route used by the current backend container health check.
 
-Use the current `config.health_views` implementation for exact response fields and dependency semantics. Do not treat an HTTP health response as proof that user journeys, SMTP, Firebase, Cloudinary, or provider APIs work.
+Use the current `config.health_views` implementation for exact response fields and dependency semantics. Do not treat an HTTP health response as proof that user journeys, the configured email backend, Firebase, Cloudinary, or provider APIs work.
 
 ## Migration release gate
 
