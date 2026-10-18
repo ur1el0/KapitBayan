@@ -23,7 +23,8 @@
 - `npm --prefix frontend run lint` — passed, exit 0.
 - `npm --prefix frontend run test -- --pool=threads` — **46 test files, 222 tests passed**, exit 0.
 - `npm --prefix frontend run build` — `tsc -b` and Vite production build passed; 2,523 modules transformed, exit 0.
-- GitHub Actions run `39139701710` on verification commit `d8c227e` reported **frontend-tests failed: 221/222 passed**. The sole failure was `PublicAnnouncements.test.tsx > focuses and scrolls to the announcement named by the share link`: the test asserted focus immediately after the article appeared, before React's passive effect applied focus. Added `waitFor` around the focus assertion. Reverification on the updated worktree: the focused file passed **6/6**, the full frontend suite passed **46 files / 222 tests**, lint passed, and the production build passed. A new remote run is pending the follow-up push.
+- GitHub Actions run `39139701710` on verification commit `d8c227e` reported **frontend-tests failed: 221/222 passed**. The sole failure was `PublicAnnouncements.test.tsx > focuses and scrolls to the announcement named by the share link`: the test asserted focus immediately after the article appeared, before React's passive effect applied focus. Added `waitFor` around the focus assertion. Reverification on the updated worktree: the focused file passed **6/6**, the full frontend suite passed **46 files / 222 tests**, lint passed, and the production build passed.
+- GitHub Actions PR run `39140427706` on commit `bd58bdb` completed successfully: backend tests, frontend tests, Flutter tests, both image builds, PostgreSQL DNS reconnect, Compose migration gate, Azure preflight, and Azure Bicep checks all passed.
 - `cd mobile && PUB_CACHE=/home/dokja/.pub-cache /home/dokja/development/flutter/bin/flutter pub get --offline` — dependencies resolved from cache; no dependency files changed.
 - `cd mobile && PUB_CACHE=/home/dokja/.pub-cache /home/dokja/development/flutter/bin/flutter analyze` — **No issues found**, exit 0.
 - `cd mobile && PUB_CACHE=/home/dokja/.pub-cache /home/dokja/development/flutter/bin/flutter test` — **157 tests passed**, exit 0. Tests emitted expected messages that Firebase push-notification listeners are unavailable in the local test environment.
@@ -37,8 +38,9 @@
 ## Delivery
 
 - Implementation commit: `299cc64` (`feat: restore barangay-only scope and platform recovery`).
+- Test synchronization follow-up: `bd58bdb` (`test: wait for announcement deep-link focus`).
 - Push: `git push -u origin fix/barangay-only-scope-no-dilg` succeeded; branch tracks `origin/fix/barangay-only-scope-no-dilg`.
-- No pull request was opened.
+- Pull request: [#266](https://github.com/ur1el0/KapitBayan/pull/266) is open against `main`, unmerged.
 
 ## Decisions / Risks
 
@@ -53,4 +55,4 @@
 - Hindsight search/list/capture calls were attempted before implementation, but the local service returned `ECONNREFUSED 127.0.0.1:9077`; decisions are grounded in repository docs and code instead.
 - The `DILG_ADMIN` label remains in immutable historical migration and ADR text and in negative regression fixtures. Existing stored legacy role values are deliberately not rewritten or deleted; login, refresh, token authentication, application routes, and tenant service authorization reject them.
 - The OpenAPI generator's 13 non-fatal serializer inference errors and 131 warnings are recorded above. The generated schema matches the current API, but generator diagnostics need a separately scoped cleanup if a warning-free schema is required.
-- Commit `299cc64` contains the verified implementation and is published on its feature branch. No PR has been created.
+- Commit `299cc64` contains the verified implementation and is published on its feature branch; follow-up commit `bd58bdb` stabilizes an asynchronous frontend test. PR #266 is open against `main`.
