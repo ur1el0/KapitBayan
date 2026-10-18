@@ -2,7 +2,7 @@
 
 ## Executive summary
 - **Task ID:** `m94-dilg-account-support-recovery`
-- **State:** Implementation and non-test checks complete; regression tests pending; PR must remain draft until verification is complete.
+- **State:** Draft PR #245 is open; implementation and non-test checks pass; regression tests remain a merge gate.
 - **Branch:** `feat/dilg-account-support`
 - **Worktree:** `/tmp/gridy-dilg-account-support`
 - **Base:** GitHub `main` at `46d5af8` (`46d5af8e6ec05d1717d280c1f2ade434ab324cbb`). The branch was rebased onto it; `frontend/src/App.tsx` retains the merged Resident Tutorial route and adds the DILG route.
@@ -92,9 +92,10 @@ git diff --check FETCH_HEAD..HEAD
 **Not run:** Backend or frontend tests. The task plan calls for regression suites, but they remain an explicit merge gate and their behavior is not verified by the checks above.
 
 ## Hygiene and delivery state
-- Implementation commit was created and rebased locally to `fcc151c` before this status update. No production mutation or deployment was made.
+- Published PR head: `e715a84` (`feat/dilg): add bounded account support and recovery`.
+- No production mutation or deployment was made.
 - Primary checkout remained clean at `96b5e81`.
-- The branch is prepared for draft-PR delivery; backend and frontend tests have not been run.
+- Draft PR [#245](https://github.com/ur1el0/KapitBayan/pull/245) is open. Backend and frontend tests have not been run; keep the PR in draft.
 - Final implementation files are listed by `git status`; generated OpenAPI output is under `/tmp`, not in the repository.
 
 ## Remaining blockers / risks
@@ -105,4 +106,5 @@ git diff --check FETCH_HEAD..HEAD
 5. Revoking refresh sessions does not retroactively invalidate an already-issued short-lived access token; this follows the platform's existing JWT model.
 
 ## Delivery
-- Deliver as a draft PR and keep it blocked from merge until regression tests and review are complete.
+- PR: https://github.com/ur1el0/KapitBayan/pull/245 (open, draft, unmerged).
+- Keep it blocked from merge until regression tests and review are complete.
