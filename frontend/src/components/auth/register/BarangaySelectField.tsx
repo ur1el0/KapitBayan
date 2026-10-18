@@ -1,5 +1,4 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
 
 export interface PublicBarangay {
     id: number;
@@ -80,12 +79,6 @@ export const BarangaySelectField: React.FC<BarangaySelectFieldProps> = ({
                     </div>
                 )}
             </div>
-
-            {isAdminMode && (
-                <p className="text-xs text-slate-600 mt-2">
-                    Registering a new barangay? <Link to="/register/barangay" className="font-bold text-primary-text underline">Apply for DILG review</Link>.
-                </p>
-            )}
         </div>
     );
 };
