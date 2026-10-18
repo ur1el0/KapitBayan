@@ -71,6 +71,8 @@ class DILGAccountSupportViewSet(
         actor = getattr(self.request, "user", None)
         if not actor or not actor.is_authenticated or actor.role != User.Role.DILG_ADMIN:
             return User.objects.none()
+        # Write actions must scope row locks to User: these optional joins
+        # otherwise make PostgreSQL reject FOR UPDATE on nullable join sides.
         return (
             User.objects.filter(
                 role__in=ACCOUNT_SUPPORT_ROLES,
@@ -133,7 +135,7 @@ class DILGAccountSupportViewSet(
     @transaction.atomic
     def partial_update(self, request, *args, **kwargs):
         target = get_object_or_404(
-            self.get_queryset().select_for_update(),
+            self.get_queryset().select_for_update(of=("self",)),
             pk=kwargs["pk"],
         )
         serializer = DILGAccountEmailCorrectionSerializer(
@@ -163,7 +165,10 @@ class DILGAccountSupportViewSet(
     @action(detail=True, methods=["post"], url_path="send-password-link")
     @transaction.atomic
     def send_password_link(self, request, pk=None):
-        target = get_object_or_404(self.get_queryset().select_for_update(), pk=pk)
+        target = get_object_or_404(
+            self.get_queryset().select_for_update(of=("self",)),
+            pk=pk,
+        )
         serializer = DILGAccountRecoveryLinkSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -199,7 +204,10 @@ class DILGAccountSupportViewSet(
         # administrators after each request observed the same pre-change count.
         if candidate.barangay_id is not None:
             get_object_or_404(Barangay.objects.select_for_update(), pk=candidate.barangay_id)
-        target = get_object_or_404(self.get_queryset().select_for_update(), pk=pk)
+        target = get_object_or_404(
+            self.get_queryset().select_for_update(of=("self",)),
+            pk=pk,
+        )
         serializer = DILGAccountActiveStateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         new_active_state = serializer.validated_data["is_active"]
