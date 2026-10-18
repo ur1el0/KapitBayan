@@ -23,6 +23,7 @@
 - `npm --prefix frontend run lint` — passed, exit 0.
 - `npm --prefix frontend run test -- --pool=threads` — **46 test files, 222 tests passed**, exit 0.
 - `npm --prefix frontend run build` — `tsc -b` and Vite production build passed; 2,523 modules transformed, exit 0.
+- GitHub Actions run `39139701710` on verification commit `d8c227e` reported **frontend-tests failed: 221/222 passed**. The sole failure was `PublicAnnouncements.test.tsx > focuses and scrolls to the announcement named by the share link`: the test asserted focus immediately after the article appeared, before React's passive effect applied focus. Added `waitFor` around the focus assertion. Reverification on the updated worktree: the focused file passed **6/6**, the full frontend suite passed **46 files / 222 tests**, lint passed, and the production build passed. A new remote run is pending the follow-up push.
 - `cd mobile && PUB_CACHE=/home/dokja/.pub-cache /home/dokja/development/flutter/bin/flutter pub get --offline` — dependencies resolved from cache; no dependency files changed.
 - `cd mobile && PUB_CACHE=/home/dokja/.pub-cache /home/dokja/development/flutter/bin/flutter analyze` — **No issues found**, exit 0.
 - `cd mobile && PUB_CACHE=/home/dokja/.pub-cache /home/dokja/development/flutter/bin/flutter test` — **157 tests passed**, exit 0. Tests emitted expected messages that Firebase push-notification listeners are unavailable in the local test environment.

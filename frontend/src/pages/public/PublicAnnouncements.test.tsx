@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { axiosPublic } from '../../api/axios';
@@ -156,7 +156,7 @@ describe('PublicAnnouncements', () => {
 
         const article = await screen.findByRole('article', { name: 'Water service interruption' });
         expect(article).toHaveAttribute('id', 'announcement-8');
-        expect(article).toHaveFocus();
+        await waitFor(() => expect(article).toHaveFocus());
         expect(scrollIntoView).toHaveBeenCalledWith({ block: 'start' });
     });
 
