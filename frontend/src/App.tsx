@@ -62,6 +62,9 @@ const ForgotPassword = lazy(() =>
 const ResetPassword = lazy(() =>
     import("./pages/auth/ResetPassword").then(({ ResetPassword }) => ({ default: ResetPassword })),
 );
+const SetPassword = lazy(() =>
+    import("./pages/auth/SetPassword").then(({ SetPassword }) => ({ default: SetPassword })),
+);
 const ResidentsHub = lazy(() =>
     import("./pages/community/ResidentsHub").then(({ ResidentsHub }) => ({ default: ResidentsHub })),
 );
@@ -149,6 +152,7 @@ export function App() {
                             <Route path="/register" element={<Register />} />
                             <Route path="/forgot-password" element={<ForgotPassword />} />
                             <Route path="/reset-password" element={<ResetPassword />} />
+                            <Route path="/set-password" element={<SetPassword />} />
                             <Route path="/public/queue/:barangayId" element={<PublicQueueDisplay />} />
                             <Route path="/public/announcements/:barangayId" element={<PublicAnnouncements />} />
                             <Route path="/notice/:id" element={<PublicNoticeRedirect />} />

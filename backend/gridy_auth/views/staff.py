@@ -150,7 +150,7 @@ class StaffManagementViewSet(
             uid = urlsafe_base64_encode(force_bytes(user.pk))
             token = default_token_generator.make_token(user)
             setup_link = (
-                f"{settings.FRONTEND_URL.rstrip('/')}/reset-password"
+                f"{settings.FRONTEND_URL.rstrip('/')}/set-password"
                 f"?uidb64={uid}&token={token}"
             )
             transaction.on_commit(
@@ -219,7 +219,7 @@ class StaffManagementViewSet(
             uid = urlsafe_base64_encode(force_bytes(user.pk))
             token = default_token_generator.make_token(user)
             setup_link = (
-                f"{settings.FRONTEND_URL.rstrip('/')}/reset-password"
+                f"{settings.FRONTEND_URL.rstrip('/')}/set-password"
                 f"?uidb64={uid}&token={token}"
             )
             transaction.on_commit(
