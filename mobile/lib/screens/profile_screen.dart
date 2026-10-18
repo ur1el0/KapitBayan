@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -5,6 +7,7 @@ import '../core/network/api_exception.dart';
 import '../core/theme/app_colors.dart';
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
+import '../services/push_notification_service.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/custom_text_field.dart';
 import '../widgets/kapitbayan_logo.dart';
@@ -16,11 +19,13 @@ import 'login_screen.dart';
 class ProfileScreen extends StatefulWidget {
   final UserModel user;
   final AuthService authService;
+  final PushNotificationService? pushNotificationService;
 
   const ProfileScreen({
     super.key,
     required this.user,
     required this.authService,
+    this.pushNotificationService,
   });
 
   @override
@@ -36,6 +41,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
   late TextEditingController _contactNumberController;
   DateTime? _birthDate;
   bool _voterStatus = false;
+  bool _isLoadingNotificationPreferences = true;
+  bool _isSavingNotificationPreference = false;
+  bool _notificationPreferencesFailed = false;
+  bool _emailAlerts = true;
+  bool _pushAlerts = false;
 
   late TextEditingController _philsysIdController;
   XFile? _newPhilsysPhoto;
@@ -81,6 +91,86 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _contactNumberController = TextEditingController();
     _philsysIdController = TextEditingController();
     _resetFieldsFromUser();
+    _loadNotificationPreferences();
+  }
+
+  Future<void> _loadNotificationPreferences() async {
+    try {
+      final response = await widget.authService.apiClient.get(
+        '/auth/me/',
+        requiresAuth: true,
+      );
+      if (response.statusCode != 200) {
+        throw Exception('Notification preferences are unavailable.');
+      }
+      final data = jsonDecode(utf8.decode(response.bodyBytes))
+          as Map<String, dynamic>;
+      if (!mounted) return;
+      setState(() {
+        _emailAlerts = data['email_alerts'] as bool? ?? true;
+        _pushAlerts = data['push_alerts'] as bool? ?? false;
+        _notificationPreferencesFailed = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _notificationPreferencesFailed = true);
+    } finally {
+      if (mounted) setState(() => _isLoadingNotificationPreferences = false);
+    }
+  }
+
+  Future<void> _updateNotificationPreference({
+    required bool push,
+    required bool enabled,
+  }) async {
+    if (push && enabled) {
+      final service = widget.pushNotificationService ??
+          PushNotificationService(apiClient: widget.authService.apiClient);
+      final registered = await service.requestPermissionAndRegisterDevice();
+      if (!registered) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Could not enable push alerts. Allow notifications and check your connection, then try again.',
+            ),
+          ),
+        );
+        return;
+      }
+    }
+
+    if (!mounted) return;
+    setState(() => _isSavingNotificationPreference = true);
+    try {
+      final field = push ? 'push_alerts' : 'email_alerts';
+      final response = await widget.authService.apiClient.patch(
+        '/auth/me/',
+        body: {field: enabled},
+        requiresAuth: true,
+      );
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw Exception('Notification preference update failed.');
+      }
+      if (!mounted) return;
+      setState(() {
+        if (push) {
+          _pushAlerts = enabled;
+        } else {
+          _emailAlerts = enabled;
+        }
+      });
+      if (push) {
+        widget.pushNotificationService?.setPushEnabled(enabled);
+      }
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not save notification preference.')),
+      );
+    } finally {
+      if (mounted) setState(() => _isSavingNotificationPreference = false);
+    }
   }
 
   void _resetFieldsFromUser() {
@@ -484,6 +574,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       relativeUrl: relativeUrl,
                     ),
                   ),
+                  _buildNotificationPreferences(),
                 ],
               ],
               const SizedBox(height: 36),
@@ -511,6 +602,95 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
               const SizedBox(height: 28),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNotificationPreferences() {
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: Material(
+        color: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: Color(0xFFE2E8F0)),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Padding(
+                padding: EdgeInsets.only(top: 6, bottom: 4),
+                child: Text(
+                  'Notification Preferences',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ),
+              const Text(
+                'Choose how you receive queue, document, and community updates.',
+                style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+              ),
+              if (_isLoadingNotificationPreferences)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 18),
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              else if (_notificationPreferencesFailed)
+                TextButton.icon(
+                  onPressed: _loadNotificationPreferences,
+                  icon: const Icon(Icons.refresh_rounded),
+                  label: const Text('Could not load preferences. Try again.'),
+                )
+              else ...[
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  value: _pushAlerts,
+                  activeThumbColor: AppColors.primaryNavy,
+                  title: const Text(
+                    'Push notifications',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  subtitle: const Text(
+                    'Receive queue calls and service updates on this device.',
+                  ),
+                  onChanged: _isSavingNotificationPreference
+                      ? null
+                      : (enabled) => _updateNotificationPreference(
+                          push: true,
+                          enabled: enabled,
+                        ),
+                ),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  value: _emailAlerts,
+                  activeThumbColor: AppColors.primaryNavy,
+                  title: const Text(
+                    'Email updates',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  subtitle: Text(
+                    _currentUser.email.isEmpty
+                        ? 'Add an email address to receive service updates.'
+                        : 'Send service updates to ${_currentUser.email}.',
+                  ),
+                  onChanged: _isSavingNotificationPreference ||
+                          _currentUser.email.isEmpty
+                      ? null
+                      : (enabled) => _updateNotificationPreference(
+                          push: false,
+                          enabled: enabled,
+                        ),
+                ),
+              ],
             ],
           ),
         ),

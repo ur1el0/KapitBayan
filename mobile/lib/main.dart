@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'core/theme/app_theme.dart';
+import 'core/navigation/app_navigation_keys.dart';
 import 'screens/login_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/admin_dashboard_screen.dart';
@@ -11,10 +12,8 @@ import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   final storage = await StorageService.init();
   final user = storage.getUser();
@@ -41,23 +40,20 @@ void main() async {
       statusBarIconBrightness: Brightness.dark,
     ),
   );
-  
-  runApp(KapitBayanApp(
-    home: initialScreen,
-  ));
+
+  runApp(KapitBayanApp(home: initialScreen));
 }
 
 class KapitBayanApp extends StatelessWidget {
   final Widget? home;
 
-  const KapitBayanApp({
-    super.key,
-    this.home,
-  });
+  const KapitBayanApp({super.key, this.home});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: appNavigatorKey,
+      scaffoldMessengerKey: appScaffoldMessengerKey,
       title: 'KapitBayan - Resident Portal',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,

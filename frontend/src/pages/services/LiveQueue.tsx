@@ -198,6 +198,28 @@ export const LiveQueue: React.FC = () => {
         }
     };
 
+    const handleNotifyResident = async () => {
+        if (!servingTicket) return;
+        setIsUpdating(true);
+        try {
+            const response = await axiosPrivate.post(
+                `/tickets/${servingTicket.ticket_id}/notify/`,
+            );
+            toast.success(
+                response.data.detail || 'Paging notification accepted for delivery.',
+            );
+        } catch (err) {
+            toast.error(
+                getSafeApiErrorMessage(
+                    err,
+                    'Could not page the resident. Please try again.',
+                ),
+            );
+        } finally {
+            setIsUpdating(false);
+        }
+    };
+
     // Handle Cancel Ticket
     const handleCancelTicket = async (ticketId: number) => {
         if (!window.confirm('Are you sure you want to cancel this ticket?')) return;
@@ -443,6 +465,7 @@ export const LiveQueue: React.FC = () => {
                 servingTicket={servingTicket}
                 onNextQueue={handleNextQueue}
                 onMarkAsDone={handleMarkAsDone}
+                onNotifyResident={handleNotifyResident}
             />
             
             {/* Bottom Section: Waiting List Table */}

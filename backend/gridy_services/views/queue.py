@@ -90,6 +90,78 @@ class QueueTicketViewSet(viewsets.ModelViewSet):
     def perform_update(self, serializer):
         serializer.save()
 
+    @staticmethod
+    def _has_notification_channel(user):
+        has_email = bool(user.email_alerts and user.email)
+        has_push = bool(user.push_alerts and user.fcm_devices.exists())
+        return has_email or has_push
+
+    @action(
+        detail=True,
+        methods=['post'],
+        permission_classes=[IsBarangayOfficialOrField],
+        url_path='notify',
+    )
+    def notify_resident(self, request, pk=None):
+        official = request.user
+        if official.barangay_id is None:
+            raise PermissionDenied(
+                "A barangay assignment is required to page a resident."
+            )
+
+        ticket = self.get_object()
+        if ticket.status != QueueTicket.Status.SERVING:
+            return Response(
+                {"detail": "Only the currently serving ticket can be paged."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if ticket.user_id is None:
+            return Response(
+                {"detail": "This ticket is not linked to a resident account."},
+                status=status.HTTP_409_CONFLICT,
+            )
+        if not self._has_notification_channel(ticket.user):
+            return Response(
+                {
+                    "detail": (
+                        "The resident has no enabled notification channel. Ask them "
+                        "to enable push notifications or email in their profile."
+                    )
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        ticket_id = ticket.pk
+        resident_id = ticket.user_id
+        ticket_number = ticket.ticket_number
+        log_action(
+            user=official,
+            action_type=AuditLog.ActionType.QUEUE_ACTION,
+            description=(
+                f"Paged the resident linked to ticket {ticket_number} "
+                f"(ID: {ticket_id})."
+            ),
+            request=request,
+        )
+        transaction.on_commit(
+            lambda: send_notification_to_user_task.delay(
+                user_id=resident_id,
+                title="Queue Paging Alert",
+                body=(
+                    f"Your ticket {ticket_number} is still being served. "
+                    "Please proceed to the service counter."
+                ),
+                data={"type": "queue", "ticket_id": str(ticket_id)},
+            )
+        )
+        return Response(
+            {
+                "detail": "Paging notification accepted for delivery.",
+                "ticket_number": ticket_number,
+            },
+            status=status.HTTP_202_ACCEPTED,
+        )
+
     @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated], url_path='cancel')
     def cancel_ticket(self, request, pk=None):
         user = request.user
@@ -394,7 +466,10 @@ class QueueTicketViewSet(viewsets.ModelViewSet):
                 request=request,
             )
 
-            if next_ticket.user_id is not None:
+            if (
+                next_ticket.user_id is not None
+                and self._has_notification_channel(next_ticket.user)
+            ):
                 user_id = next_ticket.user_id
                 ticket_id = next_ticket.id
                 ticket_number = next_ticket.ticket_number
@@ -406,7 +481,9 @@ class QueueTicketViewSet(viewsets.ModelViewSet):
                         body=(
                             f"Your ticket {ticket_number} is now being served!"
                         ),
-                        data={"ticket_id": str(ticket_id)},
+                        data={"type": "queue", "ticket_id": str(ticket_id)},
+                        # Typed payload lets the mobile client open the queue.
+                        # Keep ticket details out of the notification body.
                     )
                 )
 

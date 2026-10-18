@@ -29,7 +29,7 @@ def notify_issue_update(sender, instance, created, **kwargs):
         reporter_id = instance.reporter_id
         title = "Issue Report Update"
         body = f"Your issue report '{instance.title}' has been marked as {instance.get_status_display()}."
-        data = {"report_id": str(instance.pk)}
+        data = {"type": "issue", "report_id": str(instance.pk)}
         transaction.on_commit(
             lambda: send_notification_to_user_task.delay(
                 user_id=reporter_id,

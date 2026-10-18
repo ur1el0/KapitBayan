@@ -1,8 +1,11 @@
+import 'dart:async';
+
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/material.dart';
+
 import 'hotlines_screen.dart';
 import 'report_issue_screen.dart';
 import '../services/push_notification_service.dart';
-
-import 'package:flutter/material.dart';
 
 import '../core/network/api_client.dart';
 import '../core/theme/app_colors.dart';
@@ -41,6 +44,7 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   DashboardService? _dashboardService;
   AuthService? _authService;
+  PushNotificationService? _pushNotificationService;
   DashboardData _data = const DashboardData();
   bool _isLoading = true;
   final int _selectedNavIndex = 0;
@@ -84,11 +88,50 @@ class _DashboardScreenState extends State<DashboardScreen> {
       );
     }
 
-    // FIREBASE: Request permissions & register device token
-    final pushService = PushNotificationService(apiClient: apiClient);
-    pushService.initialize();
+    // Keep push listeners alive while the resident navigates through the app.
+    _pushNotificationService = PushNotificationService(apiClient: apiClient);
+    unawaited(
+      _pushNotificationService!.initialize(
+        onNotificationOpened: _openNotificationDestination,
+      ),
+    );
 
     await _loadDashboardData();
+  }
+
+  void _openNotificationDestination(RemoteMessage message) {
+    if (!mounted) return;
+
+    final data = message.data;
+    final type =
+        data['type']?.toString() ??
+        (data.containsKey('ticket_id')
+            ? 'queue'
+            : data.containsKey('request_id')
+            ? 'document'
+            : data.containsKey('report_id')
+            ? 'issue'
+            : data.containsKey('announcement_id')
+            ? 'announcement'
+            : '');
+    final Widget? destination = switch (type) {
+      'queue' => const QueueScreen(),
+      'document' => const DocumentsScreen(),
+      'issue' => const MyIssuesScreen(),
+      'announcement' => const AnnouncementsScreen(),
+      _ => null,
+    };
+    if (destination == null) return;
+
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute<void>(builder: (_) => destination));
+  }
+
+  @override
+  void dispose() {
+    unawaited(_pushNotificationService?.dispose());
+    super.dispose();
   }
 
   Future<void> _loadDashboardData() async {
@@ -160,6 +203,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           builder: (_) => ProfileScreen(
                             user: _data.user!,
                             authService: _authService!,
+                            pushNotificationService: _pushNotificationService,
                           ),
                         ),
                       );

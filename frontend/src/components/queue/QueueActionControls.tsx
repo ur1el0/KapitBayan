@@ -1,5 +1,4 @@
 import React from 'react';
-import toast from 'react-hot-toast';
 import { SkipForward, CheckCircle, Bell } from 'lucide-react';
 import type { QueueTicket } from './types';
 
@@ -9,6 +8,7 @@ interface QueueActionControlsProps {
     servingTicket: QueueTicket | null;
     onNextQueue: () => void;
     onMarkAsDone: () => void;
+    onNotifyResident: () => void;
 }
 
 export const QueueActionControls: React.FC<QueueActionControlsProps> = ({
@@ -17,6 +17,7 @@ export const QueueActionControls: React.FC<QueueActionControlsProps> = ({
     servingTicket,
     onNextQueue,
     onMarkAsDone,
+    onNotifyResident,
 }) => {
     return (
         <div className="flex items-center gap-4">
@@ -42,15 +43,11 @@ export const QueueActionControls: React.FC<QueueActionControlsProps> = ({
 
             {/* Notify / Recall Button */}
             <button
-                onClick={() => {
-                    if (servingTicket) {
-                        toast.success(`Paging ticket ${servingTicket.ticket_number}...`);
-                    }
-                }}
-                disabled={!servingTicket}
-                aria-label="Send notification alert"
+                onClick={onNotifyResident}
+                disabled={isUpdating || !servingTicket}
+                aria-label="Page resident"
                 className="flex-none bg-slate-100 hover:bg-slate-200 text-slate-700 py-3.5 px-5 rounded-2xl shadow-xs transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Send Notification Alert"
+                title="Page the resident linked to the serving ticket"
             >
                 <Bell className="w-5 h-5" />
             </button>
