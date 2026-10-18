@@ -50,6 +50,9 @@ Strict separation of configuration across environments:
 *   `EMAIL_HOST`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, & `DEFAULT_FROM_EMAIL`
 *   `VITE_API_BASE_URL` (leave unset or `/api/v1` for production same-origin builds; `http://127.0.0.1:8000/api/v1` for local development)
 *   `REFRESH_COOKIE_SAMESITE` (defaults to `Strict`)
+*   `BLOCKED_PRODUCTION_LOGIN_USERNAMES` (optional comma-separated exact usernames for test accounts that must not authenticate in production)
+
+Set the denylist only in the production service's private environment settings. Do not commit account names or passwords. Blocked identities cannot log in, refresh sessions, use existing JWT access tokens, or start Django-authenticated sessions; refresh sessions are revoked when a blocked identity next attempts refresh. The rule is disabled when `DEBUG=True`, so local fixtures continue to work. Keep intended production operator accounts out of the list.
 
 ### Runtime guarantees and scale-out gates
 

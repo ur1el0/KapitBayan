@@ -44,6 +44,107 @@ class AuthAPITests(IsolatedAuthAPITestCase):
         self.assertEqual(cookie['samesite'], 'Strict')
         self.assertEqual(cookie['path'], '/api/v1/auth/')
 
+    def test_production_login_blocks_configured_username_and_email_identifier(self):
+        with self.settings(
+            DEBUG=False,
+            BLOCKED_PRODUCTION_LOGIN_USERNAMES={self.username.upper()},
+        ):
+            for identifier in (self.username, self.user.email):
+                response = self.client.post(
+                    reverse('auth_login'),
+                    {"username": identifier, "password": self.password},
+                    format='json',
+                )
+                self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+        self.assertFalse(
+            RefreshSession.objects.filter(user=self.user, is_revoked=False).exists()
+        )
+
+    def test_production_login_blocks_reserved_demo_email_domain(self):
+        self.user.email = "seeded@gridy.local"
+        self.user.save(update_fields=["email"])
+
+        with self.settings(DEBUG=False, BLOCKED_PRODUCTION_LOGIN_USERNAMES=()):
+            response = self.client.post(
+                reverse('auth_login'),
+                {"username": self.username, "password": self.password},
+                format='json',
+            )
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_production_login_allows_user_not_in_test_account_blocklist(self):
+        with self.settings(
+            DEBUG=False,
+            BLOCKED_PRODUCTION_LOGIN_USERNAMES={"another_test_user"},
+        ):
+            response = self.client.post(
+                reverse('auth_login'),
+                {"username": self.username, "password": self.password},
+                format='json',
+            )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_production_blocked_account_cannot_refresh_or_use_existing_access_token(self):
+        login_response = self.client.post(
+            reverse('auth_login'),
+            {"username": self.username, "password": self.password},
+            format='json',
+        )
+        self.assertEqual(login_response.status_code, status.HTTP_200_OK)
+        access_token = login_response.data["access"]
+        refresh_token = login_response.cookies["refresh_token"].value
+
+        with self.settings(
+            DEBUG=False,
+            BLOCKED_PRODUCTION_LOGIN_USERNAMES={self.username},
+        ):
+            self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {access_token}")
+            protected_response = self.client.get(reverse("auth_me"))
+            self.assertEqual(
+                protected_response.status_code,
+                status.HTTP_401_UNAUTHORIZED,
+            )
+
+            self.client.credentials()
+            refresh_response = self.client.post(
+                reverse("auth_token_refresh"),
+                {"refresh": refresh_token},
+                format="json",
+            )
+            self.assertEqual(
+                refresh_response.status_code,
+                status.HTTP_401_UNAUTHORIZED,
+            )
+
+        self.assertFalse(
+            RefreshSession.objects.filter(user=self.user, is_revoked=False).exists()
+        )
+
+    def test_production_blocked_account_cannot_start_django_session(self):
+        with self.settings(
+            DEBUG=False,
+            BLOCKED_PRODUCTION_LOGIN_USERNAMES={self.username},
+        ):
+            self.assertFalse(
+                self.client.login(username=self.username, password=self.password)
+            )
+
+    def test_local_debug_mode_allows_configured_demo_account(self):
+        with self.settings(
+            DEBUG=True,
+            BLOCKED_PRODUCTION_LOGIN_USERNAMES={self.username},
+        ):
+            response = self.client.post(
+                reverse('auth_login'),
+                {"username": self.username, "password": self.password},
+                format='json',
+            )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
     def test_password_reset_revokes_all_existing_refresh_sessions(self):
         login_url = reverse("auth_login")
         login_payload = {

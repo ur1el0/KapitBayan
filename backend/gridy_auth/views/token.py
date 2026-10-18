@@ -10,6 +10,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from gridy_audit.services import get_client_ip
+from gridy_auth.authentication import is_production_test_account
 from gridy_auth.models import RefreshSession, User
 from gridy_auth.serializers import CustomTokenObtainPairSerializer
 
@@ -115,6 +116,16 @@ class CustomTokenRefreshView(TokenRefreshView):
         except Exception:
             return Response(
                 {"detail": "Invalid token details."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        if is_production_test_account(session.user):
+            RefreshSession.objects.filter(
+                user=session.user,
+                is_revoked=False,
+            ).update(is_revoked=True)
+            return Response(
+                {"detail": "Session is revoked or invalid."},
                 status=status.HTTP_401_UNAUTHORIZED,
             )
 
