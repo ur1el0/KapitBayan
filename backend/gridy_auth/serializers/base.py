@@ -202,7 +202,10 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'role', 'barangay', 'profile', 'full_name']
+        fields = [
+            'id', 'username', 'email', 'role', 'barangay', 'profile', 'full_name',
+            'email_alerts', 'push_alerts',
+        ]
         read_only_fields = ['role', 'barangay', 'full_name']
 
     def __init__(self, *args, **kwargs):

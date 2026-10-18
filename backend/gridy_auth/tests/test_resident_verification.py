@@ -62,6 +62,26 @@ class ResidentProfileAPITests(IsolatedAuthAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['username'], self.username)
 
+    def test_notification_preferences_are_returned_and_updated_for_self(self):
+        self.client.force_authenticate(user=self.user)
+
+        profile_response = self.client.get("/api/v1/auth/me/")
+
+        self.assertEqual(profile_response.status_code, status.HTTP_200_OK)
+        self.assertTrue(profile_response.data["email_alerts"])
+        self.assertFalse(profile_response.data["push_alerts"])
+
+        update_response = self.client.patch(
+            "/api/v1/auth/me/",
+            {"email_alerts": False, "push_alerts": True},
+            format="json",
+        )
+
+        self.assertEqual(update_response.status_code, status.HTTP_200_OK)
+        self.user.refresh_from_db()
+        self.assertFalse(self.user.email_alerts)
+        self.assertTrue(self.user.push_alerts)
+
     def test_self_deletion_preserves_audit_event_without_actor(self):
         user_id = self.user.pk
         self.client.force_authenticate(user=self.user)

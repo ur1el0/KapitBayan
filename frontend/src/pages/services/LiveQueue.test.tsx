@@ -285,6 +285,20 @@ describe('LiveQueue Component', () => {
         });
     });
 
+    it('pages the resident linked to the serving ticket through the API', async () => {
+        vi.mocked(axiosPrivate.post).mockResolvedValueOnce({
+            data: { detail: 'Paging notification accepted for delivery.' },
+        } as never);
+        renderQueue();
+
+        await screen.findByText('Q-002');
+        fireEvent.click(screen.getByRole('button', { name: 'Page resident' }));
+
+        await waitFor(() => {
+            expect(axiosPrivate.post).toHaveBeenCalledWith('/tickets/2/notify/');
+        });
+    });
+
     it('opens queue history, deletes a ticket, and closes the modal', async () => {
         vi.spyOn(window, 'confirm').mockReturnValue(true);
         vi.mocked(axiosPrivate.delete).mockResolvedValueOnce({ data: {} } as never);

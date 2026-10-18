@@ -149,7 +149,7 @@ class IssueReportAPITests(APITestCase):
             user_id=resident.id,
             title="Issue Report Update",
             body="Your issue report 'Blocked sidewalk' has been marked as In Progress.",
-            data={"report_id": str(report.id)},
+            data={"type": "issue", "report_id": str(report.id)},
         )
 
     def test_resident_cannot_update_report_urgency(self):

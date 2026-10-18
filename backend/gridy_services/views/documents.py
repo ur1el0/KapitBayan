@@ -437,7 +437,10 @@ class DocumentRequestViewSet(viewsets.ModelViewSet):
                     f"Your request for {document_request.document_type} is now "
                     f"{document_request.get_status_display()}."
                 ),
-                data={"request_id": str(document_request.id)},
+                data={
+                    "type": "document",
+                    "request_id": str(document_request.id),
+                },
             )
 
         return Response(

@@ -25,7 +25,7 @@ from gridy_communications.serializers import (
     FAQSerializer,
     AdminNotificationSerializer,
 )
-from gridy_communications.tasks import async_send_fcm_topic_notification
+from gridy_communications.tasks import send_announcement_notification_task
 
 logger = logging.getLogger(__name__)
 
@@ -125,12 +125,12 @@ class AnnouncementViewSet(viewsets.ModelViewSet):
             raise PermissionDenied("A barangay assignment is required to publish announcements.")
         instance = serializer.save(created_by=user)
         try:
-            # The task wrapper's .delay() starts best-effort background thread delivery.
-            async_send_fcm_topic_notification.delay(
-                topic="announcements",
-                title="New Announcement",
-                body=instance.title,
-                data={"announcement_id": str(instance.id)}
+            # A global topic could reach residents in unrelated barangays. Fan out
+            # only to opted-in residents belonging to this announcement's tenant.
+            send_announcement_notification_task.delay(
+                barangay_id=user.barangay_id,
+                announcement_id=instance.id,
+                title=instance.title,
             )
         except Exception as e:
             logger.error(
