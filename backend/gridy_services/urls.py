@@ -8,7 +8,6 @@ from .views import (
     PublicQueueStatusView,
     PaymentRecipientViewSet,
 )
-from .analytics import DILGAnalyticsView
 
 router = DefaultRouter()
 router.register(r'document-requests', DocumentRequestViewSet, basename='document-request')
@@ -25,5 +24,4 @@ urlpatterns = [
     path('', include(router.urls)),
     path('public/barangays/<int:barangay_id>/queue-status/', PublicQueueStatusView.as_view(), name='public-queue-status'),
     path('dashboard/summary/', DashboardSummaryView.as_view(), name='dashboard-summary'),
-    path('dilg-analytics/', DILGAnalyticsView.as_view(), name='dilg-analytics'),
 ]

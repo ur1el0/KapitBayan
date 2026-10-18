@@ -1,6 +1,6 @@
 # KapitBayan system demo flow
 
-**Audience:** Barangay and DILG stakeholders, advisers, and pilot testers
+**Audience:** Barangay stakeholders, advisers, and pilot testers
 
 **Suggested duration:** 18–22 minutes
 **Companion:** [Printable PDF](system-demo-flow.pdf)
@@ -12,7 +12,7 @@ This guide gives a role-by-role route through the web and mobile system, then sh
 ## Before the demo
 
 - Confirm the site, API, and mobile APK point to the intended environment and recent release.
-- Prepare separate DILG, barangay-admin, resident, and field-official demo accounts. Use synthetic residents and service records.
+- Prepare separate barangay-admin, resident, and field-official demo accounts. Use synthetic residents and service records. Keep any superuser recovery demonstration in a separate operator-only session.
 - Keep the resident app signed in on the phone. Pre-grant notification permission only if you plan to demonstrate a real push alert.
 - Verify a controlled test email address and the Brevo sender before demonstrating password recovery.
 - Open a second browser profile for role switching. Keep passwords, reset links, resident identity documents, and provider secrets off screen.
@@ -23,7 +23,7 @@ This guide gives a role-by-role route through the web and mobile system, then sh
 | Time | Role and area | Show |
 | --- | --- | --- |
 | 1 min | Opening | Purpose, roles, and the path through the system |
-| 2 min | DILG administrator | Barangay onboarding, account support, and cross-barangay analytics |
+| 2 min | Barangay administrator | Tenant-scoped account support and initial service overview |
 | 5 min | Barangay administrator | Resident verification, documents and payments, queue, communications, and notifications |
 | 4 min | Resident web | Registration status, self-service requests, bulletin, help, and profile settings |
 | 4 min | Resident mobile | Queue, documents, schedules, help, and notification center |
@@ -32,19 +32,17 @@ This guide gives a role-by-role route through the web and mobile system, then sh
 
 ## 1. Open with the system path
 
-Say: “KapitBayan connects resident self-service with barangay processing and DILG oversight. The React web app and Flutter mobile app use the Django API. PostgreSQL stores service records; Cloudinary stores configured media; Brevo sends transactional email; Firebase Cloud Messaging can send mobile push alerts.”
+Say: “KapitBayan connects resident self-service with barangay processing. The React web app and Flutter mobile app use the Django API. PostgreSQL stores service records; Cloudinary stores configured media; Brevo sends transactional email; Firebase Cloud Messaging can send mobile push alerts.”
 
 Show the path:
 
-**DILG oversight → barangay processing → resident web/mobile → notification and recovery fallbacks**
+**Barangay processing → resident web/mobile → notification and recovery fallbacks**
 
 State that eligibility, document approval, payment verification, and service decisions remain with authorized staff. Electronic payment references are evidence for manual review; the system does not process payments through a gateway. The mobile app requires a network connection for server-backed workflows and is not fully offline.
 
-## 2. DILG administrator
+## 2. Operator account recovery (optional; outside the barangay user workflow)
 
-1. Open **Barangay Applications**. Review an application and show the approval/rejection workflow that establishes the barangay and its initial staff account.
-2. Open **Account Support**. Show the bounded account lookup and explain that recovery links require an independently verified account holder and destination address. Support actions are audited; this is not unrestricted account deletion or password viewing.
-3. Open **Global Analytics** and explain that the DILG view summarizes participating barangay data across tenants.
+KapitBayan does not expose a government-wide oversight dashboard or public Barangay onboarding workflow. Initial tenant and first-administrator setup is performed by an authorized deployment operator. If account recovery must be demonstrated, a Django superuser may use the isolated **Platform Account Support** page to find an eligible account, attest that contact was independently verified, and request a private recovery link. The tool cannot change account roles or Barangay assignments, create/delete accounts, or reveal passwords.
 
 Do not alter a real deployed account or send a recovery email during the demo unless the account owner has asked for it.
 
@@ -83,14 +81,14 @@ Sign in with the field-official account and show the available tabs:
 - **Clearance validator:** Enter a tracking ID and inspect the returned clearance status.
 - **Field reports:** Review barangay incident reports and record the supported field update.
 
-Explain that field staff have limited permissions scoped by their barangay. Do not use the DILG or barangay-admin account to represent a field role.
+Explain that field staff have limited permissions scoped by their barangay. Do not use the platform-operator or barangay-admin account to represent a field role.
 
 ## 7. Password reset and email fallback
 
 1. Use **Forgot password** with a test email associated with exactly one account record.
 2. Explain that the page intentionally gives a generic success response to avoid revealing whether an email is registered. That response does not confirm that Brevo received or delivered a message.
 3. Check the recipient's Inbox and Spam folder. If the message does not arrive, inspect Render application logs and Brevo **Transactional → Email logs**.
-4. If the address is wrong or recovery still fails, an authorized DILG operator can verify the account holder and request a private setup/reset link through Account Support. The resident must never share the link or password.
+4. If the address is wrong or recovery still fails, an authorized platform operator can verify the account holder and request a private setup/reset link through Platform Account Support. The resident must never share the link or password.
 
 The current endpoint may suppress dispatch when the submitted address matches zero or multiple user records. Use a unique test address for the live demonstration. Password-reset requests can also be rate limited; if the API returns HTTP 429, wait before retrying. The notification email preference does not turn password-reset messages on or off.
 

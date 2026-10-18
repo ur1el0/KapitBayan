@@ -47,7 +47,7 @@ Use this page to find current system guidance. Source code, migrations, generate
 
 ## Domain and architecture guidance
 
-This repository uses barangay, resident, field official, DILG administrator, walk-in request, fee assessment, waiver, and Official Receipt as domain terms. Before changing a workflow, inspect its models, serializers, permissions, tests, and relevant ADRs. Preserve tenant scoping and distinguish staff review from automated decisions. Do not describe public information as private evidence or treat a payment reference as proof of settlement.
+This repository uses barangay, resident, field official, walk-in request, fee assessment, waiver, and Official Receipt as domain terms. Historical migrations and ADRs retain the terminology used when they were written; it does not imply an active government-wide product role. Before changing a workflow, inspect its models, serializers, permissions, tests, and current ADRs. Preserve tenant scoping and distinguish staff review from automated decisions. Do not describe public information as private evidence or treat a payment reference as proof of settlement.
 
 ADRs are stored under `architecture/decisions/`. Read the relevant accepted decision before changing a domain boundary. If implementation and an ADR disagree, record the discrepancy and propose a reviewed decision update; do not silently rewrite the architecture in code or docs.
 

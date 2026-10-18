@@ -76,9 +76,6 @@ class DocumentRequestViewSet(viewsets.ModelViewSet):
                 )
             ).order_by('-created_at')
 
-        if user.role == User.Role.DILG_ADMIN:
-            return DocumentRequest.objects.all().order_by('-created_at')
-
         # Residents see only their own requests
         return DocumentRequest.objects.filter(user=user).order_by('-created_at')
 

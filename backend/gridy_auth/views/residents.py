@@ -216,8 +216,6 @@ class PendingResidentsView(ListAPIView):
 
     def get_queryset(self):
         user = self.request.user
-        if user.role == User.Role.DILG_ADMIN:
-            return Resident.objects.filter(is_verified=False)
         return Resident.objects.filter(is_verified=False, user__barangay=user.barangay)
 
 
@@ -331,6 +329,4 @@ class ResidentViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        if user.role == User.Role.DILG_ADMIN:
-            return Resident.objects.filter(is_verified=True).select_related('user').order_by('full_name')
         return Resident.objects.filter(is_verified=True, user__barangay=user.barangay).select_related('user').order_by('full_name')

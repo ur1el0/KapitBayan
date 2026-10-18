@@ -8,7 +8,7 @@ All application API routes are mounted below `/api/v1/` unless noted.
 
 | Prefix or route | Owner | Purpose |
 |---|---|---|
-| `/auth/` | `gridy_auth` | Registration, login, refresh, logout, profile, resident verification/import, barangay directory and onboarding, sessions, and barangay-scoped Field Official management |
+| `/auth/` | `gridy_auth` | Resident registration, login, refresh, logout, profile, resident verification/import, public barangay directory, sessions, barangay-scoped Field Official management, and superuser-only platform account support |
 | `/document-requests/` | `gridy_services` | Digital and walk-in document request lifecycle, fee assessment, payment evidence, receipt and PDF operations |
 | `/tickets/` | `gridy_services` | Ticket creation, resident status, staff queue operations, and live desk status |
 | `/aid-requests/` | `gridy_services` | Assistance request submission and authorized review |
@@ -16,7 +16,7 @@ All application API routes are mounted below `/api/v1/` unless noted.
 | `/reports/` | `gridy_reports` | Resident issue submission and staff triage |
 | `/announcements/`, `/activities/`, `/faqs/`, `/hotlines/`, `/devices/`, `/admin-notifications/` | `gridy_communications` | Communications, public information, device registration, and notification administration |
 | `/public/barangays/<id>/queue-status/` | `gridy_services` | Public queue display data |
-| `/dashboard/summary/`, `/dilg-analytics/` | `gridy_services` | Role- and tenant-scoped reporting |
+| `/dashboard/summary/` | `gridy_services` | Barangay- and role-scoped reporting |
 | `/health/live/`, `/health/ready/` | `config` | Liveness and dependency readiness checks |
 
 The current payment-proof view is mounted at `/api/v1/document-requests/<pk>/payment-proof/`; a compatibility alias is `/api/v1/documents/<pk>/payment-proof/`. Both paths must preserve the same authentication, ownership/tenant policy, and private response headers.

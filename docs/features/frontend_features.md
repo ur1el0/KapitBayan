@@ -4,7 +4,7 @@ The web client is a React, TypeScript, and Vite application. Routes are defined 
 
 ## Authentication and route access
 
-Resident self-service routes use the resident layout and `RESIDENT` guard. Staff routes use the administrative layout with explicit `ADMIN`/`DILG_ADMIN` guards and narrower guards for sensitive actions. The current router has no hidden keyboard role-switch shortcut. Field officials use the mobile client in the current route design. These client checks complement backend permissions; they do not replace them.
+Resident self-service routes use the resident layout and `RESIDENT` guard. Staff routes use the administrative layout with the `ADMIN` guard and narrower guards for sensitive actions. The separate `/platform/accounts` route requires the superuser flag and does not use the barangay staff layout. The current router has no hidden keyboard role-switch shortcut. Field officials use the mobile client in the current route design. These client checks complement backend permissions; they do not replace them.
 
 ## Staff capabilities
 

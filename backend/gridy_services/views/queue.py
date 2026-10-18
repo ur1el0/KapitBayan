@@ -42,9 +42,6 @@ class QueueTicketViewSet(viewsets.ModelViewSet):
         if user.role in [User.Role.ADMIN, User.Role.FIELD_OFFICIAL]:
             return QueueTicket.objects.filter(barangay=user.barangay).order_by('-created_at')
 
-        if user.role == User.Role.DILG_ADMIN:
-            return QueueTicket.objects.all().order_by('-created_at')
-
         return QueueTicket.objects.filter(user=user).order_by('-created_at')
 
     def perform_create(self, serializer):

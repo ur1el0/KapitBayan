@@ -199,11 +199,12 @@ class UserSerializer(serializers.ModelSerializer):
     profile = ResidentSerializer(required=False)
     barangay = BarangaySerializer(read_only=True)
     full_name = serializers.SerializerMethodField()
+    is_superuser = serializers.BooleanField(read_only=True)
 
     class Meta:
         model = User
         fields = [
-            'id', 'username', 'email', 'role', 'barangay', 'profile', 'full_name',
+            'id', 'username', 'email', 'role', 'barangay', 'profile', 'full_name', 'is_superuser',
             'email_alerts', 'push_alerts',
         ]
         read_only_fields = ['role', 'barangay', 'full_name']

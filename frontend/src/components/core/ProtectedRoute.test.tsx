@@ -49,7 +49,7 @@ describe('ProtectedRoute', () => {
         render(
             <MemoryRouter initialEntries={['/dashboard']}>
                 <Routes>
-                    <Route element={<ProtectedRoute allowedRoles={['ADMIN', 'DILG_ADMIN']} />}>
+                    <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
                         <Route path="/dashboard" element={<p>Admin dashboard</p>} />
                     </Route>
                     <Route path="/field-official-mobile" element={<p>Open KapitBayan on mobile</p>} />
@@ -59,5 +59,33 @@ describe('ProtectedRoute', () => {
 
         expect(await screen.findByText('Open KapitBayan on mobile')).toBeInTheDocument();
         expect(screen.queryByText('Admin dashboard')).not.toBeInTheDocument();
+    });
+
+    it('keeps platform superusers out of resident and barangay workspaces', async () => {
+        vi.mocked(useAuth).mockReturnValue({
+            user: { role: 'RESIDENT', is_superuser: true },
+            isAuthenticated: true,
+            isAuthReady: true,
+            login: vi.fn(),
+            logout: vi.fn(),
+            updateBarangayPrimaryColor: vi.fn(),
+        } as never);
+
+        render(
+            <MemoryRouter initialEntries={['/portal']}>
+                <Routes>
+                    <Route path="/" element={<p>Home</p>} />
+                    <Route element={<ProtectedRoute allowedRoles={['RESIDENT']} />}>
+                        <Route path="/portal" element={<p>Resident portal</p>} />
+                    </Route>
+                    <Route element={<ProtectedRoute requireSuperuser />}>
+                        <Route path="/platform/accounts" element={<p>Platform account support</p>} />
+                    </Route>
+                </Routes>
+            </MemoryRouter>,
+        );
+
+        expect(await screen.findByText('Platform account support')).toBeInTheDocument();
+        expect(screen.queryByText('Resident portal')).not.toBeInTheDocument();
     });
 });

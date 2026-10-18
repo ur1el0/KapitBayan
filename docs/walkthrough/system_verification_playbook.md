@@ -15,7 +15,7 @@ Use this checklist in a local or disposable test environment. Do not use real re
 
 1. Use synthetic accounts with known barangay assignments and role scope.
 2. Verify an authorized staff member can review only the intended barangay's records.
-3. Test cross-tenant object IDs, unassigned staff, residents, and DILG accounts against endpoint-specific authorization rules.
+3. Test cross-tenant object IDs, unassigned staff, residents, and legacy/unknown role accounts against endpoint-specific authorization rules.
 4. Record an explicit fee assessment or waiver, manually verify electronic payment against a test transaction, record the O.R., and verify the server-side release gate.
 5. Verify walk-in records keep barangay and treasury history without requiring a synthetic login account.
 

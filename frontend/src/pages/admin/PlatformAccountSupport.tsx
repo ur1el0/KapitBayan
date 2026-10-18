@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
-import { AlertTriangle, KeyRound, Search, ShieldCheck, UserRoundCog } from 'lucide-react';
+import { AlertTriangle, KeyRound, LogOut, Search, ShieldCheck, UserRoundCog } from 'lucide-react';
 import { InlineErrorState } from '../../components/ui/InlineErrorState';
+import { useAuth } from '../../context/auth-context';
 import {
-    correctDILGAccountEmail,
-    fetchDILGAccounts,
-    sendDILGAccountRecoveryLink,
-    setDILGAccountActive,
+    correctPlatformAccountEmail,
+    fetchPlatformAccounts,
+    sendPlatformAccountRecoveryLink,
+    setPlatformAccountActive,
     type AccountSupportReason,
-    type DILGAccount,
-} from '../../api/dilgAccountSupport';
+    type PlatformAccount,
+} from '../../api/platformAccountSupport';
 
 const PAGE_SIZE = 50;
 const REASONS: { value: AccountSupportReason; label: string }[] = [
@@ -33,7 +34,7 @@ function apiErrorMessage(error: unknown, fallback: string) {
     return fallback;
 }
 
-function barangayLabel(account: DILGAccount) {
+function barangayLabel(account: PlatformAccount) {
     if (account.barangay_id === null) return 'Unassigned account';
     const parts = [account.barangay_name, account.barangay_municipality, account.barangay_province]
         .filter((part): part is string => Boolean(part));
@@ -64,12 +65,13 @@ function ReasonSelect({
     );
 }
 
-export function DILGAccountSupport() {
-    const [accounts, setAccounts] = useState<DILGAccount[]>([]);
+export function PlatformAccountSupport() {
+    const { logout } = useAuth();
+    const [accounts, setAccounts] = useState<PlatformAccount[]>([]);
     const [count, setCount] = useState(0);
     const [searchDraft, setSearchDraft] = useState('');
     const [search, setSearch] = useState('');
-    const [role, setRole] = useState<DILGAccount['role'] | ''>('');
+    const [role, setRole] = useState<PlatformAccount['role'] | ''>('');
     const [activeFilter, setActiveFilter] = useState<'all' | 'active' | 'inactive'>('all');
     const [page, setPage] = useState(1);
     const [loading, setLoading] = useState(true);
@@ -88,7 +90,7 @@ export function DILGAccountSupport() {
         if (isRetry) setRetrying(true);
         else setLoading(true);
         try {
-            const result = await fetchDILGAccounts({
+            const result = await fetchPlatformAccounts({
                 search,
                 role,
                 active: activeFilter === 'all' ? undefined : activeFilter === 'active',
@@ -119,7 +121,7 @@ export function DILGAccountSupport() {
         setSearch(normalized);
     };
 
-    const selectAccount = (account: DILGAccount) => {
+    const selectAccount = (account: PlatformAccount) => {
         setSelectedId((current) => current === account.id ? null : account.id);
         setEmailDraft(account.email);
         setEmailVerified(false);
@@ -127,17 +129,17 @@ export function DILGAccountSupport() {
         setMessage(null);
     };
 
-    const updateAccount = (account: DILGAccount) => {
+    const updateAccount = (account: PlatformAccount) => {
         setAccounts((current) => current.map((item) => item.id === account.id ? account : item));
     };
 
-    const submitEmailCorrection = async (event: FormEvent<HTMLFormElement>, account: DILGAccount) => {
+    const submitEmailCorrection = async (event: FormEvent<HTMLFormElement>, account: PlatformAccount) => {
         event.preventDefault();
         if (!emailVerified) return;
         setBusyAction(`email-${account.id}`);
         setMessage(null);
         try {
-            const updated = await correctDILGAccountEmail(account.id, {
+            const updated = await correctPlatformAccountEmail(account.id, {
                 email: emailDraft.trim().toLowerCase(),
                 contact_verified: true,
                 reason: emailReason,
@@ -151,12 +153,12 @@ export function DILGAccountSupport() {
         }
     };
 
-    const resendRecoveryLink = async (account: DILGAccount) => {
+    const resendRecoveryLink = async (account: PlatformAccount) => {
         if (!emailVerified) return;
         setBusyAction(`link-${account.id}`);
         setMessage(null);
         try {
-            await sendDILGAccountRecoveryLink(account.id, {
+            await sendPlatformAccountRecoveryLink(account.id, {
                 contact_verified: true,
                 reason: emailReason,
             });
@@ -168,12 +170,12 @@ export function DILGAccountSupport() {
         }
     };
 
-    const changeActiveState = async (account: DILGAccount) => {
+    const changeActiveState = async (account: PlatformAccount) => {
         if (!statusConfirmed) return;
         setBusyAction(`status-${account.id}`);
         setMessage(null);
         try {
-            const updated = await setDILGAccountActive(account.id, {
+            const updated = await setPlatformAccountActive(account.id, {
                 is_active: !account.is_active,
                 reason: statusReason,
             });
@@ -196,8 +198,9 @@ export function DILGAccountSupport() {
 
     return (
         <main className="mx-auto max-w-7xl space-y-6 p-4 sm:p-8">
-            <header>
-                <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary-text">DILG administration</p>
+            <header className="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary-text">Platform operations</p>
                 <h1 className="mt-1 flex items-center gap-3 text-2xl font-extrabold text-slate-900 sm:text-3xl">
                     <UserRoundCog className="h-7 w-7 text-primary-text" aria-hidden="true" />
                     Account support
@@ -205,6 +208,15 @@ export function DILGAccountSupport() {
                 <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
                     Find barangay accounts, including legacy unassigned accounts, correct a verified contact address, send a private setup/reset link, or suspend access. These actions are audited.
                 </p>
+                </div>
+                <button
+                    type="button"
+                    onClick={() => void logout()}
+                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                >
+                    <LogOut className="h-4 w-4" aria-hidden="true" />
+                    Log out
+                </button>
             </header>
 
             <aside className="flex gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
@@ -224,7 +236,7 @@ export function DILGAccountSupport() {
                 </div>
                 <div>
                     <label htmlFor="account-role" className="block text-sm font-semibold text-slate-700">Role</label>
-                    <select id="account-role" value={role} onChange={(event) => { setRole(event.target.value as DILGAccount['role'] | ''); setPage(1); }} className="mt-1 min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary md:text-sm">
+                    <select id="account-role" value={role} onChange={(event) => { setRole(event.target.value as PlatformAccount['role'] | ''); setPage(1); }} className="mt-1 min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary md:text-sm">
                         <option value="">All barangay roles</option>
                         <option value="RESIDENT">Resident</option>
                         <option value="FIELD_OFFICIAL">Field Official</option>

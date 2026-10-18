@@ -1,5 +1,4 @@
 import logging
-from django.db.models import Q
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -77,9 +76,6 @@ class ActivityScheduleViewSet(viewsets.ModelViewSet):
         if not user or not user.is_authenticated:
             return ActivitySchedule.objects.none()
             
-        if user.role == User.Role.DILG_ADMIN:
-            return ActivitySchedule.objects.all().order_by('event_datetime', 'created_at')
-
         if not user.barangay_id:
             return ActivitySchedule.objects.none()
             
@@ -108,9 +104,6 @@ class AnnouncementViewSet(viewsets.ModelViewSet):
         if not user or not user.is_authenticated:
             return Announcement.objects.none()
             
-        if user.role == User.Role.DILG_ADMIN:
-            return Announcement.objects.all().order_by('-is_pinned', '-created_at')
-
         if not user.barangay_id:
             return Announcement.objects.none()
             
@@ -175,9 +168,6 @@ class EmergencyHotlineViewSet(viewsets.ModelViewSet):
         if not user or not user.is_authenticated:
             return EmergencyHotline.objects.none()
         
-        if user.role == User.Role.DILG_ADMIN:
-            return EmergencyHotline.objects.all()
-
         if not user.barangay_id:
             return EmergencyHotline.objects.none()
         
@@ -204,17 +194,15 @@ class EmergencyHotlineViewSet(viewsets.ModelViewSet):
         serializer.save(created_by=user)
 
 class FAQManagerPermission(permissions.BasePermission):
-    """Barangay admins manage local resident FAQs; DILG manages global FAQs."""
+    """Only assigned Barangay Admins manage local resident FAQs."""
 
     def has_permission(self, request, view):
         user = request.user
         return bool(
             user
             and user.is_authenticated
-            and (
-                user.role == User.Role.DILG_ADMIN
-                or (user.role == User.Role.ADMIN and user.barangay_id)
-            )
+            and user.role == User.Role.ADMIN
+            and user.barangay_id
         )
 
 
@@ -226,37 +214,24 @@ class FAQViewSet(viewsets.ModelViewSet):
         if not user or not user.is_authenticated:
             return FAQ.objects.none()
 
-        faqs = FAQ.objects.select_related('barangay').all()
-        if user.role == User.Role.DILG_ADMIN:
-            return faqs.filter(barangay__isnull=True)
-
-        in_scope = Q(barangay__isnull=True)
-        if user.barangay_id:
-            in_scope |= Q(barangay_id=user.barangay_id)
+        if not user.barangay_id:
+            return FAQ.objects.none()
+        faqs = FAQ.objects.select_related('barangay').filter(barangay_id=user.barangay_id)
 
         if user.role == User.Role.RESIDENT:
             return faqs.filter(
                 audience=FAQ.Audience.RESIDENT,
                 is_published=True,
-            ).filter(in_scope)
+            )
 
         if user.role == User.Role.ADMIN:
-            local_resident_faqs = Q(
-                barangay_id=user.barangay_id,
-                audience=FAQ.Audience.RESIDENT,
-            ) if user.barangay_id else Q(pk__in=[])
-            published_global_faqs = Q(
-                barangay__isnull=True,
-                audience=FAQ.Audience.RESIDENT,
-                is_published=True,
-            )
-            return faqs.filter(local_resident_faqs | published_global_faqs)
+            return faqs.filter(audience=FAQ.Audience.RESIDENT)
 
         if user.role == User.Role.FIELD_OFFICIAL:
             return faqs.filter(
                 audience=FAQ.Audience.STAFF,
                 is_published=True,
-            ).filter(in_scope)
+            )
 
         return FAQ.objects.none()
 
@@ -275,9 +250,6 @@ class FAQViewSet(viewsets.ModelViewSet):
                 raise PermissionDenied("Barangay admins can create resident FAQs only.")
             serializer.save(barangay_id=user.barangay_id, audience=FAQ.Audience.RESIDENT)
             return
-        if user.role == User.Role.DILG_ADMIN:
-            serializer.save(barangay=None)
-            return
         raise PermissionDenied("You cannot manage FAQs.")
 
     def perform_update(self, serializer):
@@ -291,11 +263,6 @@ class FAQViewSet(viewsets.ModelViewSet):
                 raise PermissionDenied("Barangay admins can manage resident FAQs only.")
             serializer.save(barangay_id=user.barangay_id)
             return
-        if user.role == User.Role.DILG_ADMIN:
-            if instance.barangay_id is not None:
-                raise PermissionDenied("DILG admins can manage global FAQs only.")
-            serializer.save(barangay=None)
-            return
         raise PermissionDenied("You cannot manage FAQs.")
 
     def perform_destroy(self, instance):
@@ -303,22 +270,20 @@ class FAQViewSet(viewsets.ModelViewSet):
         if user.role == User.Role.ADMIN:
             if instance.barangay_id != user.barangay_id or instance.audience != FAQ.Audience.RESIDENT:
                 raise PermissionDenied("You can manage only resident FAQs for your Barangay.")
-        elif user.role == User.Role.DILG_ADMIN:
-            if instance.barangay_id is not None:
-                raise PermissionDenied("DILG admins can manage global FAQs only.")
         else:
             raise PermissionDenied("You cannot manage FAQs.")
         instance.delete()
     
 class IsAdminNotificationRecipient(permissions.BasePermission):
-    """Allow Barangay and DILG admins to access their own notifications."""
+    """Allow Barangay Admins to access their own notifications."""
 
     def has_permission(self, request, view):
         user = request.user
         return bool(
             user
             and user.is_authenticated
-            and user.role in (User.Role.ADMIN, User.Role.DILG_ADMIN)
+            and user.role == User.Role.ADMIN
+            and user.barangay_id is not None
         )
 
 
@@ -327,7 +292,7 @@ class AdminNotificationViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated, IsAdminNotificationRecipient]
 
     def get_queryset(self):
-        # Keep this endpoint owner-scoped for both Barangay and DILG admins.
+        # Notifications remain owner-scoped and tenant-role guarded.
         return AdminNotification.objects.filter(user=self.request.user)
     
     @action(detail=False, methods=['post'])

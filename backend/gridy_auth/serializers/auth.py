@@ -38,6 +38,8 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
                 attrs[self.username_field] = matched_user.username
 
         data = super().validate(attrs)
+        if self.user.role not in {User.Role.ADMIN, User.Role.RESIDENT, User.Role.FIELD_OFFICIAL}:
+            raise serializers.ValidationError({"detail": "This account role is no longer supported."})
         full_name = getattr(self.user.profile, 'full_name', None) if hasattr(self.user, 'profile') else None
         if not full_name:
             full_name = f"{self.user.first_name} {self.user.last_name}".strip() or self.user.username
@@ -47,6 +49,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             'email': self.user.email,
             'role': self.user.role,
             'barangay_id': self.user.barangay.id if self.user.barangay else None,
+            'is_superuser': self.user.is_superuser,
             'full_name': full_name,
         }
         return data

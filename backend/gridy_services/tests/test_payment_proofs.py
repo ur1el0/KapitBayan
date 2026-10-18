@@ -91,7 +91,7 @@ class PaymentProofStorageAndEndpointTests(APITestCase):
             username="dilg_officer",
             password="SecurePassword123!",
             email="dilg@test.ph",
-            role=User.Role.DILG_ADMIN,
+            role="DILG_ADMIN",
         )
 
         # Generate sample image bytes

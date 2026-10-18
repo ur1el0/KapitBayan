@@ -184,14 +184,14 @@ class DocumentRequestAPITests(ServiceAPIBaseTestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertFalse(DocumentRequest.objects.exists())
 
-    def test_dilg_admin_cannot_create_document_request(self):
+    def test_retired_role_cannot_create_document_request(self):
         dilg_admin = User.objects.create_user(
             username="dilg_document_test",
             password="SecurePassword123!",
             email="dilg-doc-test@example.com",
-            role=User.Role.DILG_ADMIN,
+            role="DILG_ADMIN",
         )
-        self.client.force_login(dilg_admin)
+        self.client.force_authenticate(dilg_admin)
 
         response = self.client.post(
             reverse('document-request-list'),

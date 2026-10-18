@@ -72,14 +72,14 @@ Using the **Barangay Admin** account in the staff web portal:
 2. Edit its question or answer, save, and reload to check persistence.
 3. Unpublish it and confirm it no longer appears to residents.
 4. Republish, then delete the test entry and confirm it disappears.
-5. If using DILG_ADMIN, verify global FAQ management and confirm the account cannot modify Barangay-owned entries.
+5. Confirm FAQs shown and managed by the Barangay Admin belong only to that Barangay; global legacy FAQs are not exposed through the current API.
 
 Using **Resident A's mobile app and resident web portal**:
 
 1. Open Help & FAQs from normal navigation.
 2. Search for the test question and browse its category.
 3. Expand and collapse answers, return to the page, and refresh.
-4. Confirm global and own-Barangay published resident FAQs appear; staff guidance, drafts, and another Barangay's local FAQs do not.
+4. Confirm only this Barangay's published resident FAQs appear; staff guidance, drafts, legacy global FAQs, and another Barangay's local FAQs do not.
 
 Check common topics such as account access, document requests, queue and schedules, aid questions, notices, privacy, and safe help-seeking. Answers about eligibility, fees, required documents, processing times, office hours, or contacts must come from that Barangay's verified content.
 

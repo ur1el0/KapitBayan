@@ -28,9 +28,11 @@ export const Login: React.FC = () => {
 
             const { access, user: userData } = response.data;
 
-            const isAllowedForWeb = isAdminMode
-                ? ['ADMIN', 'DILG_ADMIN'].includes(userData?.role ?? '')
-                : userData?.role === 'RESIDENT';
+            const isAllowedForWeb = userData?.is_superuser === true
+                ? isAdminMode
+                : isAdminMode
+                    ? userData?.role === 'ADMIN'
+                    : userData?.role === 'RESIDENT';
 
             if (!isAllowedForWeb) {
                 try {
@@ -54,10 +56,10 @@ export const Login: React.FC = () => {
 
             if (access) {
                 login(access, userData);
-                if (userData?.role === 'RESIDENT') {
+                if (userData?.is_superuser === true) {
+                    navigate('/platform/accounts');
+                } else if (userData?.role === 'RESIDENT') {
                     navigate('/portal/documents');
-                } else if (userData?.role === 'DILG_ADMIN') {
-                    navigate('/dilg-analytics');
                 } else {
                     navigate('/dashboard');
                 }
@@ -289,7 +291,7 @@ export const Login: React.FC = () => {
                         <div className="text-center pt-3">
                             <p className="text-xs text-slate-500 font-medium">
                                 {isAdminMode ? (
-                                    'Official accounts are provisioned through DILG onboarding.'
+                                    'Barangay staff accounts are managed by their Barangay Administrator.'
                                 ) : (
                                     <>
                                         Don't have an account?{' '}
@@ -297,6 +299,17 @@ export const Login: React.FC = () => {
                                             Register as Resident
                                         </Link>
                                     </>
+                                )}
+                            </p>
+                            <p className="mt-3 text-xs text-slate-500">
+                                {isAdminMode ? (
+                                    <Link to="/login" className="font-semibold text-slate-700 hover:text-primary hover:underline">
+                                        Resident sign in
+                                    </Link>
+                                ) : (
+                                    <Link to="/official-login" className="font-semibold text-slate-700 hover:text-primary hover:underline">
+                                        Barangay staff sign in
+                                    </Link>
                                 )}
                             </p>
                         </div>

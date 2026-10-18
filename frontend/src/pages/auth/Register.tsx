@@ -216,8 +216,6 @@ export const Register: React.FC = () => {
         <div className="min-h-screen flex flex-col md:flex-row bg-[#F6F8FC] font-sans">
             {/* Left Sidebar Banner */}
             <RegisterHeroBanner
-                isAdminMode={false}
-                onToggleMode={() => navigate('/register/official')}
             />
 
             {/* Right Registration Form */}
@@ -402,13 +400,6 @@ export const Register: React.FC = () => {
                                 >
                                     Create Resident Account
                                 </Button>
-                            </div>
-
-                            {/* Mode Switch Link */}
-                            <div className="text-center pt-2">
-                                <Link to="/register/official" className="text-xs font-medium text-slate-500 hover:text-slate-800 transition-colors">
-                                    Barangay Personnel? <span className="text-slate-900 font-bold underline">Switch to Official Registration</span>
-                                </Link>
                             </div>
 
                             {/* Back to Login */}

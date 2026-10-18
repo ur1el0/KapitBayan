@@ -1,4 +1,5 @@
 from urllib.parse import urlencode
+from datetime import timedelta
 
 from django.contrib.auth.tokens import default_token_generator
 from django.urls import reverse
@@ -43,6 +44,42 @@ class AuthAPITests(IsolatedAuthAPITestCase):
         self.assertTrue(cookie['httponly'])
         self.assertEqual(cookie['samesite'], 'Strict')
         self.assertEqual(cookie['path'], '/api/v1/auth/')
+
+    def test_retired_role_cannot_login_refresh_or_use_an_existing_access_token(self):
+        legacy_user = User.objects.create_user(
+            username="legacy_platform_account",
+            password=self.password,
+            email="legacy-platform@example.test",
+            role="DILG_ADMIN",
+        )
+        login_response = self.client.post(
+            reverse("auth_login"),
+            {"username": legacy_user.username, "password": self.password},
+            format="json",
+        )
+        self.assertEqual(login_response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertFalse(RefreshSession.objects.filter(user=legacy_user).exists())
+
+        refresh = RefreshToken.for_user(legacy_user)
+        RefreshSession.objects.create(
+            user=legacy_user,
+            refresh_token_jti=refresh["jti"],
+            expires_at=timezone.now() + timedelta(days=1),
+        )
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {refresh.access_token}")
+        access_response = self.client.get(reverse("auth_me"))
+        self.assertEqual(access_response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+        self.client.credentials()
+        refresh_response = self.client.post(
+            reverse("auth_token_refresh"),
+            {"refresh": str(refresh)},
+            format="json",
+        )
+        self.assertEqual(refresh_response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertTrue(
+            RefreshSession.objects.filter(user=legacy_user, is_revoked=True).exists()
+        )
 
     def test_production_login_blocks_configured_username_and_email_identifier(self):
         with self.settings(

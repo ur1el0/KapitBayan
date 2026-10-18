@@ -16,14 +16,14 @@ from rest_framework.response import Response
 from gridy_audit.models import AuditLog
 from gridy_audit.services import log_action
 from gridy_auth.models import Barangay, RefreshSession, User
-from gridy_auth.permissions import IsDILGAdmin
-from gridy_auth.serializers.account_support import (
+from gridy_auth.permissions import IsDjangoSuperuser
+from gridy_auth.serializers.platform_account_support import (
     ACCOUNT_SUPPORT_ROLES,
-    DILGAccountActiveStateSerializer,
-    DILGAccountDirectoryQuerySerializer,
-    DILGAccountEmailCorrectionSerializer,
-    DILGAccountRecoveryLinkSerializer,
-    DILGAccountSummarySerializer,
+    PlatformAccountActiveStateSerializer,
+    PlatformAccountDirectoryQuerySerializer,
+    PlatformAccountEmailCorrectionSerializer,
+    PlatformAccountRecoveryLinkSerializer,
+    PlatformAccountSummarySerializer,
 )
 from gridy_auth.tasks import send_password_reset_email
 from gridy_auth.throttling import SharedDatabaseScopedRateThrottle
@@ -52,24 +52,24 @@ def _dispatch_recovery_link(user_id):
         logger.error("Account recovery dispatch failed (%s).", type(exc).__name__)
 
 
-@extend_schema(tags=["DILG Account Support"])
-class DILGAccountSupportViewSet(
+@extend_schema(tags=["Platform Account Support"])
+class PlatformAccountSupportViewSet(
     mixins.ListModelMixin,
     mixins.RetrieveModelMixin,
     mixins.UpdateModelMixin,
     viewsets.GenericViewSet,
 ):
-    """Limited DILG recovery and active-state support for barangay accounts."""
+    """Limited superuser recovery and active-state support for barangay accounts."""
 
-    permission_classes = [permissions.IsAuthenticated, IsDILGAdmin]
+    permission_classes = [permissions.IsAuthenticated, IsDjangoSuperuser]
     throttle_classes = [SharedDatabaseScopedRateThrottle]
-    throttle_scope = "dilg_account_support"
-    serializer_class = DILGAccountSummarySerializer
+    throttle_scope = "platform_account_support"
+    serializer_class = PlatformAccountSummarySerializer
     http_method_names = ["get", "patch", "post", "head", "options"]
 
     def get_queryset(self):
         actor = getattr(self.request, "user", None)
-        if not actor or not actor.is_authenticated or actor.role != User.Role.DILG_ADMIN:
+        if not actor or not actor.is_authenticated or not actor.is_superuser:
             return User.objects.none()
         # Write actions must scope row locks to User: these optional joins
         # otherwise make PostgreSQL reject FOR UPDATE on nullable join sides.
@@ -84,17 +84,17 @@ class DILGAccountSupportViewSet(
 
     def get_serializer_class(self):
         if self.action == "partial_update":
-            return DILGAccountEmailCorrectionSerializer
+            return PlatformAccountEmailCorrectionSerializer
         if self.action == "send_password_link":
-            return DILGAccountRecoveryLinkSerializer
+            return PlatformAccountRecoveryLinkSerializer
         if self.action == "set_active":
-            return DILGAccountActiveStateSerializer
-        return DILGAccountSummarySerializer
+            return PlatformAccountActiveStateSerializer
+        return PlatformAccountSummarySerializer
 
     @extend_schema(
-        summary="Search barangay accounts for DILG support",
-        parameters=[DILGAccountDirectoryQuerySerializer],
-        responses={200: DILGAccountSummarySerializer(many=True)},
+        summary="Search eligible barangay accounts for platform support",
+        parameters=[PlatformAccountDirectoryQuerySerializer],
+        responses={200: PlatformAccountSummarySerializer(many=True)},
     )
     def list(self, request, *args, **kwargs):
         query_data = {
@@ -102,7 +102,7 @@ class DILGAccountSupportViewSet(
             for key in ("search", "role", "active")
             if key in request.query_params
         }
-        query_serializer = DILGAccountDirectoryQuerySerializer(data=query_data)
+        query_serializer = PlatformAccountDirectoryQuerySerializer(data=query_data)
         query_serializer.is_valid(raise_exception=True)
         filters = query_serializer.validated_data
 
@@ -122,15 +122,15 @@ class DILGAccountSupportViewSet(
 
         page = self.paginate_queryset(queryset)
         if page is not None:
-            serializer = DILGAccountSummarySerializer(page, many=True)
+            serializer = PlatformAccountSummarySerializer(page, many=True)
             return self.get_paginated_response(serializer.data)
-        serializer = DILGAccountSummarySerializer(queryset, many=True)
+        serializer = PlatformAccountSummarySerializer(queryset, many=True)
         return Response(serializer.data)
 
     @extend_schema(
         summary="Correct a barangay account email and send a secure setup/reset link",
-        request=DILGAccountEmailCorrectionSerializer,
-        responses={200: DILGAccountSummarySerializer, 400: OpenApiResponse(description="Invalid email, reason, or verification attestation"), 404: OpenApiResponse(description="Account not found or not eligible")},
+        request=PlatformAccountEmailCorrectionSerializer,
+        responses={200: PlatformAccountSummarySerializer, 400: OpenApiResponse(description="Invalid email, reason, or verification attestation"), 404: OpenApiResponse(description="Account not found or not eligible")},
     )
     @transaction.atomic
     def partial_update(self, request, *args, **kwargs):
@@ -138,7 +138,7 @@ class DILGAccountSupportViewSet(
             self.get_queryset().select_for_update(of=("self",)),
             pk=kwargs["pk"],
         )
-        serializer = DILGAccountEmailCorrectionSerializer(
+        serializer = PlatformAccountEmailCorrectionSerializer(
             data=request.data,
             context={"target": target},
         )
@@ -155,11 +155,11 @@ class DILGAccountSupportViewSet(
             contact_verified=True,
         )
         transaction.on_commit(lambda account_id=target.pk: _dispatch_recovery_link(account_id))
-        return Response(DILGAccountSummarySerializer(target).data, status=status.HTTP_200_OK)
+        return Response(PlatformAccountSummarySerializer(target).data, status=status.HTTP_200_OK)
 
     @extend_schema(
         summary="Send a private setup/reset link to the verified account email",
-        request=DILGAccountRecoveryLinkSerializer,
+        request=PlatformAccountRecoveryLinkSerializer,
         responses={202: OpenApiResponse(description="Recovery email dispatch requested"), 400: OpenApiResponse(description="Contact verification and reason are required"), 404: OpenApiResponse(description="Account not found or not eligible")},
     )
     @action(detail=True, methods=["post"], url_path="send-password-link")
@@ -169,7 +169,7 @@ class DILGAccountSupportViewSet(
             self.get_queryset().select_for_update(of=("self",)),
             pk=pk,
         )
-        serializer = DILGAccountRecoveryLinkSerializer(data=request.data)
+        serializer = PlatformAccountRecoveryLinkSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         matching_email_accounts = User.objects.filter(email__iexact=target.email).count()
@@ -193,8 +193,8 @@ class DILGAccountSupportViewSet(
 
     @extend_schema(
         summary="Activate or deactivate a barangay account",
-        request=DILGAccountActiveStateSerializer,
-        responses={200: DILGAccountSummarySerializer, 400: OpenApiResponse(description="Invalid state or last active barangay administrator guard"), 404: OpenApiResponse(description="Account not found or not eligible")},
+        request=PlatformAccountActiveStateSerializer,
+        responses={200: PlatformAccountSummarySerializer, 400: OpenApiResponse(description="Invalid state or last active barangay administrator guard"), 404: OpenApiResponse(description="Account not found or not eligible")},
     )
     @action(detail=True, methods=["post"], url_path="set-active")
     @transaction.atomic
@@ -208,13 +208,13 @@ class DILGAccountSupportViewSet(
             self.get_queryset().select_for_update(of=("self",)),
             pk=pk,
         )
-        serializer = DILGAccountActiveStateSerializer(data=request.data)
+        serializer = PlatformAccountActiveStateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         new_active_state = serializer.validated_data["is_active"]
         reason = serializer.validated_data["reason"]
 
         if new_active_state == target.is_active:
-            return Response(DILGAccountSummarySerializer(target).data)
+            return Response(PlatformAccountSummarySerializer(target).data)
 
         if not new_active_state and target.role == User.Role.ADMIN and target.barangay_id is not None:
             active_admin_count = User.objects.filter(
@@ -239,7 +239,7 @@ class DILGAccountSupportViewSet(
             action="account activated" if new_active_state else "account deactivated",
             reason=reason,
         )
-        return Response(DILGAccountSummarySerializer(target).data)
+        return Response(PlatformAccountSummarySerializer(target).data)
 
     @staticmethod
     def _log_action(request, target, *, action, reason, contact_verified=False):
@@ -248,7 +248,7 @@ class DILGAccountSupportViewSet(
             user=request.user,
             action_type=AuditLog.ActionType.USER_ACTION,
             description=(
-                f"DILG account support: {action}; target account ID={target.pk}; "
+                f"Platform account support: {action}; target account ID={target.pk}; "
                 f"role={target.role}; barangay ID={target.barangay_id or 'unassigned'}; "
                 f"reason={reason}.{verification_note}"
             ),

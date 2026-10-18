@@ -172,7 +172,7 @@ class TestStaffManagementPermissions:
             username="dilg_admin_staff_test",
             email="dilg.staff.test@example.com",
             password="AdminPassword123!",
-            role=User.Role.DILG_ADMIN,
+            role="DILG_ADMIN",
             barangay=None,
             is_staff=True,
         )

@@ -125,9 +125,6 @@ class BarangayViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        if user.role == User.Role.DILG_ADMIN:
-            return Barangay.objects.all().order_by('name')
-        
         # Isolate to the official's own barangay
         if user.barangay:
             return Barangay.objects.filter(id=user.barangay.id)

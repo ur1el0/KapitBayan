@@ -5,7 +5,7 @@ PostgreSQL is the production relational database configured by `DATABASE_URL`. S
 ## Domain relationships
 
 - `Barangay` is the tenant root for barangay-scoped users, documents, queues, communications, and operational data.
-- `User` carries a role and, for barangay roles and residents, an assigned barangay. DILG users have a distinct oversight role.
+- `User` carries an active product role and, for barangay roles and residents, an assigned barangay. Existing rows with retired role strings may remain for audit continuity but are denied authentication and authorization.
 - `Resident` is a profile associated with a user. Verification and evidence fields are handled through guarded workflows.
 - `DocumentRequest` records online and walk-in transactions. Walk-in requests may have no user account; the barangay relationship preserves their tenant and treasury history. User erasure uses the reviewed `SET_NULL` relationship so municipal records can remain.
 - `QueueTicket`, `AidRequest`, `IssueReport`, `Announcement`, `ActivitySchedule`, and hotline/FAQ records serve their respective feature domains.

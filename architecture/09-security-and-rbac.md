@@ -11,9 +11,9 @@ The API uses JWT access credentials and server-managed refresh sessions/cookies 
 - `RESIDENT`: access to the authenticated resident's own profile and service records.
 - `ADMIN`: barangay staff operations limited to the assigned barangay.
 - `FIELD_OFFICIAL`: mobile-oriented staff permissions defined per endpoint and limited to the assigned barangay.
-- `DILG_ADMIN`: explicitly scoped oversight/onboarding and bounded account-recovery functions; not a general tenant bypass.
+- Django `is_superuser`: platform recovery and Django administration only; this flag does not create barangay service access and is not an active product role.
 
-The DILG account-support endpoint may search minimal account directory fields for residents, field officials, and barangay administrators across tenants, including legacy unassigned accounts. It excludes DILG accounts and superusers, cannot change roles or barangay assignments, and supports only audited email correction/recovery-link dispatch and account activation state changes. Email corrections and recovery-link dispatch require DILG's external contact-verification attestation. See [ADR 020](decisions/020-dilg-account-support-boundary.md).
+The platform account-support endpoint is available only to an active Django superuser. It searches minimal directory fields for resident and barangay staff accounts, including legacy unassigned accounts, excludes superusers and retired role values, cannot create/delete accounts or change roles, barangay assignments, credentials, or resident evidence, and supports audited email correction/recovery-link dispatch and account activation state changes. Email corrections and recovery-link dispatch require an operator attestation that contact details were verified through an official channel. Account suspension revokes refresh sessions. See [ADR 021](decisions/021-barangay-only-product-scope-and-platform-recovery.md).
 
 Each sensitive list, detail, create, update, deletion, and media operation must enforce its endpoint-specific role and tenant scope. Tenant ownership should come from the authenticated user and persisted record, not an unchecked client-supplied barangay ID. Object absence and authorization responses must follow the endpoint's documented information-disclosure contract.
 

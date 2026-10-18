@@ -73,53 +73,6 @@ class AuthRegistrationAPITests(IsolatedAuthAPITestCase):
         self.assertEqual(created_user.role, User.Role.RESIDENT)
         self.assertFalse(created_user.is_staff)
 
-    def test_staff_creation_aligned_with_adr011_dilg_onboarding(self):
-        from gridy_auth.models import BarangayApplication
-        dilg_admin = User.objects.create_user(
-            username="dilg_reviewer",
-            email="dilg@dilg.gov.ph",
-            password="DilgPassword123!",
-            role=User.Role.DILG_ADMIN,
-            is_staff=True,
-        )
-        barangay = Barangay.objects.create(
-            name="Barangay Onboarded",
-            municipality="Lucena City",
-            province="Quezon",
-        )
-        application = BarangayApplication.objects.create(
-            application_type=BarangayApplication.ApplicationType.OFFICIAL,
-            existing_barangay=barangay,
-            name=barangay.name,
-            municipality=barangay.municipality,
-            province=barangay.province,
-            applicant_name="Kapitan Mario Reyes",
-            applicant_position="Punong Barangay",
-            applicant_email="kapitan.mario@example.com",
-            applicant_phone="09181234567",
-            status=BarangayApplication.Status.PENDING,
-        )
-
-        self.client.force_authenticate(user=dilg_admin)
-        review_url = reverse("barangay-application-review", kwargs={"pk": application.pk})
-        with patch("gridy_auth.tasks.send_barangay_approval_email.delay") as mock_email:
-            response = self.client.post(
-                review_url,
-                {"status": "APPROVED", "review_note": "Verified through DILG field office."},
-                format="json",
-            )
-            self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        created_official = User.objects.get(email="kapitan.mario@example.com")
-        self.assertEqual(created_official.role, User.Role.ADMIN)
-        self.assertTrue(created_official.is_staff)
-        self.assertTrue(created_official.is_active)
-        self.assertFalse(created_official.has_usable_password())
-        self.assertEqual(created_official.barangay.name, "Barangay Onboarded")
-        self.assertEqual(created_official.first_name, "Kapitan")
-        self.assertEqual(created_official.last_name, "Mario Reyes")
-
-
     def test_user_registration_success(self):
         url = reverse('auth_register')
         payload = {

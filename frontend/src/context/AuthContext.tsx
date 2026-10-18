@@ -14,7 +14,6 @@ const DEFAULT_PRIMARY_COLOR = '#082B66';
 const AUTHENTICATED_ROLES = new Set([
     'ADMIN',
     'RESIDENT',
-    'DILG_ADMIN',
     'FIELD_OFFICIAL',
 ]);
 

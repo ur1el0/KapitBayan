@@ -126,14 +126,6 @@ export const Dashboard: React.FC = () => {
     }, []);
 
     useEffect(() => {
-        if (user?.role === 'DILG_ADMIN') {
-            navigate('/dilg-analytics', { replace: true });
-        }
-    }, [user, navigate]);
-
-    useEffect(() => {
-        if (user?.role === 'DILG_ADMIN') return;
-
         void fetchSummary();
         void fetchActivities();
 
@@ -170,10 +162,6 @@ export const Dashboard: React.FC = () => {
             { name: 'Other', count: summaryData.issue_reports.scenario_breakdown.other || 0 },
         ]
         : [];
-
-    if (user?.role === 'DILG_ADMIN') {
-        return null;
-    }
 
     return (
         <div className="space-y-6">

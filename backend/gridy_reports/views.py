@@ -3,7 +3,6 @@ from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from .models import IssueReport
 from .serializers import IssueReportSerializer
 from gridy_auth.permissions import IsBarangayOfficial, IsBarangayOfficialOrField, IsResident
-from gridy_auth.models import User
 
 from gridy_audit.services import log_action
 from gridy_audit.models import AuditLog
@@ -27,13 +26,11 @@ class IssueReportViewSet(viewsets.ModelViewSet):
         if not user or not user.is_authenticated:
             return IssueReport.objects.none()
 
-        # DILG Super Admins can see the entire database
-        if user.role == User.Role.DILG_ADMIN:
-            return IssueReport.objects.all().order_by('-created_at')
-
         # Barangay Officials only see reports from residents in their specific Barangay
-        if user.role in [User.Role.ADMIN, User.Role.FIELD_OFFICIAL]:
-            return IssueReport.objects.filter(reporter__barangay=user.barangay).order_by('-created_at')
+        if user.role in ["ADMIN", "FIELD_OFFICIAL"]:
+            if user.barangay_id is None:
+                return IssueReport.objects.none()
+            return IssueReport.objects.filter(reporter__barangay_id=user.barangay_id).order_by('-created_at')
         
         # Standard Residents only see their own reports (and we fixed the created_by typo)
         return IssueReport.objects.filter(reporter=user).order_by('-created_at')

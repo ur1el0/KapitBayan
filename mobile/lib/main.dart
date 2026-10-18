@@ -20,7 +20,7 @@ void main() async {
   final hasValidSession = storage.getAccessToken() != null && user != null;
 
   Widget initialScreen = const LoginScreen();
-  if (hasValidSession) {
+  if (hasValidSession && user.isSupportedRole) {
     switch (user.role.toUpperCase()) {
       case 'ADMIN':
         initialScreen = const AdminDashboardScreen();
@@ -32,6 +32,10 @@ void main() async {
         initialScreen = const DashboardScreen();
         break;
     }
+  } else if (hasValidSession) {
+    // Clear cached retired/unknown roles so they cannot enter a resident or
+    // staff workspace through a session created by an older app version.
+    await storage.clearSession();
   }
 
   SystemChrome.setSystemUIOverlayStyle(

@@ -8,7 +8,7 @@ Authentication uses access credentials and server-managed refresh sessions. Regi
 
 ## Roles and barangay isolation
 
-API permissions and querysets enforce role and barangay scope. Residents access their own records; barangay staff actions are restricted to their assigned barangay; DILG routes are explicit. Barangay administrators can provision, list, update the permitted profile fields of, and activate/deactivate Field Officials only within their barangay. Provisioning sends an expiring password-setup link instead of setting a password in the admin UI. Cross-tenant IDs supplied by clients do not grant access.
+API permissions and querysets enforce role and barangay scope. Residents access their own records; barangay staff actions are restricted to their assigned barangay. Barangay administrators can provision, list, update the permitted profile fields of, and activate/deactivate Field Officials only within their barangay. Provisioning sends an expiring password-setup link instead of setting a password in the admin UI. A separate superuser-only support API permits audited contact correction, recovery-link delivery, and account activation; it does not create/delete accounts or alter roles, barangay assignments, credentials, or resident evidence. Cross-tenant IDs supplied by clients do not grant access.
 
 ## Documents and treasury
 

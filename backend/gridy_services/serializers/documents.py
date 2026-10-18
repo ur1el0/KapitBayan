@@ -108,7 +108,6 @@ class DocumentRequestSerializer(FeePolicyValidationMixin, serializers.ModelSeria
         return bool(
             user
             and user.is_authenticated
-            and user.role != User.Role.DILG_ADMIN
             and user.barangay_id == obj.barangay_id
         )
 

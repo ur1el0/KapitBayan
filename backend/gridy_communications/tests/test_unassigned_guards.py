@@ -42,11 +42,11 @@ class UnassignedCommunicationsAPITests(APITestCase):
             barangay=None,
             is_active=True,
         )
-        self.dilg_admin = User.objects.create_user(
-            username="dilg_admin_comm",
+        self.legacy_platform_user = User.objects.create_user(
+            username="legacy_platform_comm",
             password="SecurePassword123!",
-            email="dilg_admin_comm@example.com",
-            role=User.Role.DILG_ADMIN,
+            email="legacy_platform_comm@example.com",
+            role="DILG_ADMIN",
             barangay=None,
             is_active=True,
         )
@@ -138,23 +138,14 @@ class UnassignedCommunicationsAPITests(APITestCase):
         self.assertEqual(hot_res.status_code, status.HTTP_403_FORBIDDEN)
         self.assertFalse(EmergencyHotline.objects.filter(name="Blocked Hotline").exists())
 
-    def test_dilg_admin_retains_global_communications_reads(self):
-        self.client.force_login(self.dilg_admin)
+    def test_legacy_platform_role_cannot_read_cross_barangay_communications(self):
+        self.client.force_authenticate(user=self.legacy_platform_user)
 
-        ann_res = self.client.get(reverse("announcement-list"))
-        self.assertEqual(ann_res.status_code, status.HTTP_200_OK)
-        ann_results = ann_res.data.get("results", ann_res.data) if isinstance(ann_res.data, dict) else ann_res.data
-        self.assertEqual(len(ann_results), 2)
-
-        act_res = self.client.get(reverse("activity-list"))
-        self.assertEqual(act_res.status_code, status.HTTP_200_OK)
-        act_results = act_res.data.get("results", act_res.data) if isinstance(act_res.data, dict) else act_res.data
-        self.assertEqual(len(act_results), 2)
-
-        hot_res = self.client.get(reverse("hotline-list"))
-        self.assertEqual(hot_res.status_code, status.HTTP_200_OK)
-        hot_results = hot_res.data.get("results", hot_res.data) if isinstance(hot_res.data, dict) else hot_res.data
-        self.assertEqual(len(hot_results), 2)
+        for endpoint in ["announcement-list", "activity-list", "hotline-list"]:
+            response = self.client.get(reverse(endpoint))
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            results = response.data.get("results", response.data) if isinstance(response.data, dict) else response.data
+            self.assertEqual(results, [])
 
     def test_assigned_users_isolate_communications_to_own_barangay(self):
         other_barangay = Barangay.objects.create(name="Barangay Pinagkaisahan")

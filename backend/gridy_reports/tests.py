@@ -204,11 +204,15 @@ class IssueReportAPITests(APITestCase):
         self.assertEqual(report.urgency, IssueReport.Urgency.MINOR)
 
     def test_official_can_delete_issue_report_with_audit_log(self):
+        barangay = Barangay.objects.create(name="Report Delete Test Barangay")
+        self.user.barangay = barangay
+        self.user.save(update_fields=["barangay"])
         official = User.objects.create_user(
             username="captain_delete_test",
             password="SecurePassword123!",
             email="captain_del@example.com",
-            role=User.Role.ADMIN
+            role=User.Role.ADMIN,
+            barangay=barangay,
         )
         report = IssueReport.objects.create(
             reporter=self.user,

@@ -25,10 +25,6 @@ SEEDED_BARANGAYS = {
 }
 
 RECOGNIZED_USER_IDENTITIES = {
-    "dilg_admin": {
-        "emails": {"dilg.admin@example.invalid", "dilg.admin@gridy.local"},
-        "role": User.Role.DILG_ADMIN,
-    },
     "admin_dupay": {
         "emails": {"admin.dupay@example.invalid", "captain.dupay@gridy.local"},
         "role": User.Role.ADMIN,
@@ -77,7 +73,7 @@ def is_recognized_seed_barangay(barangay, expected_meta):
 
 
 class Command(BaseCommand):
-    help = "Seed or update local synthetic accounts for officials, field officers, residents, and DILG with login credentials."
+    help = "Seed or update local synthetic accounts for Barangay Admins, Field Officials, and residents."
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -137,17 +133,6 @@ class Command(BaseCommand):
         # Account Definitions by Role
         # ---------------------------------------------------------------------
         users_manifest = [
-            # DILG Admin (Cross-Tenant / City-Wide)
-            {
-                "username": "dilg_admin",
-                "email": "dilg.admin@example.invalid",
-                "first_name": "KapitBayan Demo",
-                "last_name": "DILG Admin",
-                "role": User.Role.DILG_ADMIN,
-                "barangay_name": None,
-                "is_staff": True,
-                "resident_profile": None,
-            },
             # Barangay Officials (ADMIN)
             {
                 "username": "admin_dupay",
@@ -331,4 +316,4 @@ class Command(BaseCommand):
         for row in provisioned_summary:
             self.stdout.write(f"{row['role']:<18} {row['barangay']:<28} {row['status']}")
         self.stdout.write("-" * 58)
-        self.stdout.write(self.style.NOTICE("\nWeb Portal: http://localhost:8080/ (Resident default, Shift+\\ for Official/DILG)"))
+        self.stdout.write(self.style.NOTICE("\nWeb Portal: http://localhost:8080/ (Resident portal; barangay staff use Official Sign In)"))

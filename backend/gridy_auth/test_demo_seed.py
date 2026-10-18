@@ -65,18 +65,9 @@ class DemoAnalyticsSeedTests(TestCase):
 
 class BarangaySeedTests(TestCase):
     @override_settings(DEBUG=True)
-    def test_seeds_dilg_admin_idempotently_without_a_usable_password(self):
+    def test_seed_barangays_does_not_create_platform_or_government_wide_accounts(self):
         call_command("seed_barangays", confirm_demo_only=True, stdout=StringIO())
-
-        dilg_admin = User.objects.get(username="dilg_admin")
-        self.assertEqual(dilg_admin.role, User.Role.DILG_ADMIN)
-        self.assertTrue(dilg_admin.is_staff)
-        self.assertIsNone(dilg_admin.barangay_id)
-        self.assertFalse(dilg_admin.has_usable_password())
-
-        call_command("seed_barangays", confirm_demo_only=True, stdout=StringIO())
-
-        self.assertEqual(User.objects.filter(username="dilg_admin").count(), 1)
+        self.assertFalse(User.objects.filter(username="dilg_admin").exists())
 
 
 class LegacyDemoCredentialMigrationTests(TestCase):
@@ -121,18 +112,17 @@ class LegacyDemoCredentialMigrationTests(TestCase):
 
 class SeedUsersCommandTests(TestCase):
     @override_settings(DEBUG=True)
-    def test_seed_users_provisions_all_four_roles_with_default_password(self):
+    def test_seed_users_provisions_only_barangay_roles_with_default_password(self):
         call_command("seed_users", confirm_demo_only=True, stdout=StringIO())
 
         self.assertEqual(User.objects.filter(role=User.Role.ADMIN).count(), 3)
         self.assertEqual(User.objects.filter(role=User.Role.FIELD_OFFICIAL).count(), 2)
         self.assertEqual(User.objects.filter(role=User.Role.RESIDENT).count(), 4)
-        self.assertEqual(User.objects.filter(role=User.Role.DILG_ADMIN).count(), 1)
 
         self.assertTrue(User.objects.get(username="admin_dupay").check_password(DEFAULT_SEED_PASSWORD))
         self.assertTrue(User.objects.get(username="tanod_dupay").check_password(DEFAULT_SEED_PASSWORD))
         self.assertTrue(User.objects.get(username="resident_dupay").check_password(DEFAULT_SEED_PASSWORD))
-        self.assertTrue(User.objects.get(username="dilg_admin").check_password(DEFAULT_SEED_PASSWORD))
+        self.assertFalse(User.objects.filter(username="dilg_admin").exists())
 
         resident = Resident.objects.get(user__username="resident_dupay")
         self.assertTrue(resident.is_verified)
@@ -147,7 +137,7 @@ class SeedUsersCommandTests(TestCase):
         call_command("seed_users", confirm_demo_only=True, password=custom_password, stdout=StringIO())
         self.assertEqual(User.objects.count(), first_count)
         self.assertTrue(User.objects.get(username="admin_dupay").check_password(custom_password))
-        self.assertTrue(User.objects.get(username="dilg_admin").check_password(custom_password))
+        self.assertFalse(User.objects.filter(username="dilg_admin").exists())
 
     @override_settings(DEBUG=False)
     def test_seed_users_refuses_when_debug_is_disabled(self):
@@ -330,7 +320,6 @@ class SeedUsersCommandTests(TestCase):
         call_command("seed_users", confirm_demo_only=True, stdout=out)
         output = out.getvalue()
         seed_usernames = [
-            "dilg_admin",
             "admin_dupay",
             "admin_daungan",
             "admin_cotta",

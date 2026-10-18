@@ -75,6 +75,26 @@ void main() {
       expect(user.isFieldOfficial, isTrue);
       expect(user.roleDisplay, equals('Field Official / Tanod'));
     });
+
+    test('rejects legacy roles and superuser accounts from mobile workspaces', () {
+      final legacy = UserModel.fromJson({
+        'id': 505,
+        'username': 'legacy_operator',
+        'email': 'operator@example.test',
+        'role': 'DILG_ADMIN',
+      });
+      final platformOperator = UserModel.fromJson({
+        'id': 506,
+        'username': 'platform_operator',
+        'email': 'operator@example.test',
+        'role': 'RESIDENT',
+        'is_superuser': true,
+      });
+
+      expect(legacy.isSupportedRole, isFalse);
+      expect(platformOperator.isSuperuser, isTrue);
+      expect(platformOperator.isSupportedRole, isFalse);
+    });
   });
 
   group('AuthResponse Parsing', () {

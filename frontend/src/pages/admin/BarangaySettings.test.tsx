@@ -71,7 +71,7 @@ describe('BarangaySettings', () => {
         expect(await screen.findByText('Settings updated successfully!')).toBeInTheDocument();
     });
 
-    it('shows staff account management to barangay admins but not DILG admins', async () => {
+    it('shows staff account management only to Barangay Admins', async () => {
         vi.mocked(useAuth).mockReturnValue({
             user: { role: 'ADMIN' },
             login: vi.fn(),
