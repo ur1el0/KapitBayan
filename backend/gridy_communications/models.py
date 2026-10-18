@@ -165,3 +165,36 @@ class AdminNotification(models.Model):
         indexes = [
             models.Index(fields=['user', 'is_read', '-created_at']),
         ]
+
+
+class ResidentNotification(models.Model):
+    class Type(models.TextChoices):
+        QUEUE = 'queue', 'Queue Alert'
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='resident_notifications',
+    )
+    notification_type = models.CharField(
+        max_length=20,
+        choices=Type.choices,
+        default=Type.QUEUE,
+    )
+    title = models.CharField(max_length=255)
+    message = models.TextField()
+    data = models.JSONField(default=dict, blank=True)
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"[{self.get_notification_type_display()}] {self.title}"
+
+    class Meta:
+        ordering = ['-created_at', '-id']
+        indexes = [
+            models.Index(
+                fields=['user', 'is_read', '-created_at'],
+                name='gridy_res_user_read_idx',
+            ),
+        ]

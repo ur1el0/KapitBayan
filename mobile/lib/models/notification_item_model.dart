@@ -1,8 +1,4 @@
-enum NotificationType {
-  approved,
-  warning,
-  info,
-}
+enum NotificationType { approved, warning, info, queue }
 
 /// Unified UI model for recent notifications synthesized from document updates
 /// and community announcements.
@@ -13,6 +9,7 @@ class NotificationItemModel {
   final DateTime timestamp;
   final NotificationType type;
   final String? actionRoute;
+  final String? description;
 
   const NotificationItemModel({
     required this.id,
@@ -21,6 +18,7 @@ class NotificationItemModel {
     required this.timestamp,
     this.type = NotificationType.info,
     this.actionRoute,
+    this.description,
   });
 
   /// Formatted relative or short time (e.g. "2 hours ago • Document Services")

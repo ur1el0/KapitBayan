@@ -137,10 +137,7 @@ class RecentNotificationsSection extends StatelessWidget {
             child: const Center(
               child: Text(
                 'No new notifications at this time.',
-                style: TextStyle(
-                  fontSize: 13.5,
-                  color: AppColors.textMuted,
-                ),
+                style: TextStyle(fontSize: 13.5, color: AppColors.textMuted),
               ),
             ),
           )
@@ -165,10 +162,7 @@ class _NotificationCard extends StatelessWidget {
   final NotificationItemModel notification;
   final VoidCallback? onTap;
 
-  const _NotificationCard({
-    required this.notification,
-    this.onTap,
-  });
+  const _NotificationCard({required this.notification, this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -192,6 +186,11 @@ class _NotificationCard extends StatelessWidget {
         iconColor = AppColors.primaryNavy;
         iconData = Icons.notifications_none_rounded;
         break;
+      case NotificationType.queue:
+        iconBgColor = const Color(0xFFE0E7FF);
+        iconColor = AppColors.primaryNavy;
+        iconData = Icons.confirmation_number_outlined;
+        break;
     }
 
     return Container(
@@ -205,10 +204,7 @@ class _NotificationCard extends StatelessWidget {
             offset: const Offset(0, 3),
           ),
         ],
-        border: Border.all(
-          color: const Color(0xFFF1F5F9),
-          width: 1.2,
-        ),
+        border: Border.all(color: const Color(0xFFF1F5F9), width: 1.2),
       ),
       child: Material(
         color: Colors.transparent,
@@ -217,7 +213,10 @@ class _NotificationCard extends StatelessWidget {
           onTap: onTap,
           borderRadius: BorderRadius.circular(16),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16.0,
+              vertical: 14.0,
+            ),
             child: Row(
               children: [
                 // Circular Status Badge Icon
@@ -229,11 +228,7 @@ class _NotificationCard extends StatelessWidget {
                     shape: BoxShape.circle,
                   ),
                   child: Center(
-                    child: Icon(
-                      iconData,
-                      color: iconColor,
-                      size: 22,
-                    ),
+                    child: Icon(iconData, color: iconColor, size: 22),
                   ),
                 ),
                 const SizedBox(width: 14),

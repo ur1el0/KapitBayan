@@ -64,7 +64,9 @@ class NotificationCenterSheet extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
-                    color: hasError ? const Color(0xFFDC2626) : AppColors.primaryNavy,
+                    color: hasError
+                        ? const Color(0xFFDC2626)
+                        : AppColors.primaryNavy,
                   ),
                 ),
               ),
@@ -95,7 +97,8 @@ class NotificationCenterSheet extends StatelessWidget {
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            errorMessage ?? 'Failed to retrieve notification updates',
+                            errorMessage ??
+                                'Failed to retrieve notification updates',
                             textAlign: TextAlign.center,
                             style: const TextStyle(
                               color: AppColors.textMuted,
@@ -110,7 +113,9 @@ class NotificationCenterSheet extends StatelessWidget {
                               label: const Text('Try again'),
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: AppColors.primaryNavy,
-                                side: const BorderSide(color: AppColors.primaryNavy),
+                                side: const BorderSide(
+                                  color: AppColors.primaryNavy,
+                                ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
@@ -122,19 +127,20 @@ class NotificationCenterSheet extends StatelessWidget {
                     ),
                   )
                 : notifications.isEmpty
-                    ? const Center(
-                        child: Text(
-                          'No recent notifications',
-                          style: TextStyle(color: AppColors.textMuted),
-                        ),
-                      )
-                    : ListView.separated(
-                        controller: scrollController,
+                ? const Center(
+                    child: Text(
+                      'No recent notifications',
+                      style: TextStyle(color: AppColors.textMuted),
+                    ),
+                  )
+                : ListView.separated(
+                    controller: scrollController,
                     itemCount: notifications.length,
                     separatorBuilder: (_, _) => const Divider(height: 20),
                     itemBuilder: (context, index) {
                       final item = notifications[index];
                       final approved = item.type == NotificationType.approved;
+                      final queueAlert = item.type == NotificationType.queue;
                       return Padding(
                         padding: const EdgeInsets.symmetric(vertical: 4),
                         child: Row(
@@ -145,15 +151,21 @@ class NotificationCenterSheet extends StatelessWidget {
                               decoration: BoxDecoration(
                                 color: approved
                                     ? const Color(0xFFDCFCE7)
+                                    : queueAlert
+                                    ? const Color(0xFFE0E7FF)
                                     : const Color(0xFFFEF3C7),
                                 shape: BoxShape.circle,
                               ),
                               child: Icon(
                                 approved
                                     ? Icons.check_circle_rounded
+                                    : queueAlert
+                                    ? Icons.confirmation_number_outlined
                                     : Icons.info_rounded,
                                 color: approved
                                     ? const Color(0xFF15803D)
+                                    : queueAlert
+                                    ? AppColors.primaryNavy
                                     : const Color(0xFFB45309),
                                 size: 20,
                               ),
@@ -271,7 +283,9 @@ class NotificationDetailSheet extends StatelessWidget {
                 border: Border.all(color: const Color(0xFFE2E8F0)),
               ),
               child: Text(
-                'Advisory Category: ${item.category}\n\nOfficial notice regarding "${item.title}". Check your document requests or community bulletin for real-time status updates.',
+                item.description?.trim().isNotEmpty == true
+                    ? item.description!.trim()
+                    : 'Advisory Category: ${item.category}\n\nOfficial notice regarding "${item.title}". Check your document requests or community bulletin for real-time status updates.',
                 style: const TextStyle(
                   fontSize: 13.5,
                   color: AppColors.textPrimary,

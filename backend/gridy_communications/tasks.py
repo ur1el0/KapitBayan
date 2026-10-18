@@ -17,6 +17,14 @@ def send_notification_to_user_task(user_id, title, body, data=None):
         user = User.objects.get(id=user_id)
         push_responses = send_notification_to_user(user, title, body, data)
         email_sent = send_email_notification_to_user(user, title, body)
+        if not user.email_alerts:
+            logger.info("Notification email skipped because the recipient opted out.")
+        elif not user.email:
+            logger.info("Notification email skipped because the recipient has no address.")
+        elif email_sent:
+            logger.info("Notification email accepted by the configured backend.")
+        else:
+            logger.warning("Notification email was not accepted by the configured backend.")
         return {
             "status": "success",
             "push_sent": len(push_responses),

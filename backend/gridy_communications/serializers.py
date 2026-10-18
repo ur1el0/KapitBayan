@@ -1,6 +1,14 @@
 from rest_framework import serializers
 from gridy_auth.models import User
-from gridy_communications.models import Announcement, ActivitySchedule, FCMDevice, EmergencyHotline, FAQ, AdminNotification
+from gridy_communications.models import (
+    Announcement,
+    ActivitySchedule,
+    FCMDevice,
+    EmergencyHotline,
+    FAQ,
+    AdminNotification,
+    ResidentNotification,
+)
 
 class FCMDeviceSerializer(serializers.ModelSerializer):
     class Meta:
@@ -75,3 +83,13 @@ class AdminNotificationSerializer(serializers.ModelSerializer):
         model = AdminNotification
         fields = '__all__'
         read_only_fields = ['user', 'created_at']
+
+
+class ResidentNotificationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ResidentNotification
+        fields = [
+            'id', 'notification_type', 'title', 'message', 'data',
+            'is_read', 'created_at',
+        ]
+        read_only_fields = fields
