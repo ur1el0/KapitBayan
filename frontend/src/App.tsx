@@ -14,8 +14,8 @@ const Login = lazy(() =>
 const Register = lazy(() =>
     import("./pages/auth/Register").then(({ Register }) => ({ default: Register })),
 );
-const BarangayApplication = lazy(() =>
-    import("./pages/auth/BarangayApplication").then(({ BarangayApplication }) => ({ default: BarangayApplication })),
+const OfficialRegistration = lazy(() =>
+    import("./pages/auth/OfficialRegistration").then(({ OfficialRegistration }) => ({ default: OfficialRegistration })),
 );
 const Dashboard = lazy(() =>
     import("./pages/admin/Dashboard").then(({ Dashboard }) => ({ default: Dashboard })),
@@ -152,7 +152,7 @@ export function App() {
                             <Route path="/login" element={<Login />} />
                             <Route path="/field-official-mobile" element={<FieldOfficialWebNotice />} />
                             <Route path="/register" element={<Register />} />
-                            <Route path="/register/barangay" element={<BarangayApplication />} />
+                            <Route path="/register/official" element={<OfficialRegistration />} />
                             <Route path="/forgot-password" element={<ForgotPassword />} />
                             <Route path="/reset-password" element={<ResetPassword />} />
                             <Route path="/public/queue/:barangayId" element={<PublicQueueDisplay />} />
