@@ -54,22 +54,22 @@ class SeedBarangaysCommandTests(TestCase):
         self.assertFalse(User.objects.get(username="admin_daungan").has_usable_password())
 
     @override_settings(DEBUG=True)
-    def test_seed_barangays_migrates_legacy_dilg_display_name_in_place(self):
+    def test_seed_barangays_leaves_existing_legacy_role_rows_unchanged(self):
+        legacy_user = User.objects.create_user(
+            username="legacy_scope_user",
+            email="legacy-scope@example.test",
+            password="legacy-password",
+            role="DILG_ADMIN",
+            first_name="Historical",
+            is_staff=False,
+        )
+
         call_command("seed_barangays", confirm_demo_only=True)
-        dilg_admin = User.objects.get(username="dilg_admin")
-        user_id = dilg_admin.pk
-        original_email = dilg_admin.email
 
-        dilg_admin.first_name = "Gridy Demo"
-        dilg_admin.save(update_fields=["first_name"])
-
-        call_command("seed_barangays", confirm_demo_only=True)
-
-        dilg_admin.refresh_from_db()
-        self.assertEqual(dilg_admin.pk, user_id)
-        self.assertEqual(dilg_admin.first_name, "KapitBayan Demo")
-        self.assertEqual(dilg_admin.email, original_email)
-        self.assertEqual(User.objects.filter(username="dilg_admin").count(), 1)
+        legacy_user.refresh_from_db()
+        self.assertEqual(legacy_user.role, "DILG_ADMIN")
+        self.assertEqual(legacy_user.first_name, "Historical")
+        self.assertFalse(legacy_user.is_staff)
 
     @override_settings(DEBUG=True)
     def test_analytics_seed_migrates_legacy_display_markers_in_place(self):

@@ -26,6 +26,6 @@ from .residents import (
     RejectResidentView,
     ResidentViewSet,
 )
-from .onboarding import BarangayApplicationViewSet, PublicBarangayDirectoryView
+from .onboarding import PublicBarangayDirectoryView
 from .staff import StaffManagementViewSet
-from .account_support import DILGAccountSupportViewSet
+from .platform_account_support import PlatformAccountSupportViewSet

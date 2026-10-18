@@ -63,7 +63,6 @@ const renderDashboard = (role = 'ADMIN') => render(
         <MemoryRouter initialEntries={['/admin']}>
             <Routes>
                 <Route path="/admin" element={<Dashboard />} />
-                <Route path="/dilg-analytics" element={<p>DILG analytics destination</p>} />
             </Routes>
         </MemoryRouter>
     </AuthContext.Provider>,
@@ -114,13 +113,6 @@ describe('Dashboard', () => {
         expect(await screen.findByRole('alert')).toHaveTextContent("We couldn't load today's appointments.");
         expect(screen.getByText('₱1,250.00')).toBeInTheDocument();
         expect(screen.queryByText('This screen couldn’t load')).not.toBeInTheDocument();
-    });
-
-    it('redirects DILG admins to the cross-barangay analytics page without fetching barangay data', async () => {
-        renderDashboard('DILG_ADMIN');
-
-        expect(await screen.findByText('DILG analytics destination')).toBeInTheDocument();
-        expect(axiosPrivate.get).not.toHaveBeenCalled();
     });
 
     it('recovers a failed summary independently while retaining appointments', async () => {

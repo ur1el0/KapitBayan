@@ -7,7 +7,7 @@ export type AccountSupportReason =
     | 'STATUS_CORRECTION'
     | 'OTHER_VERIFIED_SUPPORT';
 
-export interface DILGAccount {
+export interface PlatformAccount {
     id: number;
     username: string;
     email: string;
@@ -26,18 +26,18 @@ export interface AccountPage {
     count: number;
     next: string | null;
     previous: string | null;
-    results: DILGAccount[];
+    results: PlatformAccount[];
 }
 
 export interface AccountFilters {
     search?: string;
-    role?: DILGAccount['role'] | '';
+    role?: PlatformAccount['role'] | '';
     active?: boolean;
     page?: number;
 }
 
-export async function fetchDILGAccounts(filters: AccountFilters = {}): Promise<AccountPage> {
-    const response = await axiosPrivate.get('/auth/dilg/accounts/', {
+export async function fetchPlatformAccounts(filters: AccountFilters = {}): Promise<AccountPage> {
+    const response = await axiosPrivate.get('/auth/platform/accounts/', {
         params: {
             ...(filters.search ? { search: filters.search } : {}),
             ...(filters.role ? { role: filters.role } : {}),
@@ -48,25 +48,25 @@ export async function fetchDILGAccounts(filters: AccountFilters = {}): Promise<A
     return response.data;
 }
 
-export async function correctDILGAccountEmail(
+export async function correctPlatformAccountEmail(
     accountId: number,
     payload: { email: string; contact_verified: true; reason: AccountSupportReason },
-): Promise<DILGAccount> {
-    const response = await axiosPrivate.patch(`/auth/dilg/accounts/${accountId}/`, payload);
+): Promise<PlatformAccount> {
+    const response = await axiosPrivate.patch(`/auth/platform/accounts/${accountId}/`, payload);
     return response.data;
 }
 
-export async function sendDILGAccountRecoveryLink(
+export async function sendPlatformAccountRecoveryLink(
     accountId: number,
     payload: { contact_verified: true; reason: AccountSupportReason },
 ): Promise<void> {
-    await axiosPrivate.post(`/auth/dilg/accounts/${accountId}/send-password-link/`, payload);
+    await axiosPrivate.post(`/auth/platform/accounts/${accountId}/send-password-link/`, payload);
 }
 
-export async function setDILGAccountActive(
+export async function setPlatformAccountActive(
     accountId: number,
     payload: { is_active: boolean; reason: AccountSupportReason },
-): Promise<DILGAccount> {
-    const response = await axiosPrivate.post(`/auth/dilg/accounts/${accountId}/set-active/`, payload);
+): Promise<PlatformAccount> {
+    const response = await axiosPrivate.post(`/auth/platform/accounts/${accountId}/set-active/`, payload);
     return response.data;
 }

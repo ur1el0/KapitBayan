@@ -216,14 +216,14 @@ class DocumentPaymentWorkflowTests(APITestCase):
         dilg_admin = User.objects.create_user(
             username="recipient_dilg_admin",
             password="SecurePassword123!",
-            role=User.Role.DILG_ADMIN,
+            role="DILG_ADMIN",
             is_staff=True,
         )
         self.client.force_authenticate(dilg_admin)
         dilg_response = self.client.get(reverse("payment-recipient-list"))
         self.assertEqual(dilg_response.status_code, status.HTTP_403_FORBIDDEN)
 
-    def test_dilg_document_view_hides_payment_recipient_details(self):
+    def test_legacy_role_cannot_view_another_tenant_document(self):
         document = self.make_request(
             payment_method=DocumentRequest.PaymentMethod.GCASH,
             payment_recipient=self.gcash_recipient,
@@ -234,7 +234,7 @@ class DocumentPaymentWorkflowTests(APITestCase):
         dilg_admin = User.objects.create_user(
             username="payment_dilg_admin",
             password="SecurePassword123!",
-            role=User.Role.DILG_ADMIN,
+            role="DILG_ADMIN",
             is_staff=True,
         )
         self.client.force_authenticate(dilg_admin)
@@ -243,11 +243,7 @@ class DocumentPaymentWorkflowTests(APITestCase):
             reverse("document-request-detail", args=[document.pk])
         )
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIsNone(response.data["payment_recipient"])
-        self.assertIsNone(response.data["payment_recipient_name_snapshot"])
-        self.assertIsNone(response.data["payment_recipient_identifier_snapshot"])
-        self.assertIsNone(response.data["payment_instructions_snapshot"])
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_resident_payment_uses_selected_recipient_and_snapshots_details(self):
         recipient = PaymentRecipient.objects.create(

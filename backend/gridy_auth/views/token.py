@@ -52,8 +52,16 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                         status=status.HTTP_403_FORBIDDEN
                     )
 
+            # Reject legacy or unknown roles even if an old database row still exists.
+            if user.role not in {User.Role.ADMIN, User.Role.RESIDENT, User.Role.FIELD_OFFICIAL}:
+                RefreshSession.objects.filter(user=user, is_revoked=False).update(is_revoked=True)
+                return Response(
+                    {"detail": "This account role is no longer supported. Contact your Barangay administrator."},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+
             # 2. SECURITY: Enforce Active Status for Barangay Admins & Field Officials
-            if user.role in [User.Role.ADMIN, User.Role.DILG_ADMIN, User.Role.FIELD_OFFICIAL]:
+            if user.role in [User.Role.ADMIN, User.Role.FIELD_OFFICIAL]:
                 if not user.is_active:
                     return Response(
                         {"detail": "Your official account is pending verification. Only active, verified barangay personnel can log in."},
@@ -124,6 +132,14 @@ class CustomTokenRefreshView(TokenRefreshView):
                 user=session.user,
                 is_revoked=False,
             ).update(is_revoked=True)
+            return Response(
+                {"detail": "Session is revoked or invalid."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        if session.user.role not in {User.Role.ADMIN, User.Role.RESIDENT, User.Role.FIELD_OFFICIAL}:
+            session.is_revoked = True
+            session.save(update_fields=["is_revoked"])
             return Response(
                 {"detail": "Session is revoked or invalid."},
                 status=status.HTTP_401_UNAUTHORIZED,

@@ -41,7 +41,7 @@ export const AdminLayout: React.FC = () => {
                             {isMobileNavigationOpen ? <X className="h-5 w-5" aria-hidden="true" /> : <Menu className="h-5 w-5" aria-hidden="true" />}
                         </button>
                         <span className="truncate text-sm font-semibold text-slate-700 sm:text-base">
-                            {user?.role === 'DILG_ADMIN' ? 'DILG oversight' : 'KapitBayan administration'}
+                            KapitBayan administration
                         </span>
                     </div>
 

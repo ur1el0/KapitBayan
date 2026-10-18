@@ -1,9 +1,13 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { axiosPublic } from '../../api/axios';
 import { useAuth } from '../../context/auth-context';
 import { Login } from './Login';
+
+function CurrentPath() {
+    return <output data-testid="current-path">{useLocation().pathname}</output>;
+}
 
 vi.mock('../../api/axios', () => ({
     axiosPublic: { post: vi.fn() },
@@ -25,6 +29,17 @@ describe('web login role boundaries', () => {
             logout,
             isAuthenticated: false,
         } as never);
+    });
+
+    it('provides an explicit barangay staff sign-in path without a hidden role switch', () => {
+        render(
+            <MemoryRouter initialEntries={['/login']}>
+                <Login />
+            </MemoryRouter>,
+        );
+
+        expect(screen.getByRole('link', { name: 'Barangay staff sign in' }))
+            .toHaveAttribute('href', '/official-login');
     });
 
     it('rejects Field Official web login and clears the refresh session cookie', async () => {
@@ -57,5 +72,40 @@ describe('web login role boundaries', () => {
         });
         expect(logout).toHaveBeenCalledOnce();
         expect(login).not.toHaveBeenCalled();
+    });
+
+    it('allows a Django superuser to use the isolated platform recovery sign-in', async () => {
+        vi.mocked(axiosPublic.post).mockResolvedValueOnce({
+            data: {
+                access: 'platform-access-token',
+                user: { role: 'RESIDENT', is_superuser: true },
+            },
+        } as never);
+
+        render(
+            <MemoryRouter initialEntries={['/official-login']}>
+                <>
+                    <Login />
+                    <CurrentPath />
+                </>
+            </MemoryRouter>,
+        );
+
+        fireEvent.change(screen.getByPlaceholderText('Enter your username or email'), {
+            target: { value: 'platform.operator@example.test' },
+        });
+        fireEvent.change(screen.getByPlaceholderText('........'), {
+            target: { value: 'operator-password' },
+        });
+        fireEvent.click(screen.getByRole('button', { name: 'Login as Barangay Official' }));
+
+        await waitFor(() => {
+            expect(screen.getByTestId('current-path')).toHaveTextContent('/platform/accounts');
+        });
+        expect(login).toHaveBeenCalledWith('platform-access-token', {
+            role: 'RESIDENT',
+            is_superuser: true,
+        });
+        expect(logout).not.toHaveBeenCalled();
     });
 });

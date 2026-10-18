@@ -6,12 +6,13 @@ The browser application is a React and TypeScript single-page application built 
 
 | Route group | Access | Purpose |
 |---|---|---|
-| `/login`, `/register`, `/register/barangay`, password-reset routes | Public | Resident access and barangay onboarding |
+| `/login`, `/official-login`, `/register`, password-reset routes | Public | Resident access and barangay staff sign-in |
 | `/public/queue/:barangayId`, `/public/announcements/:barangayId` | Public | Read-only public displays |
-| `/dashboard`, `/documents`, `/queue`, `/communications`, `/residents`, `/reports`, and related staff routes | `ADMIN` or `DILG_ADMIN`, with additional route-level restrictions where configured | Staff and oversight workspaces |
+| `/dashboard`, `/documents`, `/queue`, `/communications`, `/residents`, `/reports`, and related staff routes | `ADMIN`, with additional route-level restrictions where configured | Barangay staff workspace |
+| `/platform/accounts` | Active Django superuser | Bounded account recovery and status support |
 | `/portal/documents`, `/portal/queue`, `/portal/bulletin`, `/portal/aid` | `RESIDENT` | Resident self-service |
 
-`/aid-requests` has an additional `ADMIN` route guard. DILG application management has a `DILG_ADMIN` guard. `FIELD_OFFICIAL` has no web staff workspace in the current router and uses the Flutter client; browser login for that role is rejected. These are UI route guards; the API remains the authorization boundary. The Field Official API token is not cryptographically bound to a native device.
+`/aid-requests` has an additional `ADMIN` route guard. Public barangay applications and their review routes have been retired; existing application rows are retained as read-only history for superusers. `FIELD_OFFICIAL` has no web staff workspace in the current router and uses the Flutter client; browser login for that role is rejected. These are UI route guards; the API remains the authorization boundary. The Field Official API token is not cryptographically bound to a native device.
 
 ## API and authentication
 

@@ -40,7 +40,7 @@ export const ForgotPassword = () => {
                         </div>
                         <h3 className="text-lg font-bold text-slate-900 mb-2">Check your inbox</h3>
                         <p className="text-slate-500 text-sm mb-8">
-                            If <span className="font-semibold text-slate-700">{email}</span> exists in our system, we have sent a secure password reset link. Check your spam folder too. If it does not arrive, contact your Barangay Admin or DILG account support to verify the email on your account.
+                            If <span className="font-semibold text-slate-700">{email}</span> exists in our system, we have sent a secure password reset link. Check your spam folder too. If it does not arrive, contact your Barangay Administrator to verify the email on your account.
                         </p>
                     </div>
                 ) : (

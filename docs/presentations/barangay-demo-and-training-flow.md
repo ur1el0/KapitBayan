@@ -153,7 +153,7 @@ Explain that field access is limited to the assigned barangay. If a tab or actio
 1. Return to the sign-in page and select **Forgot password?**
 2. Enter the demo account's email and submit once. The page shows a generic success message for privacy; it does not prove that an email was sent.
 3. Check the mailbox's Inbox and Spam folder. The deployed email provider is Brevo. If needed, an authorized operator checks Render application logs and Brevo transactional email logs.
-4. If the resident cannot access the registered email, ask them to contact the official account-support process. An authorized DILG support operator must verify the account holder before correcting the address or sending a recovery link. Do not ask for the resident's password or reset link.
+4. If the resident cannot access the registered email, ask them to contact the official account-support process. An authorized platform operator must verify the account holder before correcting the address or sending a recovery link. Do not ask for the resident's password or reset link.
 
 If the account is pending verification, password reset will not approve it. If a reset email does not arrive, check that the address belongs to exactly one account and wait before retrying if the service has rate-limited requests. A resident can continue to request in-person help through the barangay office.
 

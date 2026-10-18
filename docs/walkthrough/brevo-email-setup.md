@@ -36,7 +36,7 @@ KapitBayan uses background work inside the API process. A generic password-reset
 | Brevo logs show rejected, blocked, or bounced mail | Read the provider event reason, verify the sender, recipient address, and account-level delivery status in Brevo. |
 | Brevo reports delivery, but the recipient cannot find the message | Check Spam, Promotions, filters, and mailbox rules; verify the recipient address. |
 | A password-reset request returns HTTP 429 | Wait for the configured throttle window, then retry once. Repeated requests can prolong the wait and make the logs harder to inspect. |
-| The account email is wrong or account recovery still fails | Ask an authorized operator to verify the account holder through an official channel and use the DILG Account Support recovery flow. Do not send passwords or reset links through public or unverified channels. |
+| The account email is wrong or account recovery still fails | Ask an authorized platform operator to verify the account holder through an official channel and use the superuser-only Platform Account Support recovery flow. Do not send passwords or reset links through public or unverified channels. |
 
 The endpoint deliberately returns the same success text for an unknown email and for an address that does not resolve to exactly one account record. This prevents account discovery but means that the page alone cannot diagnose delivery. The current notification and email dispatch helpers are best-effort and do not use a durable retry queue.
 

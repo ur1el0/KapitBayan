@@ -33,7 +33,7 @@ class EmailBrandingTests(SimpleTestCase):
 
         self.assertEqual(result, 1)
         subject, message = mock_send_mail.call_args.args[:2]
-        self.assertEqual(subject, "KapitBayan barangay account approved")
+        self.assertEqual(subject, "KapitBayan official account approved")
         self.assertIn("KapitBayan password recovery page", message)
         self.assertIn("KapitBayan staff will never ask", message)
 

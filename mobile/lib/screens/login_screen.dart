@@ -113,14 +113,13 @@ class _LoginScreenState extends State<LoginScreen> {
         return;
       }
 
-      // DILG Admin Guard: DILG oversight is exclusively accessed via the Web Executive Portal
-      if (authResponse.user.role.toUpperCase() == 'DILG_ADMIN') {
+      // Refuse retired or unknown roles even if a stale client is given a token.
+      if (!authResponse.user.isSupportedRole) {
         await _authService!.logout();
         if (!mounted) return;
         setState(() {
           _isLoading = false;
-          _errorMessage =
-              'DILG Oversight accounts must sign in through the Web Executive Portal.';
+          _errorMessage = 'This account role is no longer supported. Contact your Barangay Administrator.';
         });
         return;
       }

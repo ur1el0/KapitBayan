@@ -13,8 +13,6 @@ import {
 } from '../../components/auth/register';
 
 export const Register: React.FC = () => {
-    const [isAdminMode, setIsAdminMode] = useState(false);
-
     // Common fields
     const [fullName, setFullName] = useState('');
     const [email, setEmail] = useState('');
@@ -218,12 +216,6 @@ export const Register: React.FC = () => {
         <div className="min-h-screen flex flex-col md:flex-row bg-[#F6F8FC] font-sans">
             {/* Left Sidebar Banner */}
             <RegisterHeroBanner
-                isAdminMode={isAdminMode}
-                onToggleMode={() => {
-                    setError('');
-                    setSuccess('');
-                    setIsAdminMode((prev) => !prev);
-                }}
             />
 
             {/* Right Registration Form */}
@@ -232,19 +224,15 @@ export const Register: React.FC = () => {
                     {/* Header */}
                     <div className="mb-6">
                         <div className="flex items-center gap-2 mb-2">
-                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider ${
-                                isAdminMode ? 'bg-amber-100 text-amber-900' : 'bg-sky-100 text-sky-900'
-                            }`}>
-                                {isAdminMode ? 'Authorized Staff' : 'Resident'}
+                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-sky-100 text-sky-900">
+                                Resident
                             </span>
                         </div>
                         <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">
-                            {isAdminMode ? 'Administrative Registration' : 'Resident Registration'}
+                            Resident Registration
                         </h2>
                         <p className="text-slate-500 text-sm mt-1">
-                            {isAdminMode
-                                ? 'Administrative accounts are provisioned via verified DILG onboarding per ADR 011.'
-                                : 'Complete your registration details to access barangay services.'}
+                            Complete your registration details to access barangay services.
                         </p>
                     </div>
 
@@ -267,52 +255,7 @@ export const Register: React.FC = () => {
                         </div>
                     )}
 
-                    {isAdminMode ? (
-                        <div className="space-y-6">
-                            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 space-y-4">
-                                <div className="flex items-center gap-2.5 text-amber-900">
-                                    <Shield className="w-5 h-5 text-amber-600 shrink-0" />
-                                    <h3 className="text-base font-bold">DILG-Reviewed Staff Onboarding</h3>
-                                </div>
-                                <p className="text-sm text-slate-700 leading-relaxed">
-                                    Per DILG administrative standards and ADR 011, unauthenticated public registration for barangay administrative accounts is disabled to safeguard tenant integrity.
-                                </p>
-                                <p className="text-sm text-slate-700 leading-relaxed">
-                                    To onboard your barangay and provision official staff credentials, submit an official application for DILG review. Upon approval, authorized officials receive secure password setup instructions.
-                                </p>
-                                <Link
-                                    to="/register/barangay"
-                                    className="inline-flex items-center justify-center w-full px-5 py-3 rounded-xl bg-[#091B35] text-white font-bold text-sm hover:bg-[#0F2D59] transition-all shadow-sm"
-                                >
-                                    Apply for Barangay Onboarding
-                                </Link>
-                            </div>
-
-                            <div className="text-center pt-2">
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setError('');
-                                        setSuccess('');
-                                        setIsAdminMode(false);
-                                    }}
-                                    className="text-xs font-medium text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
-                                >
-                                    <span>Registering as a Resident? <span className="text-[#0284C7] font-bold underline">Switch to Resident Sign Up</span></span>
-                                </button>
-                            </div>
-
-                            <div className="text-center pt-1">
-                                <p className="text-xs text-slate-500 font-medium">
-                                    Already have an account?{' '}
-                                    <Link to="/login" className="font-bold text-slate-900 hover:text-[#0284C7] hover:underline transition-colors">
-                                        Log in here
-                                    </Link>
-                                </p>
-                            </div>
-                        </div>
-                    ) : (
-                        <form className="space-y-4" onSubmit={handleRegister}>
+                    <form className="space-y-4" onSubmit={handleRegister}>
                             <TextField
                                 label="FULL NAME (AS IN ID)"
                                 type="text"
@@ -459,21 +402,6 @@ export const Register: React.FC = () => {
                                 </Button>
                             </div>
 
-                            {/* Mode Switch Link */}
-                            <div className="text-center pt-2">
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setError('');
-                                        setSuccess('');
-                                        setIsAdminMode(true);
-                                    }}
-                                    className="text-xs font-medium text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
-                                >
-                                    <span>Barangay Personnel? <span className="text-slate-900 font-bold underline">Switch to Official Registration</span></span>
-                                </button>
-                            </div>
-
                             {/* Back to Login */}
                             <div className="text-center pt-1">
                                 <p className="text-xs text-slate-500 font-medium">
@@ -483,8 +411,7 @@ export const Register: React.FC = () => {
                                     </Link>
                                 </p>
                             </div>
-                        </form>
-                    )}
+                    </form>
                 </div>
             </div>
         </div>

@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { BookOpen, CircleHelp, Loader2, Plus, Search, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { axiosPrivate } from '../../api/axios';
-import { useAuth } from '../../context/auth-context';
 
 type FAQAudience = 'RESIDENT' | 'STAFF';
 
@@ -23,7 +22,6 @@ type FAQForm = {
     question: string;
     answer: string;
     order: string;
-    audience: FAQAudience;
     category: string;
     is_published: boolean;
 };
@@ -45,7 +43,6 @@ const emptyForm = (): FAQForm => ({
     question: '',
     answer: '',
     order: '0',
-    audience: 'RESIDENT',
     category: 'GETTING_STARTED',
     is_published: false,
 });
@@ -59,14 +56,11 @@ function unwrapFaqs(payload: unknown): FAQItem[] {
 }
 
 export const Faqs: React.FC = () => {
-    const { user } = useAuth();
-    const isDilgAdmin = user?.role === 'DILG_ADMIN';
     const [faqs, setFaqs] = useState<FAQItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [loadError, setLoadError] = useState(false);
     const [query, setQuery] = useState('');
     const [categoryFilter, setCategoryFilter] = useState('ALL');
-    const [audienceFilter, setAudienceFilter] = useState('ALL');
     const [publicationFilter, setPublicationFilter] = useState('ALL');
     const [editorOpen, setEditorOpen] = useState(false);
     const [editingFaq, setEditingFaq] = useState<FAQItem | null>(null);
@@ -102,12 +96,11 @@ export const Faqs: React.FC = () => {
             const matchesQuery = !normalizedQuery
                 || `${faq.question} ${faq.answer}`.toLocaleLowerCase().includes(normalizedQuery);
             const matchesCategory = categoryFilter === 'ALL' || faq.category === categoryFilter;
-            const matchesAudience = audienceFilter === 'ALL' || faq.audience === audienceFilter;
             const matchesPublication = publicationFilter === 'ALL'
                 || (publicationFilter === 'PUBLISHED' ? faq.is_published : !faq.is_published);
-            return matchesQuery && matchesCategory && matchesAudience && matchesPublication;
+            return matchesQuery && matchesCategory && matchesPublication;
         });
-    }, [faqs, query, categoryFilter, audienceFilter, publicationFilter]);
+    }, [faqs, query, categoryFilter, publicationFilter]);
 
     const openCreateForm = () => {
         setEditingFaq(null);
@@ -122,7 +115,6 @@ export const Faqs: React.FC = () => {
             question: faq.question,
             answer: faq.answer,
             order: String(faq.order),
-            audience: faq.audience,
             category: faq.category,
             is_published: faq.is_published,
         });
@@ -138,7 +130,7 @@ export const Faqs: React.FC = () => {
             question: form.question.trim(),
             answer: form.answer.trim(),
             order: Number.parseInt(form.order, 10) || 0,
-            audience: isDilgAdmin ? form.audience : 'RESIDENT',
+            audience: 'RESIDENT',
             category: form.category,
             is_published: form.is_published,
         };
@@ -181,9 +173,7 @@ export const Faqs: React.FC = () => {
         }
     };
 
-    const canManage = (faq: FAQItem) => isDilgAdmin
-        ? faq.scope === 'GLOBAL'
-        : faq.scope === 'BARANGAY' && faq.audience === 'RESIDENT';
+    const canManage = (faq: FAQItem) => faq.scope === 'BARANGAY' && faq.audience === 'RESIDENT';
 
     return (
         <main className="mx-auto max-w-5xl space-y-6 pb-12">
@@ -201,7 +191,7 @@ export const Faqs: React.FC = () => {
                     className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 font-semibold text-primary-foreground outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
                 >
                     <Plus className="h-4 w-4" aria-hidden="true" />
-                    {isDilgAdmin ? 'New global FAQ' : 'New resident FAQ'}
+                    New resident FAQ
                 </button>
             </header>
 
@@ -215,7 +205,7 @@ export const Faqs: React.FC = () => {
                                 {editingFaq ? 'Edit FAQ' : 'Create FAQ'}
                             </h2>
                             <p className="mt-1 text-sm text-slate-600">
-                                {isDilgAdmin ? 'Global FAQs may be visible to residents across Barangays.' : 'This FAQ will be scoped to your Barangay.'}
+                                This FAQ will be visible to residents in your Barangay only.
                             </p>
                         </div>
                         <button type="button" onClick={() => setEditorOpen(false)} className="min-h-11 rounded-lg px-3 font-semibold text-slate-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary">
@@ -237,22 +227,13 @@ export const Faqs: React.FC = () => {
                                 {CATEGORIES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
                             </select>
                         </label>
-                        {isDilgAdmin && (
-                            <label className="grid gap-1.5 text-sm font-semibold text-slate-800">
-                                Audience
-                                <select value={form.audience} onChange={(event) => setForm((old) => ({ ...old, audience: event.target.value as FAQAudience }))} className="min-h-11 rounded-lg border border-slate-300 bg-white px-3 font-normal focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary">
-                                    <option value="RESIDENT">Residents</option>
-                                    <option value="STAFF">Staff</option>
-                                </select>
-                            </label>
-                        )}
                         <label className="grid gap-1.5 text-sm font-semibold text-slate-800">
                             Display order
                             <input type="number" value={form.order} onChange={(event) => setForm((old) => ({ ...old, order: event.target.value }))} className="min-h-11 rounded-lg border border-slate-300 px-3 font-normal focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary" />
                         </label>
                         <label className="flex min-h-11 items-center gap-3 self-end rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-800">
                             <input type="checkbox" checked={form.is_published} onChange={(event) => setForm((old) => ({ ...old, is_published: event.target.checked }))} className="h-5 w-5 accent-blue-800" />
-                            Publish for the selected audience
+                            Publish for residents in this Barangay
                         </label>
                         <div className="flex flex-wrap items-center gap-3 md:col-span-2">
                             <button type="submit" disabled={saving} className="inline-flex min-h-11 items-center justify-center rounded-lg bg-primary px-5 font-semibold text-primary-foreground disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary">
@@ -286,13 +267,6 @@ export const Faqs: React.FC = () => {
                             <option value="DRAFT">Draft</option>
                         </select>
                     </label>
-                    {isDilgAdmin && (
-                        <select aria-label="Filter by audience" value={audienceFilter} onChange={(event) => setAudienceFilter(event.target.value)} className="min-h-11 rounded-lg border border-slate-300 bg-white px-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary">
-                            <option value="ALL">All audiences</option>
-                            <option value="RESIDENT">Residents</option>
-                            <option value="STAFF">Staff</option>
-                        </select>
-                    )}
                 </div>
 
                 {loading ? (
@@ -321,8 +295,8 @@ export const Faqs: React.FC = () => {
                                         <p className="mt-2 whitespace-pre-line text-sm leading-6 text-slate-700">{faq.answer}</p>
                                         <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold">
                                             <span className="rounded-full bg-slate-100 px-2.5 py-1 text-slate-800">{CATEGORIES.find(([value]) => value === faq.category)?.[1] ?? 'Other'}</span>
-                                            <span className="rounded-full bg-blue-50 px-2.5 py-1 text-blue-900">{faq.audience === 'RESIDENT' ? 'Residents' : 'Staff'}</span>
-                                            <span className="rounded-full bg-violet-50 px-2.5 py-1 text-violet-900">{faq.scope === 'GLOBAL' ? 'Global' : faq.barangay_name || 'This Barangay'}</span>
+                                            <span className="rounded-full bg-blue-50 px-2.5 py-1 text-blue-900">Residents</span>
+                                            <span className="rounded-full bg-violet-50 px-2.5 py-1 text-violet-900">{faq.barangay_name || 'This Barangay'}</span>
                                             <span className={`rounded-full px-2.5 py-1 ${faq.is_published ? 'bg-emerald-50 text-emerald-900' : 'bg-amber-50 text-amber-950'}`}>{faq.is_published ? 'Published' : 'Draft'}</span>
                                         </div>
                                     </div>

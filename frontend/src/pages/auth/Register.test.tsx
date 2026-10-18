@@ -14,7 +14,7 @@ afterEach(() => {
     vi.restoreAllMocks();
 });
 
-describe('Register Component (Dual-Mode)', () => {
+describe('Resident Register Component', () => {
     it('renders Resident Registration by default with resident fields and LGU service highlights', () => {
         render(
             <BrowserRouter>
@@ -24,10 +24,11 @@ describe('Register Component (Dual-Mode)', () => {
 
         // Branding & Citizen Badges
         expect(screen.getByText('KapitBayan')).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: /resident registration/i })).toBeInTheDocument();
-        expect(screen.getByText('OFFICIAL CLEARANCES ACCESS')).toBeInTheDocument();
-        expect(screen.getByText('REAL-TIME QUEUE TICKETING')).toBeInTheDocument();
-        expect(screen.getByText('COMMUNITY PROGRAM UPDATES')).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /switch to/i })).not.toBeInTheDocument();
+        expect(screen.queryByRole('link', { name: /official registration/i })).not.toBeInTheDocument();
+        expect(screen.getByText('Barangay services and clearances')).toBeInTheDocument();
+        expect(screen.getByText('Queue updates')).toBeInTheDocument();
+        expect(screen.getByText('Community program updates')).toBeInTheDocument();
 
         // Right form headings
         expect(screen.getByRole('heading', { level: 2, name: 'Resident Registration' })).toBeInTheDocument();
@@ -43,39 +44,6 @@ describe('Register Component (Dual-Mode)', () => {
         // Submit Button & Navigation
         expect(screen.getByRole('button', { name: /create resident account/i })).toBeInTheDocument();
         expect(screen.getByRole('link', { name: /log in here/i })).toHaveAttribute('href', '/login');
-    });
-
-    it('toggles to Administrative Registration when clicking the mode switch button', async () => {
-        render(
-            <BrowserRouter>
-                <Register />
-            </BrowserRouter>
-        );
-
-        await screen.findByRole('option', { name: /Barangay Ibabang Dupay/ });
-
-        // Use the header switch's full visible-mode and destination name.
-        const toggleButton = screen.getByRole('button', {
-            name: 'Resident Registration, switch to official registration',
-        });
-        expect(toggleButton).toHaveTextContent('Resident Registration');
-        fireEvent.click(toggleButton);
-
-        // Verify Admin Headings and Features
-        expect(screen.getByRole('heading', { level: 2, name: 'Administrative Registration' })).toBeInTheDocument();
-        const switchToResidentButton = screen.getByRole('button', {
-            name: 'Staff Registration, switch to resident registration',
-        });
-        expect(switchToResidentButton).toHaveTextContent('Staff Registration');
-        expect(screen.getByText('CREDENTIALS VERIFICATION')).toBeInTheDocument();
-        expect(screen.getByText('ADMIN ACCESS TIERS')).toBeInTheDocument();
-        expect(screen.getByText('SECURITY AUDIT COMPLIANCE')).toBeInTheDocument();
-
-        // Verify DILG Guidance and Link per ADR 011
-        expect(screen.getByRole('heading', { level: 3, name: 'DILG-Reviewed Staff Onboarding' })).toBeInTheDocument();
-        expect(screen.getByText(/unauthenticated public registration for barangay administrative accounts is disabled/i)).toBeInTheDocument();
-        const onboardingLink = screen.getByRole('link', { name: 'Apply for Barangay Onboarding' });
-        expect(onboardingLink).toHaveAttribute('href', '/register/barangay');
     });
 
     it('blocks registration when the approved barangay directory is unavailable', async () => {
@@ -182,32 +150,6 @@ describe('Register Component (Dual-Mode)', () => {
         fireEvent.submit(submitButton.closest('form')!);
 
         expect(await screen.findByText('Passwords do not match.')).toBeInTheDocument();
-    });
-
-    it('allows toggling between Resident and Administrative modes via the bottom links', async () => {
-        render(
-            <BrowserRouter>
-                <Register />
-            </BrowserRouter>
-        );
-
-        // Click bottom link to switch to official registration
-        const switchToAdminLink = screen.getByRole('button', {
-            name: /Barangay Personnel\? Switch to Official Registration/i,
-        });
-        fireEvent.click(switchToAdminLink);
-
-        expect(screen.getByRole('heading', { level: 2, name: 'Administrative Registration' })).toBeInTheDocument();
-        expect(screen.getByRole('link', { name: 'Apply for Barangay Onboarding' })).toHaveAttribute('href', '/register/barangay');
-
-        // Click bottom link to switch back to resident sign up
-        const switchToResidentLink = screen.getByRole('button', {
-            name: /Registering as a Resident\? Switch to Resident Sign Up/i,
-        });
-        fireEvent.click(switchToResidentLink);
-
-        expect(screen.getByRole('heading', { level: 2, name: 'Resident Registration' })).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: /create resident account/i })).toBeInTheDocument();
     });
 
     it('sends accepted privacy consent with resident registration', async () => {

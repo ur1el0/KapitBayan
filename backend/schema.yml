@@ -17,7 +17,6 @@ paths:
       tags:
       - api
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '200':
@@ -43,7 +42,6 @@ paths:
               $ref: '#/components/schemas/ActivitySchedule'
         required: true
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '201':
@@ -65,7 +63,6 @@ paths:
       tags:
       - api
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '200':
@@ -98,7 +95,6 @@ paths:
               $ref: '#/components/schemas/ActivitySchedule'
         required: true
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '200':
@@ -130,7 +126,6 @@ paths:
             schema:
               $ref: '#/components/schemas/PatchedActivitySchedule'
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '200':
@@ -151,7 +146,6 @@ paths:
       tags:
       - api
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '204':
@@ -169,7 +163,6 @@ paths:
       tags:
       - api
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '200':
@@ -195,7 +188,6 @@ paths:
               $ref: '#/components/schemas/AdminNotification'
         required: true
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '201':
@@ -216,7 +208,6 @@ paths:
       tags:
       - api
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '200':
@@ -248,7 +239,6 @@ paths:
               $ref: '#/components/schemas/AdminNotification'
         required: true
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '200':
@@ -279,7 +269,6 @@ paths:
             schema:
               $ref: '#/components/schemas/PatchedAdminNotification'
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '200':
@@ -299,7 +288,6 @@ paths:
       tags:
       - api
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '204':
@@ -322,7 +310,6 @@ paths:
               $ref: '#/components/schemas/AdminNotification'
         required: true
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '200':
@@ -344,7 +331,6 @@ paths:
       tags:
       - api
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '200':
@@ -370,7 +356,6 @@ paths:
               $ref: '#/components/schemas/AidRequest'
         required: true
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '201':
@@ -392,7 +377,6 @@ paths:
       tags:
       - api
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '200':
@@ -424,7 +408,6 @@ paths:
             schema:
               $ref: '#/components/schemas/PatchedAidRequestReview'
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '200':
@@ -446,7 +429,6 @@ paths:
       tags:
       - api
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '200':
@@ -472,7 +454,6 @@ paths:
               $ref: '#/components/schemas/Announcement'
         required: true
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '201':
@@ -494,7 +475,6 @@ paths:
       tags:
       - api
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '200':
@@ -527,7 +507,6 @@ paths:
               $ref: '#/components/schemas/Announcement'
         required: true
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '200':
@@ -559,7 +538,6 @@ paths:
             schema:
               $ref: '#/components/schemas/PatchedAnnouncement'
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '200':
@@ -580,7 +558,6 @@ paths:
       tags:
       - api
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '204':
@@ -601,7 +578,6 @@ paths:
       tags:
       - Barangay Settings
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '200':
@@ -625,7 +601,6 @@ paths:
       tags:
       - Barangay Settings
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '200':
@@ -656,7 +631,6 @@ paths:
             schema:
               $ref: '#/components/schemas/PatchedBarangay'
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '200':
@@ -668,6 +642,14 @@ paths:
   /api/v1/auth/import-residents/:
     post:
       operationId: api_v1_auth_import_residents_create
+      description: Bulk imports residents from a historical Registry of Barangay Inhabitants
+        (RBI) CSV file (Barangay Official only). Unlike resident self-service registration,
+        historical RBI records do not require uploaded proof images; the authorized
+        official's import serves as an administrative residency attestation. Imported
+        resident accounts are assigned to the official's barangay, marked as pre-verified
+        (is_verified=True), and provisioned without usable passwords. Durably logs
+        audit provenance linked to the importing official, the CSV file, and the imported
+        resident records.
       summary: Bulk Import Residents from CSV
       tags:
       - api
@@ -678,7 +660,6 @@ paths:
               $ref: '#/components/schemas/FileUpload'
         required: true
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '200':
@@ -694,6 +675,13 @@ paths:
                 $ref: '#/components/schemas/ResidentImportResponse'
           description: ''
         '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '403':
           content:
             application/json:
               schema:
@@ -733,7 +721,6 @@ paths:
       tags:
       - api
       security:
-      - jwtAuth: []
       - cookieAuth: []
       - {}
       responses:
@@ -745,7 +732,6 @@ paths:
       tags:
       - User Profile
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '200':
@@ -757,17 +743,16 @@ paths:
       - User Profile
       requestBody:
         content:
-          application/json:
+          multipart/form-data:
             schema:
               $ref: '#/components/schemas/PatchedUser'
           application/x-www-form-urlencoded:
             schema:
               $ref: '#/components/schemas/PatchedUser'
-          multipart/form-data:
+          application/json:
             schema:
               $ref: '#/components/schemas/PatchedUser'
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '200':
@@ -789,7 +774,6 @@ paths:
       tags:
       - User Profile
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '204':
@@ -813,7 +797,6 @@ paths:
               $ref: '#/components/schemas/PasswordResetRequest'
         required: true
       security:
-      - jwtAuth: []
       - cookieAuth: []
       - {}
       responses:
@@ -843,7 +826,6 @@ paths:
               $ref: '#/components/schemas/PasswordResetConfirm'
         required: true
       security:
-      - jwtAuth: []
       - cookieAuth: []
       - {}
       responses:
@@ -867,7 +849,6 @@ paths:
       tags:
       - api
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '200':
@@ -876,53 +857,230 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedResidentList'
           description: ''
-  /api/v1/auth/register/:
-    post:
-      operationId: api_v1_auth_register_create
+  /api/v1/auth/platform/accounts/:
+    get:
+      operationId: api_v1_auth_platform_accounts_list
+      description: Limited superuser recovery and active-state support for barangay
+        accounts.
+      summary: Search eligible barangay accounts for platform support
+      parameters:
+      - in: query
+        name: active
+        schema:
+          type: boolean
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - in: query
+        name: role
+        schema:
+          enum:
+          - RESIDENT
+          - FIELD_OFFICIAL
+          - ADMIN
+          type: string
+          minLength: 1
+        description: |-
+          * `RESIDENT` - RESIDENT
+          * `FIELD_OFFICIAL` - FIELD_OFFICIAL
+          * `ADMIN` - ADMIN
+      - in: query
+        name: search
+        schema:
+          type: string
+          maxLength: 120
       tags:
-      - Authentication
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Register'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/Register'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/Register'
-        required: true
+      - Platform Account Support
       security:
-      - jwtAuth: []
       - cookieAuth: []
-      - {}
       responses:
-        '201':
+        '200':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/User'
+                $ref: '#/components/schemas/PaginatedPlatformAccountSummaryList'
           description: ''
-  /api/v1/auth/register/admin/:
+  /api/v1/auth/platform/accounts/{id}/:
+    get:
+      operationId: api_v1_auth_platform_accounts_retrieve
+      description: Limited superuser recovery and active-state support for barangay
+        accounts.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this user.
+        required: true
+      tags:
+      - Platform Account Support
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlatformAccountSummary'
+          description: ''
+    patch:
+      operationId: api_v1_auth_platform_accounts_partial_update
+      description: Limited superuser recovery and active-state support for barangay
+        accounts.
+      summary: Correct a barangay account email and send a secure setup/reset link
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this user.
+        required: true
+      tags:
+      - Platform Account Support
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedPlatformAccountEmailCorrection'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedPlatformAccountEmailCorrection'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedPlatformAccountEmailCorrection'
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlatformAccountSummary'
+          description: ''
+        '400':
+          description: Invalid email, reason, or verification attestation
+        '404':
+          description: Account not found or not eligible
+  /api/v1/auth/platform/accounts/{id}/send-password-link/:
     post:
-      operationId: api_v1_auth_register_admin_create
+      operationId: api_v1_auth_platform_accounts_send_password_link_create
+      description: Limited superuser recovery and active-state support for barangay
+        accounts.
+      summary: Send a private setup/reset link to the verified account email
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this user.
+        required: true
+      tags:
+      - Platform Account Support
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlatformAccountRecoveryLink'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PlatformAccountRecoveryLink'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PlatformAccountRecoveryLink'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '202':
+          description: Recovery email dispatch requested
+        '400':
+          description: Contact verification and reason are required
+        '404':
+          description: Account not found or not eligible
+  /api/v1/auth/platform/accounts/{id}/set-active/:
+    post:
+      operationId: api_v1_auth_platform_accounts_set_active_create
+      description: Limited superuser recovery and active-state support for barangay
+        accounts.
+      summary: Activate or deactivate a barangay account
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this user.
+        required: true
+      tags:
+      - Platform Account Support
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlatformAccountActiveState'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PlatformAccountActiveState'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PlatformAccountActiveState'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlatformAccountSummary'
+          description: ''
+        '400':
+          description: Invalid state or last active barangay administrator guard
+        '404':
+          description: Account not found or not eligible
+  /api/v1/auth/public/barangays/:
+    get:
+      operationId: api_v1_auth_public_barangays_list
+      description: List existing Barangays so residents can select their jurisdiction.
+      tags:
+      - Barangay Directory
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PublicBarangay'
+          description: ''
+  /api/v1/auth/register/:
+    post:
+      operationId: api_v1_auth_register_create
+      description: 'Resident registration requires at least one valid uploaded image:
+        a PhilSys ID photo, a secondary ID photo, or a utility/residency proof photo.
+        A typed PhilSys ID number alone does not satisfy this requirement. For historical
+        administrative bulk ingestion without digital proof images, authorized barangay
+        officials must use the RBI CSV import endpoint (/api/v1/auth/import-residents/).'
       tags:
       - Authentication
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AdminRegister'
+              $ref: '#/components/schemas/Register'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/AdminRegister'
+              $ref: '#/components/schemas/Register'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/AdminRegister'
+              $ref: '#/components/schemas/Register'
         required: true
       security:
-      - jwtAuth: []
       - cookieAuth: []
       - {}
       responses:
@@ -945,7 +1103,6 @@ paths:
       tags:
       - api
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '204':
@@ -967,8 +1124,8 @@ paths:
   /api/v1/auth/resident/:
     get:
       operationId: api_v1_auth_resident_list
-      description: CRUD endpoint for verified residents. Only Barangay Officials can
-        access this full directory.
+      description: Directory endpoint for verified residents. Supports list, retrieve,
+        update, and delete.
       parameters:
       - name: page
         required: false
@@ -979,7 +1136,6 @@ paths:
       tags:
       - api
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '200':
@@ -988,39 +1144,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedResidentList'
           description: ''
-    post:
-      operationId: api_v1_auth_resident_create
-      description: CRUD endpoint for verified residents. Only Barangay Officials can
-        access this full directory.
-      tags:
-      - api
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Resident'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/Resident'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/Resident'
-        required: true
-      security:
-      - jwtAuth: []
-      - cookieAuth: []
-      responses:
-        '201':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Resident'
-          description: ''
   /api/v1/auth/resident/{id}/:
     get:
       operationId: api_v1_auth_resident_retrieve
-      description: CRUD endpoint for verified residents. Only Barangay Officials can
-        access this full directory.
+      description: Directory endpoint for verified residents. Supports list, retrieve,
+        update, and delete.
       parameters:
       - in: path
         name: id
@@ -1030,7 +1158,6 @@ paths:
       tags:
       - api
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '200':
@@ -1041,8 +1168,8 @@ paths:
           description: ''
     put:
       operationId: api_v1_auth_resident_update
-      description: CRUD endpoint for verified residents. Only Barangay Officials can
-        access this full directory.
+      description: Directory endpoint for verified residents. Supports list, retrieve,
+        update, and delete.
       parameters:
       - in: path
         name: id
@@ -1064,7 +1191,6 @@ paths:
               $ref: '#/components/schemas/ResidentAdminUpdate'
         required: true
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '200':
@@ -1075,8 +1201,8 @@ paths:
           description: ''
     patch:
       operationId: api_v1_auth_resident_partial_update
-      description: CRUD endpoint for verified residents. Only Barangay Officials can
-        access this full directory.
+      description: Directory endpoint for verified residents. Supports list, retrieve,
+        update, and delete.
       parameters:
       - in: path
         name: id
@@ -1097,7 +1223,6 @@ paths:
             schema:
               $ref: '#/components/schemas/PatchedResidentAdminUpdate'
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '200':
@@ -1108,8 +1233,8 @@ paths:
           description: ''
     delete:
       operationId: api_v1_auth_resident_destroy
-      description: CRUD endpoint for verified residents. Only Barangay Officials can
-        access this full directory.
+      description: Directory endpoint for verified residents. Supports list, retrieve,
+        update, and delete.
       parameters:
       - in: path
         name: id
@@ -1119,7 +1244,6 @@ paths:
       tags:
       - api
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '204':
@@ -1141,7 +1265,6 @@ paths:
       tags:
       - api
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '200':
@@ -1160,7 +1283,6 @@ paths:
       tags:
       - api
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '200':
@@ -1182,7 +1304,6 @@ paths:
       tags:
       - api
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '200':
@@ -1191,6 +1312,168 @@ paths:
               schema:
                 $ref: '#/components/schemas/RefreshSession'
           description: ''
+  /api/v1/auth/staff/:
+    get:
+      operationId: api_v1_auth_staff_list
+      description: Returns all active and inactive Field Officials belonging to the
+        authenticated Admin's Barangay.
+      summary: List Barangay Field Officials
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - Staff Management
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedStaffUserListList'
+          description: ''
+    post:
+      operationId: api_v1_auth_staff_create
+      description: Creates a new Field Official bound to the authenticated Admin's
+        Barangay.
+      summary: Onboard New Field Official
+      tags:
+      - Staff Management
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StaffUserCreate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/StaffUserCreate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/StaffUserCreate'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StaffUserList'
+          description: ''
+        '400':
+          description: Validation error or duplicate credentials.
+        '403':
+          description: Restricted to Barangay Admins with assigned Barangay.
+  /api/v1/auth/staff/{id}/:
+    put:
+      operationId: api_v1_auth_staff_update
+      description: Updates a Field Official's first name, last name, and/or email.
+        The target must belong to the authenticated Admin's Barangay. Username, role,
+        Barangay, password, and privilege fields cannot be changed here.
+      summary: Update Field Official Profile
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this user.
+        required: true
+      tags:
+      - Staff Management
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StaffUserUpdate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/StaffUserUpdate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/StaffUserUpdate'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StaffUserList'
+          description: ''
+        '400':
+          description: Invalid profile fields or disallowed request fields.
+        '404':
+          description: Field Official not found in administrator's Barangay.
+    patch:
+      operationId: api_v1_auth_staff_partial_update
+      description: Updates a Field Official's first name, last name, and/or email.
+        The target must belong to the authenticated Admin's Barangay. Username, role,
+        Barangay, password, and privilege fields cannot be changed here.
+      summary: Partially Update Field Official Profile
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this user.
+        required: true
+      tags:
+      - Staff Management
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedStaffUserUpdate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedStaffUserUpdate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedStaffUserUpdate'
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StaffUserList'
+          description: ''
+        '400':
+          description: Invalid profile fields or disallowed request fields.
+        '404':
+          description: Field Official not found in administrator's Barangay.
+  /api/v1/auth/staff/{id}/toggle-status/:
+    post:
+      operationId: api_v1_auth_staff_toggle_status_create
+      description: Activates or deactivates a Field Official. Deactivating immediately
+        revokes all active refresh sessions.
+      summary: Toggle Field Official Active Status
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this user.
+        required: true
+      tags:
+      - Staff Management
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StaffUserList'
+          description: ''
+        '404':
+          description: Field Official not found in administrator's Barangay.
   /api/v1/auth/token/refresh/:
     post:
       operationId: api_v1_auth_token_refresh_create
@@ -1231,7 +1514,6 @@ paths:
       tags:
       - api
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '200':
@@ -1256,7 +1538,6 @@ paths:
       tags:
       - api
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '200':
@@ -1278,7 +1559,6 @@ paths:
       tags:
       - api
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '200':
@@ -1304,7 +1584,6 @@ paths:
               $ref: '#/components/schemas/FCMDevice'
         required: true
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '201':
@@ -1326,7 +1605,6 @@ paths:
       tags:
       - api
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '200':
@@ -1359,7 +1637,6 @@ paths:
               $ref: '#/components/schemas/FCMDevice'
         required: true
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '200':
@@ -1391,7 +1668,6 @@ paths:
             schema:
               $ref: '#/components/schemas/PatchedFCMDevice'
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '200':
@@ -1412,21 +1688,9 @@ paths:
       tags:
       - api
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '204':
-          description: No response body
-  /api/v1/dilg-analytics/:
-    get:
-      operationId: api_v1_dilg_analytics_retrieve
-      tags:
-      - api
-      security:
-      - jwtAuth: []
-      - cookieAuth: []
-      responses:
-        '200':
           description: No response body
   /api/v1/document-requests/:
     get:
@@ -1441,7 +1705,6 @@ paths:
       tags:
       - api
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '200':
@@ -1467,7 +1730,6 @@ paths:
               $ref: '#/components/schemas/DocumentRequest'
         required: true
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '201':
@@ -1489,7 +1751,6 @@ paths:
       tags:
       - api
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '200':
@@ -1522,7 +1783,6 @@ paths:
               $ref: '#/components/schemas/DocumentRequest'
         required: true
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '200':
@@ -1554,7 +1814,6 @@ paths:
             schema:
               $ref: '#/components/schemas/PatchedDocumentRequest'
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '200':
@@ -1575,7 +1834,6 @@ paths:
       tags:
       - api
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '204':
@@ -1593,7 +1851,27 @@ paths:
       tags:
       - api
       security:
-      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentRequest'
+          description: ''
+  /api/v1/document-requests/{id}/payment-proof/:
+    get:
+      operationId: api_v1_document_requests_payment_proof_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this document request.
+        required: true
+      tags:
+      - api
+      security:
       - cookieAuth: []
       responses:
         '200':
@@ -1616,18 +1894,17 @@ paths:
       - api
       requestBody:
         content:
-          application/json:
+          multipart/form-data:
             schema:
               $ref: '#/components/schemas/DocumentRequest'
           application/x-www-form-urlencoded:
             schema:
               $ref: '#/components/schemas/DocumentRequest'
-          multipart/form-data:
+          application/json:
             schema:
               $ref: '#/components/schemas/DocumentRequest'
         required: true
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '200':
@@ -1660,7 +1937,6 @@ paths:
             schema:
               $ref: '#/components/schemas/PatchedDocumentRequest'
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '200':
@@ -1693,7 +1969,26 @@ paths:
             schema:
               $ref: '#/components/schemas/PatchedDocumentRequest'
       security:
-      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentRequest'
+          description: ''
+  /api/v1/documents/{id}/payment-proof/:
+    get:
+      operationId: api_v1_documents_payment_proof_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      security:
       - cookieAuth: []
       responses:
         '200':
@@ -1715,7 +2010,6 @@ paths:
       tags:
       - api
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '200':
@@ -1741,7 +2035,6 @@ paths:
               $ref: '#/components/schemas/FAQ'
         required: true
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '201':
@@ -1763,7 +2056,6 @@ paths:
       tags:
       - api
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '200':
@@ -1796,7 +2088,6 @@ paths:
               $ref: '#/components/schemas/FAQ'
         required: true
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '200':
@@ -1828,7 +2119,6 @@ paths:
             schema:
               $ref: '#/components/schemas/PatchedFAQ'
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '200':
@@ -1849,7 +2139,6 @@ paths:
       tags:
       - api
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '204':
@@ -1863,7 +2152,50 @@ paths:
       tags:
       - api
       security:
-      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '503':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/v1/health/live/:
+    get:
+      operationId: api_v1_health_live_retrieve
+      description: Confirm that the Django application can serve requests without
+        checking external dependencies.
+      summary: Check Application Liveness
+      tags:
+      - api
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/v1/health/ready/:
+    get:
+      operationId: api_v1_health_ready_retrieve
+      description: Verify backend database and cache connectivity and measure execution
+        latencies.
+      summary: Check System Health Telemetry
+      tags:
+      - api
+      security:
       - cookieAuth: []
       - {}
       responses:
@@ -1894,7 +2226,6 @@ paths:
       tags:
       - api
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '200':
@@ -1920,7 +2251,6 @@ paths:
               $ref: '#/components/schemas/EmergencyHotline'
         required: true
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '201':
@@ -1942,7 +2272,6 @@ paths:
       tags:
       - api
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '200':
@@ -1975,7 +2304,6 @@ paths:
               $ref: '#/components/schemas/EmergencyHotline'
         required: true
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '200':
@@ -2007,7 +2335,6 @@ paths:
             schema:
               $ref: '#/components/schemas/PatchedEmergencyHotline'
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '200':
@@ -2028,11 +2355,129 @@ paths:
       tags:
       - api
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '204':
           description: No response body
+  /api/v1/payment-recipients/:
+    get:
+      operationId: api_v1_payment_recipients_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedPaymentRecipientList'
+          description: ''
+    post:
+      operationId: api_v1_payment_recipients_create
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentRecipient'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PaymentRecipient'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PaymentRecipient'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentRecipient'
+          description: ''
+  /api/v1/payment-recipients/{id}/:
+    get:
+      operationId: api_v1_payment_recipients_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this payment recipient.
+        required: true
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentRecipient'
+          description: ''
+    patch:
+      operationId: api_v1_payment_recipients_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this payment recipient.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedPaymentRecipient'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedPaymentRecipient'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedPaymentRecipient'
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentRecipient'
+          description: ''
+  /api/v1/public/announcements/{announcement_id}/:
+    get:
+      operationId: api_v1_public_announcements_retrieve
+      parameters:
+      - in: path
+        name: announcement_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicAnnouncement'
+          description: ''
   /api/v1/public/barangays/{barangay_id}/announcements/:
     get:
       operationId: api_v1_public_barangays_announcements_list
@@ -2045,7 +2490,6 @@ paths:
       tags:
       - api
       security:
-      - jwtAuth: []
       - cookieAuth: []
       - {}
       responses:
@@ -2093,7 +2537,6 @@ paths:
       tags:
       - api
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '200':
@@ -2119,7 +2562,6 @@ paths:
               $ref: '#/components/schemas/IssueReport'
         required: true
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '201':
@@ -2141,7 +2583,6 @@ paths:
       tags:
       - api
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '200':
@@ -2174,7 +2615,6 @@ paths:
               $ref: '#/components/schemas/IssueReport'
         required: true
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '200':
@@ -2206,7 +2646,6 @@ paths:
             schema:
               $ref: '#/components/schemas/PatchedIssueReport'
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '200':
@@ -2227,11 +2666,48 @@ paths:
       tags:
       - api
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '204':
           description: No response body
+  /api/v1/resident-notifications/:
+    get:
+      operationId: api_v1_resident_notifications_list
+      description: Expose only the authenticated user's persisted resident alerts.
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ResidentNotification'
+          description: ''
+  /api/v1/resident-notifications/{id}/:
+    get:
+      operationId: api_v1_resident_notifications_retrieve
+      description: Expose only the authenticated user's persisted resident alerts.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResidentNotification'
+          description: ''
   /api/v1/tickets/:
     get:
       operationId: api_v1_tickets_list
@@ -2245,7 +2721,6 @@ paths:
       tags:
       - api
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '200':
@@ -2271,7 +2746,6 @@ paths:
               $ref: '#/components/schemas/QueueTicket'
         required: true
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '201':
@@ -2293,7 +2767,6 @@ paths:
       tags:
       - api
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '200':
@@ -2326,7 +2799,6 @@ paths:
               $ref: '#/components/schemas/QueueTicket'
         required: true
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '200':
@@ -2358,7 +2830,6 @@ paths:
             schema:
               $ref: '#/components/schemas/PatchedQueueTicket'
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '200':
@@ -2379,7 +2850,6 @@ paths:
       tags:
       - api
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '204':
@@ -2409,7 +2879,6 @@ paths:
               $ref: '#/components/schemas/QueueTicket'
         required: true
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '200':
@@ -2443,7 +2912,39 @@ paths:
               $ref: '#/components/schemas/QueueTicket'
         required: true
       security:
-      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueueTicket'
+          description: ''
+  /api/v1/tickets/{id}/notify/:
+    post:
+      operationId: api_v1_tickets_notify_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this queue ticket.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QueueTicket'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/QueueTicket'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/QueueTicket'
+        required: true
+      security:
       - cookieAuth: []
       responses:
         '200':
@@ -2477,7 +2978,6 @@ paths:
               $ref: '#/components/schemas/QueueTicketPriority'
         required: true
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '200':
@@ -2492,7 +2992,6 @@ paths:
       tags:
       - api
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '200':
@@ -2519,7 +3018,6 @@ paths:
               $ref: '#/components/schemas/QueueTicket'
         required: true
       security:
-      - jwtAuth: []
       - cookieAuth: []
       responses:
         '200':
@@ -2545,7 +3043,6 @@ paths:
       tags:
       - media
       security:
-      - jwtAuth: []
       - cookieAuth: []
       - {}
       responses:
@@ -2597,7 +3094,7 @@ components:
           type: integer
           readOnly: true
         notification_type:
-          $ref: '#/components/schemas/NotificationTypeEnum'
+          $ref: '#/components/schemas/AdminNotificationNotificationTypeEnum'
         title:
           type: string
           maxLength: 255
@@ -2619,44 +3116,18 @@ components:
       - message
       - title
       - user
-    AdminRegister:
-      type: object
-      properties:
-        username:
-          type: string
-          writeOnly: true
-          maxLength: 150
-        full_name:
-          type: string
-          writeOnly: true
-          maxLength: 255
-        barangay_id:
-          type: integer
-          writeOnly: true
-          nullable: true
-        email:
-          type: string
-          format: email
-          writeOnly: true
-        password:
-          type: string
-          writeOnly: true
-        confirm_password:
-          type: string
-          writeOnly: true
-        affirmation:
-          type: boolean
-          writeOnly: true
-          default: false
-        passkey:
-          type: string
-          writeOnly: true
-      required:
-      - confirm_password
-      - email
-      - full_name
-      - passkey
-      - password
+    AdminNotificationNotificationTypeEnum:
+      enum:
+      - queue
+      - document
+      - system
+      - alert
+      type: string
+      description: |-
+        * `queue` - Queue Alert
+        * `document` - Document Request
+        * `system` - System Update
+        * `alert` - Security/Verification Alert
     AidRequest:
       type: object
       properties:
@@ -2738,6 +3209,14 @@ components:
       - id
       - title
       - updated_at
+    AudienceEnum:
+      enum:
+      - RESIDENT
+      - STAFF
+      type: string
+      description: |-
+        * `RESIDENT` - Residents
+        * `STAFF` - Staff
     Barangay:
       type: object
       properties:
@@ -2746,7 +3225,13 @@ components:
           readOnly: true
         name:
           type: string
-          maxLength: 255
+          readOnly: true
+        municipality:
+          type: string
+          readOnly: true
+        province:
+          type: string
+          readOnly: true
         logo:
           type: string
           format: uri
@@ -2771,7 +3256,9 @@ components:
           maxLength: 7
       required:
       - id
+      - municipality
       - name
+      - province
     CustomTokenObtainPair:
       type: object
       properties:
@@ -2853,9 +3340,51 @@ components:
           pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
           readOnly: true
           description: Clearance issuance fee in PHP
+        fee_assessment_status:
+          allOf:
+          - $ref: '#/components/schemas/FeeAssessmentStatusEnum'
+          readOnly: true
+          description: |-
+            Explicit provenance of clearance fee determination.
+
+            * `AWAITING_ASSESSMENT` - Awaiting Assessment
+            * `ASSESSED` - Staff-Assessed Fee
+            * `WAIVED` - Staff-Approved Waiver
+            * `STATUTORY_EXEMPT` - Statutory Exemption
+        fee_assessed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+          description: Timestamp when the clearance fee was assessed or waived.
+        fee_waiver_reason:
+          type: string
+          readOnly: true
+          description: Mandatory written justification when an ordinary fee is waived
+            by staff.
+        fee_assessed_by_name:
+          type: string
+          nullable: true
+          readOnly: true
         payment_method:
           allOf:
           - $ref: '#/components/schemas/PaymentMethodEnum'
+          readOnly: true
+        payment_recipient:
+          type: integer
+          nullable: true
+          readOnly: true
+        payment_recipient_name_snapshot:
+          type: string
+          nullable: true
+          readOnly: true
+        payment_recipient_identifier_snapshot:
+          type: string
+          nullable: true
+          readOnly: true
+        payment_instructions_snapshot:
+          type: string
+          nullable: true
           readOnly: true
         payment_reference:
           type: string
@@ -2866,6 +3395,14 @@ components:
           readOnly: true
         payment_review_note:
           type: string
+          readOnly: true
+        payment_proof_url:
+          type: string
+          nullable: true
+          readOnly: true
+        payment_transacted_at:
+          type: string
+          format: date-time
           readOnly: true
         created_at:
           type: string
@@ -2880,13 +3417,23 @@ components:
       - created_at
       - document_type
       - fee_amount
+      - fee_assessed_at
+      - fee_assessed_by_name
+      - fee_assessment_status
+      - fee_waiver_reason
       - id
       - is_walkin
       - or_number
+      - payment_instructions_snapshot
       - payment_method
+      - payment_proof_url
+      - payment_recipient
+      - payment_recipient_identifier_snapshot
+      - payment_recipient_name_snapshot
       - payment_reference
       - payment_review_note
       - payment_status
+      - payment_transacted_at
       - purok
       - request_id
       - requester_name
@@ -2988,6 +3535,22 @@ components:
           minimum: -9223372036854775808
           format: int64
           description: Order in which the FAQ appears
+        audience:
+          $ref: '#/components/schemas/AudienceEnum'
+        category:
+          $ref: '#/components/schemas/FAQCategoryEnum'
+        is_published:
+          type: boolean
+        barangay_id:
+          type: integer
+          readOnly: true
+        barangay_name:
+          type: string
+          readOnly: true
+          nullable: true
+        scope:
+          type: string
+          readOnly: true
         created_at:
           type: string
           format: date-time
@@ -2998,10 +3561,37 @@ components:
           readOnly: true
       required:
       - answer
+      - barangay_id
+      - barangay_name
       - created_at
       - id
       - question
+      - scope
       - updated_at
+    FAQCategoryEnum:
+      enum:
+      - GETTING_STARTED
+      - ACCOUNT
+      - DOCUMENTS
+      - PAYMENTS
+      - QUEUE
+      - ASSISTANCE
+      - COMMUNITY
+      - ACCESSIBILITY
+      - PRIVACY
+      - OTHER
+      type: string
+      description: |-
+        * `GETTING_STARTED` - Getting started
+        * `ACCOUNT` - Account access
+        * `DOCUMENTS` - Documents and clearances
+        * `PAYMENTS` - Fees and payments
+        * `QUEUE` - Queue and schedules
+        * `ASSISTANCE` - Assistance and programs
+        * `COMMUNITY` - Community notices
+        * `ACCESSIBILITY` - Accessibility and older adults
+        * `PRIVACY` - Privacy and safety
+        * `OTHER` - Other
     FCMDevice:
       type: object
       properties:
@@ -3018,6 +3608,18 @@ components:
       - created_at
       - id
       - token
+    FeeAssessmentStatusEnum:
+      enum:
+      - AWAITING_ASSESSMENT
+      - ASSESSED
+      - WAIVED
+      - STATUTORY_EXEMPT
+      type: string
+      description: |-
+        * `AWAITING_ASSESSMENT` - Awaiting Assessment
+        * `ASSESSED` - Staff-Assessed Fee
+        * `WAIVED` - Staff-Approved Waiver
+        * `STATUTORY_EXEMPT` - Statutory Exemption
     FileUpload:
       type: object
       properties:
@@ -3119,18 +3721,6 @@ components:
       - resolved
       - total
       - urgency_breakdown
-    NotificationTypeEnum:
-      enum:
-      - queue
-      - document
-      - system
-      - alert
-      type: string
-      description: |-
-        * `queue` - Queue Alert
-        * `document` - Document Request
-        * `system` - System Update
-        * `alert` - Security/Verification Alert
     PaginatedActivityScheduleList:
       type: object
       required:
@@ -3361,6 +3951,52 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/IssueReport'
+    PaginatedPaymentRecipientList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/PaymentRecipient'
+    PaginatedPlatformAccountSummaryList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/PlatformAccountSummary'
     PaginatedQueueTicketList:
       type: object
       required:
@@ -3430,6 +4066,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Resident'
+    PaginatedStaffUserListList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/StaffUserList'
     PasswordResetConfirm:
       type: object
       properties:
@@ -3490,7 +4149,7 @@ components:
           type: integer
           readOnly: true
         notification_type:
-          $ref: '#/components/schemas/NotificationTypeEnum'
+          $ref: '#/components/schemas/AdminNotificationNotificationTypeEnum'
         title:
           type: string
           maxLength: 255
@@ -3549,7 +4208,13 @@ components:
           readOnly: true
         name:
           type: string
-          maxLength: 255
+          readOnly: true
+        municipality:
+          type: string
+          readOnly: true
+        province:
+          type: string
+          readOnly: true
         logo:
           type: string
           format: uri
@@ -3625,9 +4290,51 @@ components:
           pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
           readOnly: true
           description: Clearance issuance fee in PHP
+        fee_assessment_status:
+          allOf:
+          - $ref: '#/components/schemas/FeeAssessmentStatusEnum'
+          readOnly: true
+          description: |-
+            Explicit provenance of clearance fee determination.
+
+            * `AWAITING_ASSESSMENT` - Awaiting Assessment
+            * `ASSESSED` - Staff-Assessed Fee
+            * `WAIVED` - Staff-Approved Waiver
+            * `STATUTORY_EXEMPT` - Statutory Exemption
+        fee_assessed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+          description: Timestamp when the clearance fee was assessed or waived.
+        fee_waiver_reason:
+          type: string
+          readOnly: true
+          description: Mandatory written justification when an ordinary fee is waived
+            by staff.
+        fee_assessed_by_name:
+          type: string
+          nullable: true
+          readOnly: true
         payment_method:
           allOf:
           - $ref: '#/components/schemas/PaymentMethodEnum'
+          readOnly: true
+        payment_recipient:
+          type: integer
+          nullable: true
+          readOnly: true
+        payment_recipient_name_snapshot:
+          type: string
+          nullable: true
+          readOnly: true
+        payment_recipient_identifier_snapshot:
+          type: string
+          nullable: true
+          readOnly: true
+        payment_instructions_snapshot:
+          type: string
+          nullable: true
           readOnly: true
         payment_reference:
           type: string
@@ -3638,6 +4345,14 @@ components:
           readOnly: true
         payment_review_note:
           type: string
+          readOnly: true
+        payment_proof_url:
+          type: string
+          nullable: true
+          readOnly: true
+        payment_transacted_at:
+          type: string
+          format: date-time
           readOnly: true
         created_at:
           type: string
@@ -3686,6 +4401,22 @@ components:
           minimum: -9223372036854775808
           format: int64
           description: Order in which the FAQ appears
+        audience:
+          $ref: '#/components/schemas/AudienceEnum'
+        category:
+          $ref: '#/components/schemas/FAQCategoryEnum'
+        is_published:
+          type: boolean
+        barangay_id:
+          type: integer
+          readOnly: true
+        barangay_name:
+          type: string
+          readOnly: true
+          nullable: true
+        scope:
+          type: string
+          readOnly: true
         created_at:
           type: string
           format: date-time
@@ -3747,6 +4478,48 @@ components:
         reporter:
           type: integer
           readOnly: true
+    PatchedPaymentRecipient:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        provider:
+          $ref: '#/components/schemas/ProviderEnum'
+        provider_label:
+          type: string
+          readOnly: true
+        display_name:
+          type: string
+          maxLength: 100
+        recipient_name:
+          type: string
+          maxLength: 255
+        recipient_identifier:
+          type: string
+          maxLength: 100
+        instructions:
+          type: string
+          maxLength: 1000
+        is_active:
+          type: boolean
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+    PatchedPlatformAccountEmailCorrection:
+      type: object
+      description: Reject unsupported fields instead of silently ignoring privileged
+        input.
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        contact_verified:
+          type: boolean
+        reason:
+          $ref: '#/components/schemas/ReasonEnum'
     PatchedQueueTicket:
       type: object
       properties:
@@ -3833,6 +4606,10 @@ components:
           type: string
           format: uri
           nullable: true
+        remove_philsys_id_photo:
+          type: boolean
+          writeOnly: true
+          default: false
         secondary_id_type:
           type: string
           nullable: true
@@ -3843,6 +4620,10 @@ components:
           type: string
           format: uri
           nullable: true
+        remove_secondary_id_photo:
+          type: boolean
+          writeOnly: true
+          default: false
         utility_billing_type:
           type: string
           nullable: true
@@ -3853,6 +4634,26 @@ components:
           type: string
           format: uri
           nullable: true
+        remove_utility_billing_photo:
+          type: boolean
+          writeOnly: true
+          default: false
+    PatchedStaffUserUpdate:
+      type: object
+      description: Validate the small set of profile fields a Barangay Admin may edit.
+      properties:
+        first_name:
+          type: string
+          maxLength: 150
+          minLength: 1
+        last_name:
+          type: string
+          maxLength: 150
+          minLength: 1
+        email:
+          type: string
+          format: email
+          maxLength: 254
     PatchedUser:
       type: object
       properties:
@@ -3883,14 +4684,66 @@ components:
         full_name:
           type: string
           readOnly: true
+        is_superuser:
+          type: boolean
+          readOnly: true
+        email_alerts:
+          type: boolean
+          description: Receive daily queue and request email reports
+        push_alerts:
+          type: boolean
+          description: Receieve real-time FCM push notifications
     PaymentMethodEnum:
       enum:
       - CASH
       - GCASH
+      - MAYA
+      - BANK
+      - OTHER
       type: string
       description: |-
         * `CASH` - Cash
         * `GCASH` - GCash
+        * `MAYA` - Maya
+        * `BANK` - Bank transfer
+        * `OTHER` - Other
+    PaymentRecipient:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        provider:
+          $ref: '#/components/schemas/ProviderEnum'
+        provider_label:
+          type: string
+          readOnly: true
+        display_name:
+          type: string
+          maxLength: 100
+        recipient_name:
+          type: string
+          maxLength: 255
+        recipient_identifier:
+          type: string
+          maxLength: 100
+        instructions:
+          type: string
+          maxLength: 1000
+        is_active:
+          type: boolean
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - display_name
+      - id
+      - provider
+      - provider_label
+      - recipient_identifier
+      - recipient_name
+      - updated_at
     PaymentStatusEnum:
       enum:
       - NOT_REQUIRED
@@ -3905,6 +4758,94 @@ components:
         * `PENDING_VERIFICATION` - Pending verification
         * `VERIFIED` - Verified
         * `REJECTED` - Rejected
+    PlatformAccountActiveState:
+      type: object
+      description: Reject unsupported fields instead of silently ignoring privileged
+        input.
+      properties:
+        is_active:
+          type: boolean
+        reason:
+          $ref: '#/components/schemas/ReasonEnum'
+      required:
+      - is_active
+      - reason
+    PlatformAccountRecoveryLink:
+      type: object
+      description: Reject unsupported fields instead of silently ignoring privileged
+        input.
+      properties:
+        contact_verified:
+          type: boolean
+        reason:
+          $ref: '#/components/schemas/ReasonEnum'
+      required:
+      - contact_verified
+      - reason
+    PlatformAccountSummary:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        username:
+          type: string
+          readOnly: true
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+        email:
+          type: string
+          format: email
+          readOnly: true
+          title: Email address
+        first_name:
+          type: string
+          readOnly: true
+        last_name:
+          type: string
+          readOnly: true
+        full_name:
+          type: string
+          readOnly: true
+        role:
+          allOf:
+          - $ref: '#/components/schemas/RoleEnum'
+          readOnly: true
+        is_active:
+          type: boolean
+          readOnly: true
+          title: Active
+          description: Designates whether this user should be treated as active. Unselect
+            this instead of deleting accounts.
+        barangay_id:
+          type: integer
+          readOnly: true
+          nullable: true
+        barangay_name:
+          type: string
+          readOnly: true
+          nullable: true
+        barangay_municipality:
+          type: string
+          readOnly: true
+          nullable: true
+        barangay_province:
+          type: string
+          readOnly: true
+          nullable: true
+      required:
+      - barangay_id
+      - barangay_municipality
+      - barangay_name
+      - barangay_province
+      - email
+      - first_name
+      - full_name
+      - id
+      - is_active
+      - last_name
+      - role
+      - username
     PriorityStatusEnum:
       enum:
       - regular
@@ -3913,10 +4854,25 @@ components:
       description: |-
         * `regular` - Regular
         * `priority` - Priority/Senior/PWD/Pregnant
+    ProviderEnum:
+      enum:
+      - GCASH
+      - MAYA
+      - BANK
+      - OTHER
+      type: string
+      description: |-
+        * `GCASH` - GCash
+        * `MAYA` - Maya
+        * `BANK` - Bank transfer
+        * `OTHER` - Other
     PublicAnnouncement:
       type: object
       properties:
         id:
+          type: integer
+          readOnly: true
+        barangay_id:
           type: integer
           readOnly: true
         title:
@@ -3933,11 +4889,36 @@ components:
           format: date-time
           readOnly: true
       required:
+      - barangay_id
       - content
       - created_at
       - id
       - is_pinned
       - title
+    PublicBarangay:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+        municipality:
+          type: string
+          readOnly: true
+        province:
+          type: string
+          readOnly: true
+        primary_color:
+          type: string
+          readOnly: true
+      required:
+      - id
+      - municipality
+      - name
+      - primary_color
+      - province
     PublicQueueStatus:
       type: object
       properties:
@@ -4048,6 +5029,20 @@ components:
         * `SERVING` - Serving
         * `COMPLETED` - Completed
         * `CANCELLED` - Cancelled
+    ReasonEnum:
+      enum:
+      - INCORRECT_CONTACT
+      - LOCKED_OUT
+      - SECURITY_CONCERN
+      - STATUS_CORRECTION
+      - OTHER_VERIFIED_SUPPORT
+      type: string
+      description: |-
+        * `INCORRECT_CONTACT` - Incorrect contact details
+        * `LOCKED_OUT` - Account holder is locked out
+        * `SECURITY_CONCERN` - Security concern
+        * `STATUS_CORRECTION` - Account status correction
+        * `OTHER_VERIFIED_SUPPORT` - Other verified support issue
     RefreshSession:
       type: object
       properties:
@@ -4113,8 +5108,8 @@ components:
           writeOnly: true
         barangay_id:
           type: integer
+          minimum: 1
           writeOnly: true
-          nullable: true
         guardian_id:
           type: string
           writeOnly: true
@@ -4150,6 +5145,7 @@ components:
           writeOnly: true
           maxLength: 64
       required:
+      - barangay_id
       - birth_date
       - full_name
       - password
@@ -4201,6 +5197,10 @@ components:
           type: string
           format: uri
           nullable: true
+        remove_philsys_id_photo:
+          type: boolean
+          writeOnly: true
+          default: false
         secondary_id_type:
           type: string
           nullable: true
@@ -4211,6 +5211,10 @@ components:
           type: string
           format: uri
           nullable: true
+        remove_secondary_id_photo:
+          type: boolean
+          writeOnly: true
+          default: false
         utility_billing_type:
           type: string
           nullable: true
@@ -4221,6 +5225,10 @@ components:
           type: string
           format: uri
           nullable: true
+        remove_utility_billing_photo:
+          type: boolean
+          writeOnly: true
+          default: false
       required:
       - birth_date
       - email
@@ -4272,6 +5280,10 @@ components:
           type: string
           format: uri
           nullable: true
+        remove_philsys_id_photo:
+          type: boolean
+          writeOnly: true
+          default: false
         secondary_id_type:
           type: string
           nullable: true
@@ -4282,6 +5294,10 @@ components:
           type: string
           format: uri
           nullable: true
+        remove_secondary_id_photo:
+          type: boolean
+          writeOnly: true
+          default: false
         utility_billing_type:
           type: string
           nullable: true
@@ -4292,6 +5308,10 @@ components:
           type: string
           format: uri
           nullable: true
+        remove_utility_billing_photo:
+          type: boolean
+          writeOnly: true
+          default: false
       required:
       - birth_date
       - full_name
@@ -4316,18 +5336,159 @@ components:
       - errors
       - imported
       - skipped_due_to_duplicate
+    ResidentNotification:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        notification_type:
+          allOf:
+          - $ref: '#/components/schemas/ResidentNotificationNotificationTypeEnum'
+          readOnly: true
+        title:
+          type: string
+          readOnly: true
+        message:
+          type: string
+          readOnly: true
+        data:
+          readOnly: true
+        is_read:
+          type: boolean
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - data
+      - id
+      - is_read
+      - message
+      - notification_type
+      - title
+    ResidentNotificationNotificationTypeEnum:
+      enum:
+      - queue
+      type: string
+      description: '* `queue` - Queue Alert'
     RoleEnum:
       enum:
       - ADMIN
       - RESIDENT
-      - DILG_ADMIN
       - FIELD_OFFICIAL
       type: string
       description: |-
         * `ADMIN` - Admin
         * `RESIDENT` - Resident
-        * `DILG_ADMIN` - DILG Admin
         * `FIELD_OFFICIAL` - Field Official
+    StaffUserCreate:
+      type: object
+      description: |-
+        Validates payload for onboarding a new Field Official.
+        Enforces strict field boundaries and case-insensitive uniqueness. New
+        field officials set their own password through the private setup flow.
+      properties:
+        username:
+          type: string
+          maxLength: 150
+          minLength: 3
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        first_name:
+          type: string
+          maxLength: 150
+          minLength: 1
+        last_name:
+          type: string
+          maxLength: 150
+          minLength: 1
+      required:
+      - email
+      - first_name
+      - last_name
+      - username
+    StaffUserList:
+      type: object
+      description: Represents an authorized Field Official belonging to the administrator's
+        Barangay.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        username:
+          type: string
+          readOnly: true
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+        email:
+          type: string
+          format: email
+          readOnly: true
+          title: Email address
+        first_name:
+          type: string
+          readOnly: true
+        last_name:
+          type: string
+          readOnly: true
+        full_name:
+          type: string
+          readOnly: true
+        role:
+          allOf:
+          - $ref: '#/components/schemas/RoleEnum'
+          readOnly: true
+        is_active:
+          type: boolean
+          readOnly: true
+          title: Active
+          description: Designates whether this user should be treated as active. Unselect
+            this instead of deleting accounts.
+        date_joined:
+          type: string
+          format: date-time
+          readOnly: true
+        last_login:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+      required:
+      - date_joined
+      - email
+      - first_name
+      - full_name
+      - id
+      - is_active
+      - last_login
+      - last_name
+      - role
+      - username
+    StaffUserUpdate:
+      type: object
+      description: Validate the small set of profile fields a Barangay Admin may edit.
+      properties:
+        first_name:
+          type: string
+          maxLength: 150
+          minLength: 1
+        last_name:
+          type: string
+          maxLength: 150
+          minLength: 1
+        email:
+          type: string
+          format: email
+          maxLength: 254
+      required:
+      - email
+      - first_name
+      - last_name
     StatusB97Enum:
       enum:
       - PENDING
@@ -4417,10 +5578,20 @@ components:
         full_name:
           type: string
           readOnly: true
+        is_superuser:
+          type: boolean
+          readOnly: true
+        email_alerts:
+          type: boolean
+          description: Receive daily queue and request email reports
+        push_alerts:
+          type: boolean
+          description: Receieve real-time FCM push notifications
       required:
       - barangay
       - full_name
       - id
+      - is_superuser
       - role
       - username
   securitySchemes:
@@ -4428,7 +5599,3 @@ components:
       type: apiKey
       in: cookie
       name: sessionid
-    jwtAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT

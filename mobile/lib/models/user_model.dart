@@ -5,6 +5,7 @@ class UserModel {
   final String email;
   final String role;
   final String fullName;
+  final bool isSuperuser;
   final bool isVerified;
   final String? contactNumber;
   final String? purok;
@@ -25,6 +26,7 @@ class UserModel {
     required this.email,
     required this.role,
     required this.fullName,
+    this.isSuperuser = false,
     this.isVerified = true,
     this.contactNumber,
     this.purok,
@@ -58,6 +60,7 @@ class UserModel {
       email: json['email'] as String? ?? '',
       role: json['role'] as String? ?? 'RESIDENT',
       fullName: resolvedFullName,
+      isSuperuser: json['is_superuser'] as bool? ?? false,
       isVerified: resolvedVerification,
       contactNumber: profile?['contact_number'] as String? ?? json['contact_number'] as String?,
       purok: profile?['purok']?.toString() ?? json['purok']?.toString(),
@@ -81,6 +84,7 @@ class UserModel {
       'email': email,
       'role': role,
       'full_name': fullName,
+      'is_superuser': isSuperuser,
       'is_verified': isVerified,
       'contact_number': contactNumber,
       'purok': purok,
@@ -102,6 +106,7 @@ class UserModel {
     String? email,
     String? role,
     String? fullName,
+    bool? isSuperuser,
     bool? isVerified,
     String? contactNumber,
     String? purok,
@@ -121,6 +126,7 @@ class UserModel {
       email: email ?? this.email,
       role: role ?? this.role,
       fullName: fullName ?? this.fullName,
+      isSuperuser: isSuperuser ?? this.isSuperuser,
       isVerified: isVerified ?? this.isVerified,
       contactNumber: contactNumber ?? this.contactNumber,
       purok: purok ?? this.purok,
@@ -155,8 +161,14 @@ class UserModel {
   bool get isOfficial =>
       role.toUpperCase() == 'BARANGAY_OFFICIAL' ||
       role.toUpperCase() == 'ADMIN' ||
-      role.toUpperCase() == 'FIELD_OFFICIAL' ||
-      role.toUpperCase() == 'DILG_ADMIN';
+      role.toUpperCase() == 'FIELD_OFFICIAL';
+
+  /// Whether this client understands and can safely route the account role.
+  bool get isSupportedRole => !isSuperuser && const {
+        'RESIDENT',
+        'ADMIN',
+        'FIELD_OFFICIAL',
+      }.contains(role.toUpperCase());
 
   /// Convenience getter to check specifically if user has field duties
   bool get isFieldOfficial =>
@@ -170,8 +182,6 @@ class UserModel {
         return 'Barangay Executive';
       case 'FIELD_OFFICIAL':
         return 'Field Official / Tanod';
-      case 'DILG_ADMIN':
-        return 'DILG Super Admin';
       default:
         return 'Resident';
     }

@@ -34,7 +34,7 @@ class StrictSerializer(serializers.Serializer):
         return super().to_internal_value(data)
 
 
-class DILGAccountDirectoryQuerySerializer(serializers.Serializer):
+class PlatformAccountDirectoryQuerySerializer(serializers.Serializer):
     search = serializers.CharField(required=False, allow_blank=True, max_length=120, trim_whitespace=True)
     role = serializers.ChoiceField(required=False, choices=ACCOUNT_SUPPORT_ROLES)
     active = serializers.BooleanField(required=False)
@@ -45,7 +45,7 @@ class DILGAccountDirectoryQuerySerializer(serializers.Serializer):
         return value
 
 
-class DILGAccountSummarySerializer(serializers.ModelSerializer):
+class PlatformAccountSummarySerializer(serializers.ModelSerializer):
     barangay_id = serializers.IntegerField(read_only=True, allow_null=True)
     full_name = serializers.SerializerMethodField()
     barangay_name = serializers.CharField(source="barangay.name", read_only=True, allow_null=True)
@@ -78,7 +78,7 @@ class DILGAccountSummarySerializer(serializers.ModelSerializer):
         return profile_name or f"{obj.first_name} {obj.last_name}".strip() or obj.username
 
 
-class DILGAccountEmailCorrectionSerializer(StrictSerializer):
+class PlatformAccountEmailCorrectionSerializer(StrictSerializer):
     email = serializers.EmailField(max_length=254)
     contact_verified = serializers.BooleanField()
     reason = serializers.ChoiceField(choices=ACCOUNT_SUPPORT_REASON_CHOICES)
@@ -102,7 +102,7 @@ class DILGAccountEmailCorrectionSerializer(StrictSerializer):
         return attrs
 
 
-class DILGAccountRecoveryLinkSerializer(StrictSerializer):
+class PlatformAccountRecoveryLinkSerializer(StrictSerializer):
     contact_verified = serializers.BooleanField()
     reason = serializers.ChoiceField(choices=ACCOUNT_SUPPORT_REASON_CHOICES)
 
@@ -114,6 +114,6 @@ class DILGAccountRecoveryLinkSerializer(StrictSerializer):
         return attrs
 
 
-class DILGAccountActiveStateSerializer(StrictSerializer):
+class PlatformAccountActiveStateSerializer(StrictSerializer):
     is_active = serializers.BooleanField()
     reason = serializers.ChoiceField(choices=ACCOUNT_SUPPORT_REASON_CHOICES)

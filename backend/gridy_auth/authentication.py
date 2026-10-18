@@ -41,8 +41,12 @@ def is_production_test_account(user):
 
 
 def production_user_authentication_rule(user):
-    """Preserve SimpleJWT's active-user rule and reject production test users."""
-    return default_user_authentication_rule(user) and not is_production_test_account(user)
+    """Reject inactive, test, and retired-role users at token issuance."""
+    return (
+        default_user_authentication_rule(user)
+        and not is_production_test_account(user)
+        and getattr(user, "role", None) in {"ADMIN", "RESIDENT", "FIELD_OFFICIAL"}
+    )
 
 
 class ProductionSafeModelBackend(ModelBackend):
@@ -52,6 +56,7 @@ class ProductionSafeModelBackend(ModelBackend):
         return (
             super().user_can_authenticate(user)
             and not is_production_test_account(user)
+            and getattr(user, "role", None) in {"ADMIN", "RESIDENT", "FIELD_OFFICIAL"}
         )
 
 
@@ -60,7 +65,10 @@ class ProductionSafeJWTAuthentication(JWTAuthentication):
 
     def get_user(self, validated_token):
         user = super().get_user(validated_token)
-        if is_production_test_account(user):
+        if (
+            is_production_test_account(user)
+            or user.role not in {"ADMIN", "RESIDENT", "FIELD_OFFICIAL"}
+        ):
             raise AuthenticationFailed(
                 "User is inactive or deleted.",
                 code="user_inactive",

@@ -14,9 +14,6 @@ const Login = lazy(() =>
 const Register = lazy(() =>
     import("./pages/auth/Register").then(({ Register }) => ({ default: Register })),
 );
-const BarangayApplication = lazy(() =>
-    import("./pages/auth/BarangayApplication").then(({ BarangayApplication }) => ({ default: BarangayApplication })),
-);
 const Dashboard = lazy(() =>
     import("./pages/admin/Dashboard").then(({ Dashboard }) => ({ default: Dashboard })),
 );
@@ -53,17 +50,11 @@ const Notifications = lazy(() =>
 const Faqs = lazy(() =>
     import("./pages/community/Faqs").then(({ Faqs }) => ({ default: Faqs })),
 );
-const DILGDashboard = lazy(() =>
-    import("./pages/admin/DILGDashboard").then(({ DILGDashboard }) => ({ default: DILGDashboard })),
-);
-const DILGAccountSupport = lazy(() =>
-    import("./pages/admin/DILGAccountSupport").then(({ DILGAccountSupport }) => ({ default: DILGAccountSupport })),
-);
 const BarangaySettings = lazy(() =>
     import("./pages/admin/BarangaySettings").then(({ BarangaySettings }) => ({ default: BarangaySettings })),
 );
-const BarangayApplications = lazy(() =>
-    import("./pages/admin/BarangayApplications").then(({ BarangayApplications }) => ({ default: BarangayApplications })),
+const PlatformAccountSupport = lazy(() =>
+    import("./pages/admin/PlatformAccountSupport").then(({ PlatformAccountSupport }) => ({ default: PlatformAccountSupport })),
 );
 const ForgotPassword = lazy(() =>
     import("./pages/auth/ForgotPassword").then(({ ForgotPassword }) => ({ default: ForgotPassword })),
@@ -103,6 +94,9 @@ function RootRedirect() {
     }
     if (!isAuthenticated) {
         return <Navigate to="/login" replace />;
+    }
+    if (user?.is_superuser) {
+        return <Navigate to="/platform/accounts" replace />;
     }
     if (user?.role === 'FIELD_OFFICIAL') {
         return <Navigate to="/field-official-mobile" replace />;
@@ -153,22 +147,16 @@ export function App() {
                             <Route path="/official-login" element={<Login />} />
                             <Route path="/field-official-mobile" element={<FieldOfficialWebNotice />} />
                             <Route path="/register" element={<Register />} />
-                            <Route path="/register/barangay" element={<BarangayApplication />} />
                             <Route path="/forgot-password" element={<ForgotPassword />} />
                             <Route path="/reset-password" element={<ResetPassword />} />
                             <Route path="/public/queue/:barangayId" element={<PublicQueueDisplay />} />
                             <Route path="/public/announcements/:barangayId" element={<PublicAnnouncements />} />
                             <Route path="/notice/:id" element={<PublicNoticeRedirect />} />
 
-                            {/* Admin & Official Workstation (Tier 1 & Tier 2) */}
-                            <Route element={<ProtectedRoute allowedRoles={['ADMIN', 'DILG_ADMIN']} />}>
+                            {/* Barangay Admin Workstation */}
+                            <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
                                 <Route element={<AdminLayout />}>
                                     <Route path="/dashboard" element={<Dashboard />} />
-                                    <Route path="/dilg-analytics" element={<DILGDashboard />} />
-                                    <Route element={<ProtectedRoute allowedRoles={['DILG_ADMIN']} />}>
-                                        <Route path="/dilg-applications" element={<BarangayApplications />} />
-                                        <Route path="/dilg-accounts" element={<DILGAccountSupport />} />
-                                    </Route>
                                     <Route path="/queue" element={<LiveQueue />} />
                                     <Route path="/documents" element={<DocumentRequests />} />
                                     <Route path="/settings" element={<Settings />} />
@@ -184,6 +172,11 @@ export function App() {
                                     </Route>
                                     <Route path="/profile" element={<AdminProfile />} />
                                 </Route>
+                            </Route>
+
+                            {/* Controlled platform account recovery; backend requires Django superuser. */}
+                            <Route element={<ProtectedRoute requireSuperuser />}>
+                                <Route path="/platform/accounts" element={<PlatformAccountSupport />} />
                             </Route>
 
                             {/* Citizen Desktop Portal (Tier 4: Residents & Self-Service Kiosks) */}

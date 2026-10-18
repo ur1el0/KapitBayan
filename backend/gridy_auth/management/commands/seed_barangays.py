@@ -161,22 +161,7 @@ class Command(BaseCommand):
                 user.save(update_fields=["password"])
             return user
 
-        # C. DILG administration account
-        dilg_admin = get_demo_user(
-            "dilg_admin",
-            {
-                "email": "dilg.admin@example.invalid",
-                "first_name": "KapitBayan Demo",
-                "last_name": "DILG Admin",
-                "role": User.Role.DILG_ADMIN,
-                "is_staff": True,
-            },
-        )
-        if dilg_admin.first_name == "Gridy Demo":
-            dilg_admin.first_name = "KapitBayan Demo"
-            dilg_admin.save(update_fields=["first_name"])
-
-        # D. Barangay Cotta seed users
+        # C. Barangay Cotta seed users
         admin_cotta = get_demo_user(
             "admin_cotta",
             {

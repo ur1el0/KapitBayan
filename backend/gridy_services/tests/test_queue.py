@@ -423,7 +423,7 @@ class QueueTicketAPITests(ServiceAPIBaseTestCase):
         ticket.refresh_from_db()
         self.assertEqual(ticket.status, QueueTicket.Status.WAITING)
 
-    def test_dilg_admin_cannot_cancel_queue_ticket(self):
+    def test_legacy_role_cannot_cancel_queue_ticket(self):
         barangay = Barangay.objects.create(
             name="DILG Queue Isolation Test Barangay"
         )
@@ -436,10 +436,10 @@ class QueueTicketAPITests(ServiceAPIBaseTestCase):
             username="dilg_queue_test",
             password="SecurePassword123!",
             email="dilg-queue-test@example.com",
-            role=User.Role.DILG_ADMIN,
+            role="DILG_ADMIN",
         )
 
-        self.client.force_login(dilg_admin)
+        self.client.force_authenticate(dilg_admin)
         response = self.client.post(
             reverse("ticket-cancel-ticket", args=[ticket.id])
         )
