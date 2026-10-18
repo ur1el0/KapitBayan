@@ -40,3 +40,6 @@ git diff --check
 
 ## Production handoff
 No production database, Render environment, or deployment has been changed. The private denylist must be configured after merge, preserving the manually created DILG and test barangay usernames. The test barangay username is currently unknown, so the exact production setting value cannot yet be prepared safely.
+
+## Deployment note
+Changing Django's configured authentication backend means existing Django session cookies created by the default backend will require a new sign-in after deployment. Mobile and web JWT sessions are unaffected for ordinary accounts; blocked accounts' access tokens will fail immediately once their usernames are configured.
