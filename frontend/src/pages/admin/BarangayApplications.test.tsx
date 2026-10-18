@@ -12,7 +12,7 @@ describe('BarangayApplications', () => {
         vi.mocked(axiosPrivate.post).mockReset();
         vi.spyOn(window, 'confirm').mockReturnValue(true);
         vi.mocked(axiosPrivate.get).mockResolvedValue({ data: [{
-            id: 4, name: 'Barangay Mabini', municipality: 'Lucena City', province: 'Quezon',
+            id: 4, application_type: 'OFFICIAL', name: 'Barangay Mabini', municipality: 'Lucena City', province: 'Quezon',
             applicant_name: 'Maria Santos', applicant_position: 'Secretary',
             applicant_email: 'maria@example.com', applicant_phone: '09170000000',
             status: 'PENDING', review_note: '',
@@ -51,13 +51,13 @@ describe('BarangayApplications', () => {
         render(<BarangayApplications />);
 
         expect(await screen.findByRole('alert')).toHaveTextContent('Could not load barangay applications.');
-        expect(screen.getByRole('heading', { name: 'Barangay applications' })).toBeInTheDocument();
-        expect(screen.getByText(/Verify the barangay and applicant/)).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'Official Account Applications' })).toBeInTheDocument();
+        expect(screen.getByText(/Verify each official through official channels/)).toBeInTheDocument();
         expect(screen.queryByText('No applications have been submitted.')).not.toBeInTheDocument();
 
         fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
 
-        expect(await screen.findByText('Barangay Mabini')).toBeInTheDocument();
+        expect(await screen.findByRole('heading', { name: /Maria Santos/ })).toBeInTheDocument();
         expect(screen.queryByRole('alert')).not.toBeInTheDocument();
         expect(axiosPrivate.get).toHaveBeenNthCalledWith(1, '/auth/barangay-applications/');
         expect(axiosPrivate.get).toHaveBeenNthCalledWith(2, '/auth/barangay-applications/');
@@ -106,9 +106,9 @@ describe('BarangayApplications', () => {
     it('requires review decision confirmation and posts approval', async () => {
         vi.mocked(axiosPrivate.post).mockResolvedValue({ data: { id: 4, status: 'APPROVED' } } as never);
         render(<BarangayApplications />);
-        fireEvent.click(await screen.findByRole('button', { name: 'Approve and create account' }));
+        fireEvent.click(await screen.findByRole('button', { name: 'Approve official account' }));
 
-        expect(window.confirm).toHaveBeenCalledWith('Approve Barangay Mabini, Lucena City? This creates its tenant and first official account.');
+        expect(window.confirm).toHaveBeenCalledWith('Approve the official account request for Maria Santos at Barangay Mabini?');
         await waitFor(() => expect(axiosPrivate.post).toHaveBeenCalledWith('/auth/barangay-applications/4/review/', {
             status: 'APPROVED', review_note: '',
         }));
