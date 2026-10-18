@@ -9,6 +9,18 @@ import '../core/navigation/app_navigation_keys.dart';
 import '../core/network/api_client.dart';
 
 class PushNotificationService {
+  static PushNotificationService? _sharedInstance;
+
+  static PushNotificationService shared({required ApiClient apiClient}) {
+    return _sharedInstance ??= PushNotificationService(apiClient: apiClient);
+  }
+
+  static Future<void> disposeShared() async {
+    final service = _sharedInstance;
+    _sharedInstance = null;
+    await service?.dispose();
+  }
+
   static const String _webVapidKey =
       'BP9uZMIa96hTyaoGPJisSEjRjRM69TOWDQD6TYQCKxE8weHrwVA7Oa85-h6rYu-BPS-A_q287LJ6_CTYqDQcEmY';
 
@@ -154,6 +166,7 @@ class PushNotificationService {
   }
 
   Future<void> dispose() async {
+    _pushEnabled = false;
     await _cancelSubscriptions();
     _onNotificationOpened = null;
     _initialized = false;

@@ -123,10 +123,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     required bool push,
     required bool enabled,
   }) async {
+    final pushService = push
+        ? widget.pushNotificationService ??
+            PushNotificationService.shared(apiClient: widget.authService.apiClient)
+        : null;
     if (push && enabled) {
-      final service = widget.pushNotificationService ??
-          PushNotificationService(apiClient: widget.authService.apiClient);
-      final registered = await service.requestPermissionAndRegisterDevice();
+      final registered = await pushService!.requestPermissionAndRegisterDevice();
       if (!registered) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -161,7 +163,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         }
       });
       if (push) {
-        widget.pushNotificationService?.setPushEnabled(enabled);
+        pushService!.setPushEnabled(enabled);
       }
     } catch (_) {
       if (!mounted) return;
