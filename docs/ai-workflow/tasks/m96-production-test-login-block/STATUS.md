@@ -1,7 +1,7 @@
 # M96 status: production test login block
 
 ## State
-Implementation and local verification complete on `fix/production-test-login-block`, based on `origin/main` at `4f924e9`. Pull request not yet opened.
+Implementation and local verification complete on `fix/production-test-login-block`, based on `origin/main` at `4f924e9`. PR [#248](https://github.com/ur1el0/KapitBayan/pull/248) is open for review.
 
 ## Progress
 - [x] Confirm production API login, refresh-session, and JWT authentication paths.
@@ -9,7 +9,7 @@ Implementation and local verification complete on `fix/production-test-login-blo
 - [x] Implement production-only account policy for login, refresh, access JWT, and Django auth sessions.
 - [x] Add regression tests and environment documentation.
 - [x] Run checks and record results.
-- [ ] Push branch and open PR.
+- [x] Push branch and open PR #248.
 
 ## Verification
 All Django commands used the repository virtual environment with `DEBUG=True`, `KAPITBAYAN_TEST_USE_SQLITE=True`, and an explicit SQLite database URL under `/tmp`; no production database URL was used.
@@ -39,4 +39,4 @@ git diff --check
 **Result:** exit 0; no whitespace errors.
 
 ## Production handoff
-No production database, Render environment, or deployment has been changed. The private denylist must be configured after merge, preserving the manually created DILG and test barangay usernames. The test barangay username still needs to be confirmed before generating the exact production setting value.
+No production database, Render environment, or deployment has been changed. The private denylist must be configured after merge, preserving the manually created DILG and test barangay usernames. The test barangay username is currently unknown, so the exact production setting value cannot yet be prepared safely.
