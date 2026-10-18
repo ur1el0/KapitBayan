@@ -11,6 +11,7 @@ import '../models/auth_response.dart';
 import '../models/barangay_model.dart';
 import '../models/user_model.dart';
 import 'storage_service.dart';
+import 'push_notification_service.dart';
 
 /// Authentication service coordinating login, session renewal, user profiles,
 /// and local storage synchronization.
@@ -426,6 +427,7 @@ class AuthService {
     } catch (_) {
       // Silently proceed with local cleanup even if network fails
     } finally {
+      await PushNotificationService.disposeShared();
       apiClient.clearAuthCredentials();
       await storageService.clearSession();
     }
