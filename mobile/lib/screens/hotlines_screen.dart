@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../core/config/app_config.dart';
 import '../core/network/api_client.dart';
 import '../core/theme/app_colors.dart';
 import '../models/hotline_model.dart';
+import '../services/hotline_caller.dart';
 import '../services/hotline_services.dart';
 import '../services/storage_service.dart';
 
@@ -16,6 +16,7 @@ class HotlinesScreen extends StatefulWidget {
 }
 
 class _HotlinesScreenState extends State<HotlinesScreen> {
+  final HotlineCaller _hotlineCaller = HotlineCaller();
   HotlineService? _service;
   List<HotlineModel> _hotlines = [];
   String _selectedCategory = 'ALL';
@@ -105,17 +106,17 @@ class _HotlinesScreenState extends State<HotlinesScreen> {
   }
 
   Future<void> _makePhoneCall(String phoneNumber) async {
-    final cleanNumber = phoneNumber.replaceAll(RegExp(r'[^\d+]'), '');
-    final Uri launchUri = Uri(scheme: 'tel', path: cleanNumber);
-    
-    if (await canLaunchUrl(launchUri)) {
-      await launchUrl(launchUri);
-    } else {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not launch phone dialer')),
-        );
-      }
+    var launched = false;
+    try {
+      launched = await _hotlineCaller.call(phoneNumber);
+    } catch (_) {
+      // Phone handlers can be unavailable or reject the URI on this device.
+    }
+
+    if (!launched && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not launch phone dialer')),
+      );
     }
   }
 
