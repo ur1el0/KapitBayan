@@ -6,7 +6,7 @@ from gridy_auth.models import User
 
 class StaffUserListSerializer(serializers.ModelSerializer):
     """
-    Represents an authorized Field Official belonging to the administrator's Barangay.
+    Represents an authorized peer administrator or Field Official in the administrator's Barangay.
     """
     full_name = serializers.SerializerMethodField()
 
@@ -84,6 +84,10 @@ class StaffUserCreateSerializer(serializers.Serializer):
             )
 
         return attrs
+
+
+class BarangayAdminCreateSerializer(StaffUserCreateSerializer):
+    """Validate the identity fields for a peer Barangay Admin invitation."""
 
 
 class StaffUserUpdateSerializer(serializers.Serializer):

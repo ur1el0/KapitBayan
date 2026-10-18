@@ -109,6 +109,35 @@ def send_field_official_setup_email(user_email, full_name, barangay_name, setup_
 
 
 @async_task
+def send_barangay_admin_setup_email(user_email, full_name, barangay_name, setup_link):
+    """Send a private one-time password setup link to a new Barangay Admin."""
+    try:
+        subject = "KapitBayan Barangay Admin account setup"
+        message = (
+            f"Hello {full_name},\n\n"
+            f"A Barangay Admin account was created for you by Barangay {barangay_name}. "
+            "Set your password using the private link below:\n\n"
+            f"{setup_link}\n\n"
+            "This link expires and can be used once. If it expires or you did not request "
+            "this account, contact your Barangay Admin. Do not share the link or your password."
+        )
+        sent_count = send_mail(
+            subject,
+            message,
+            settings.DEFAULT_FROM_EMAIL,
+            [user_email],
+            fail_silently=False,
+        )
+    except Exception as exc:
+        logger.error("Barangay Admin setup email delivery failed (%s).", type(exc).__name__)
+        return
+
+    if sent_count != 1:
+        logger.error("Email backend did not accept the Barangay Admin setup message.")
+    return sent_count
+
+
+@async_task
 def send_password_reset_email(user_email, reset_link):
     """
     Sends password reset email in a non-blocking background thread.
