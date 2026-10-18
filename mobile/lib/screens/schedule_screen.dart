@@ -5,6 +5,7 @@ import '../core/theme/app_tokens.dart';
 import '../models/activity_schedule_model.dart';
 import '../models/document_request_model.dart';
 import '../models/user_model.dart';
+import '../services/activity_calendar_service.dart';
 import '../services/auth_service.dart';
 import '../services/schedule_service.dart';
 import '../services/storage_service.dart';
@@ -23,8 +24,14 @@ import 'profile_screen.dart';
 class ScheduleScreen extends StatefulWidget {
   final ScheduleService? scheduleService;
   final AuthService? authService;
+  final ActivityCalendarService? calendarService;
 
-  const ScheduleScreen({super.key, this.scheduleService, this.authService});
+  const ScheduleScreen({
+    super.key,
+    this.scheduleService,
+    this.authService,
+    this.calendarService,
+  });
 
   @override
   State<ScheduleScreen> createState() => _ScheduleScreenState();
@@ -110,24 +117,23 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     );
   }
 
-  void _onAddToCalendar(ActivityScheduleModel activity) {
+  Future<void> _onAddToCalendar(ActivityScheduleModel activity) async {
+    var calendarOpened = false;
+    try {
+      calendarOpened = await (widget.calendarService ?? ActivityCalendarService())
+          .addActivity(activity);
+    } catch (_) {
+      // A device may have no calendar app or the platform handoff may fail.
+    }
+
+    if (!mounted) return;
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Row(
-          children: [
-            const Icon(
-              Icons.check_circle_rounded,
-              color: Colors.white,
-              size: 20,
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                'Added "${activity.title}" to device calendar reminder',
-                style: const TextStyle(fontWeight: FontWeight.w600),
-              ),
-            ),
-          ],
+        content: Text(
+          calendarOpened
+              ? 'Calendar opened. Review and save the event there.'
+              : 'Could not open your device calendar.',
         ),
         backgroundColor: AppColors.primaryNavy,
         behavior: SnackBarBehavior.floating,
