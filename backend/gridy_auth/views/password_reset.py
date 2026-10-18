@@ -32,7 +32,7 @@ class PasswordResetRequestView(APIView):
         if serializer.is_valid():
             email = serializer.validated_data['email']
             matching_users = list(
-                User.objects.filter(email__iexact=email)[:2]
+                User.objects.filter(email__iexact=email, is_active=True)[:2]
             )
 
             if len(matching_users) == 1:
