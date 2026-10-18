@@ -25,7 +25,7 @@ The web client is configured for a same-origin API proxy, while mobile clients c
 
 ## Documentation
 
-Start at the [documentation index](docs/README.md) for current architecture, decision records, feature guides, and walkthroughs. The [system presentation flow](docs/presentations/system-demo-flow.md) is a role-by-role live demo script, with a [PDF copy](docs/presentations/system-demo-flow.pdf). The [Brevo email setup guide](docs/walkthrough/brevo-email-setup.md) covers deployed SMTP configuration and delivery checks. The [ADR index](architecture/decisions/README.md) records the accepted architectural decisions. Use the generated OpenAPI schema for exact request/response details.
+Start at the [documentation index](docs/README.md) for current architecture, decision records, feature guides, and walkthroughs. The [system presentation flow](docs/presentations/system-demo-flow.md) gives a short product overview; the [barangay demo and training flow](docs/presentations/barangay-demo-and-training-flow.md) walks admins, staff, field officials, and residents through actual tasks. Printable copies are available for the [system overview](docs/presentations/system-demo-flow.pdf) and [barangay training flow](docs/presentations/barangay-demo-and-training-flow.pdf). The [Brevo email setup guide](docs/walkthrough/brevo-email-setup.md) covers deployed SMTP configuration and delivery checks. The [ADR index](architecture/decisions/README.md) records the accepted architectural decisions. Use the generated OpenAPI schema for exact request/response details.
 
 ## Local development with Docker Compose
 
