@@ -15,6 +15,7 @@ const AUTHENTICATED_ROLES = new Set([
     'ADMIN',
     'RESIDENT',
     'FIELD_OFFICIAL',
+    'DILG_ADMIN',
 ]);
 
 function isUserProfile(value: unknown): value is User {
