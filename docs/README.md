@@ -42,7 +42,7 @@ Use this page to find current system guidance. Source code, migrations, generate
 
 ## Demonstration guides
 
-- [KapitBayan system demo flow](presentations/system-demo-flow.md) ([PDF](presentations/system-demo-flow.pdf))
+- [KapitBayan system demo flow](presentations/system-demo-flow.md) ([older PDF export](presentations/system-demo-flow.pdf))
 - [Barangay demo and user-training flow](presentations/barangay-demo-and-training-flow.md) ([PDF](presentations/barangay-demo-and-training-flow.pdf))
 
 ## Domain and architecture guidance

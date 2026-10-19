@@ -57,6 +57,9 @@ class BarangayApplication(models.Model):
     applicant_position = models.CharField(max_length=120)
     applicant_email = models.EmailField()
     applicant_phone = models.CharField(max_length=30)
+    admin_username = models.CharField(max_length=150, blank=True, default="")
+    applicant_authorized = models.BooleanField(default=False)
+    contact_consent = models.BooleanField(default=False)
     status = models.CharField(
         max_length=12,
         choices=Status.choices,
@@ -72,12 +75,20 @@ class BarangayApplication(models.Model):
         related_name="reviewed_barangay_applications",
     )
     reviewed_at = models.DateTimeField(null=True, blank=True)
+    review_verified = models.BooleanField(default=False)
     created_barangay = models.ForeignKey(
         Barangay,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name="onboarding_application",
+    )
+    created_admin = models.ForeignKey(
+        "gridy_auth.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="first_admin_onboarding_applications",
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -91,6 +102,16 @@ class BarangayApplication(models.Model):
                 Lower("province"),
                 condition=Q(status="PENDING"),
                 name="unique_pending_barangay_application",
+            ),
+            models.UniqueConstraint(
+                Lower("admin_username"),
+                condition=Q(status="PENDING") & ~Q(admin_username=""),
+                name="unique_pending_admin_username",
+            ),
+            models.UniqueConstraint(
+                Lower("applicant_email"),
+                condition=Q(status="PENDING") & ~Q(admin_username=""),
+                name="unique_pending_admin_email",
             ),
         ]
 

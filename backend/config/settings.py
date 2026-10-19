@@ -276,6 +276,7 @@ REST_FRAMEWORK = {
         'password_reset_confirm': '10/hour',
         'staff_management': '30/minute',
         'platform_account_support': '30/minute',
+        'barangay_onboarding_application': '5/hour',
     }
 }
 

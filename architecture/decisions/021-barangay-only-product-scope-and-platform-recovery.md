@@ -1,6 +1,6 @@
 # ADR 021: Barangay-Only Product Scope and Platform Recovery
 
-- **Status:** Accepted
+- **Status:** Accepted; onboarding decision superseded in part by [ADR 022](022-reviewed-new-barangay-onboarding.md)
 - **Date:** 2026-10-18
 - **Supersedes:** The active product-scope portions of ADR 011 and ADR 020. Historical records remain unchanged.
 
@@ -14,13 +14,13 @@ The system still needs a controlled way to bootstrap its initial Barangay and fi
 
 1. The active application roles are `RESIDENT`, `ADMIN`, and `FIELD_OFFICIAL`, each with permissions defined by its endpoint and Barangay assignment. Legacy stored values such as `DILG_ADMIN` may remain in existing rows but are not accepted at login, refresh, access-token authentication, staff routing, or tenant service authorization.
 2. Public Barangay directory reads remain available for resident registration. Public Barangay application and review endpoints are retired. Initial tenant and first administrator setup is a deployment-operator bootstrap performed through a protected process.
-3. Barangay `ADMIN` users may provision and list peer `ADMIN` accounts and manage Field Officials only within their own Barangay. Peer administrators receive a one-time password setup link; they cannot select their role or Barangay during provisioning. No application role receives cross-Barangay service-data access.
+3. Barangay `ADMIN` users may provision and manage Field Officials only within their own Barangay. They cannot create or list peer `ADMIN` accounts. Admin accounts are created through protected platform-operator provisioning. No application role receives cross-Barangay service-data access.
 4. Django superusers are platform operators, not a product role. A separately permissioned and throttled support surface permits minimal account lookup, audited contact correction with an explicit verification attestation, recovery-link dispatch, and account activation changes. It excludes superusers and retired roles; it cannot create or delete accounts, set passwords directly, change roles or Barangay assignments, or change resident evidence. Disabling an account revokes its refresh sessions, and the last active Barangay administrator cannot be disabled by this flow.
 5. Existing `BarangayApplication` rows and their review metadata are retained and may be inspected read-only by active Django superusers. They are not automatically rejected or deleted. Historical migration and ADR files are retained as records of prior decisions.
 
 ## Consequences
 
-- Tenant onboarding and creation of the first Barangay administrator are controlled by the deployment operator. After bootstrap, an assigned Barangay administrator may invite additional administrators in that same Barangay. There is no public or DILG-facing onboarding workflow.
+- Tenant onboarding and creation of a Barangay's Admin are controlled by a platform operator. After onboarding, the assigned Barangay Admin may manage Field Officials in that Barangay but cannot provision another Admin. Public applications and reviewed provisioning are defined by ADR 022; no DILG-facing workflow is introduced.
 - Account recovery remains possible without adding cross-tenant service access or unrestricted account CRUD.
 - A role-choice migration may remove retired values from Django's declared choices, but must not delete or rewrite existing rows. Authentication and authorization checks remain the enforcement boundary.
 - Current product guides and training materials describe Barangay-only roles. Historical ADRs and migration files retain their original wording and are superseded by this decision.

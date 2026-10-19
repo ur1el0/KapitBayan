@@ -6,13 +6,13 @@ The browser application is a React and TypeScript single-page application built 
 
 | Route group | Access | Purpose |
 |---|---|---|
-| `/login`, `/official-login`, `/register`, password-reset routes | Public | Resident access and barangay staff sign-in |
+| `/login`, `/official-login`, `/register`, `/register/barangay`, password-reset routes | Public | Resident access, barangay staff sign-in, and new Barangay onboarding request |
 | `/public/queue/:barangayId`, `/public/announcements/:barangayId` | Public | Read-only public displays |
 | `/dashboard`, `/documents`, `/queue`, `/communications`, `/residents`, `/reports`, and related staff routes | `ADMIN`, with additional route-level restrictions where configured | Barangay staff workspace |
 | `/platform/accounts` | Active Django superuser | Bounded account recovery and status support |
 | `/portal/documents`, `/portal/queue`, `/portal/bulletin`, `/portal/aid` | `RESIDENT` | Resident self-service |
 
-`/aid-requests` has an additional `ADMIN` route guard. Public barangay applications and their review routes have been retired; existing application rows are retained as read-only history for superusers. `FIELD_OFFICIAL` has no web staff workspace in the current router and uses the Flutter client; browser login for that role is rejected. These are UI route guards; the API remains the authorization boundary. The Field Official API token is not cryptographically bound to a native device.
+`/aid-requests` has an additional `ADMIN` route guard. `/register/barangay` creates only a pending request. `/platform/barangay-applications` is restricted to an active Django superuser, who must independently verify an applicant before creating the tenant and its Admin. Barangay Admins cannot create or list other Admin accounts; they can manage Field Officials through staff settings. `FIELD_OFFICIAL` has no web staff workspace in the current router and uses the Flutter client; browser login for that role is rejected. These are UI route guards; the API remains the authorization boundary. The Field Official API token is not cryptographically bound to a native device.
 
 ## API and authentication
 

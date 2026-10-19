@@ -16,6 +16,8 @@ from .views import (
     PasswordResetRequestView,
     PasswordResetConfirmView,
     PublicBarangayDirectoryView,
+    PublicBarangayApplicationCreateView,
+    PlatformBarangayApplicationViewSet,
     StaffManagementViewSet,
     PlatformAccountSupportViewSet,
 )
@@ -27,11 +29,21 @@ router.register(r'barangay', BarangayViewSet, basename='barangay')
 router.register(r"sessions", SessionViewSet, basename="session")
 router.register(r"staff", StaffManagementViewSet, basename="staff")
 router.register(r"platform/accounts", PlatformAccountSupportViewSet, basename="platform-account-support")
+router.register(
+    r"platform/barangay-applications",
+    PlatformBarangayApplicationViewSet,
+    basename="platform-barangay-application",
+)
 
 
 urlpatterns = [
     path('register/', RegisterView.as_view(), name='auth_register'),
     path('public/barangays/', PublicBarangayDirectoryView.as_view(), name='public-barangay-list'),
+    path(
+        'public/barangay-applications/',
+        PublicBarangayApplicationCreateView.as_view(),
+        name='public-barangay-application-create',
+    ),
     path('login/', CustomTokenObtainPairView.as_view(), name='auth_login'),
     path('token/refresh/', CustomTokenRefreshView.as_view(), name='auth_token_refresh'),
     path('logout/', LogoutView.as_view(), name='auth_logout'),

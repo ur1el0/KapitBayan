@@ -13,16 +13,15 @@ from gridy_audit.models import AuditLog
 from gridy_audit.services import log_action
 from gridy_auth.models import RefreshSession, User
 from gridy_auth.serializers.staff import (
-    BarangayAdminCreateSerializer,
     StaffUserCreateSerializer,
     StaffUserListSerializer,
     StaffUserUpdateSerializer,
 )
-from gridy_auth.tasks import send_barangay_admin_setup_email, send_field_official_setup_email
+from gridy_auth.tasks import send_field_official_setup_email
 
 
 class IsAssignedBarangayAdmin(permissions.BasePermission):
-    """Allow staff management only to admins assigned to a barangay."""
+    """Allow Field Official management only to admins assigned to a Barangay."""
 
     def has_permission(self, request, view):
         user = request.user
@@ -42,9 +41,8 @@ class StaffManagementViewSet(
     viewsets.GenericViewSet,
 ):
     """
-    Administrative management for Barangay Field Officials.
-    Allows authenticated Barangay Admins to provision, list, edit allowed
-    profile fields, and toggle active status strictly within their Barangay.
+    Management of Field Officials by their assigned Barangay Admin.
+    Admin account creation and listing are reserved for platform operators.
     """
     permission_classes = [permissions.IsAuthenticated, IsAssignedBarangayAdmin]
     throttle_classes = [ScopedRateThrottle]
@@ -54,16 +52,6 @@ class StaffManagementViewSet(
         user = self.request.user
         if not user.is_authenticated or user.role != User.Role.ADMIN or not user.barangay_id:
             return User.objects.none()
-        if self.action == "admins":
-            return (
-                User.objects.filter(
-                    barangay_id=user.barangay_id,
-                    role=User.Role.ADMIN,
-                    is_superuser=False,
-                )
-                .exclude(pk=user.pk)
-                .order_by("-date_joined")
-            )
         return (
             User.objects.filter(
                 barangay_id=user.barangay_id,
@@ -73,98 +61,11 @@ class StaffManagementViewSet(
         )
 
     def get_serializer_class(self):
-        if self.action == "admins" and self.request.method == "POST":
-            return BarangayAdminCreateSerializer
         if self.action == "create":
             return StaffUserCreateSerializer
         if self.action in {"update", "partial_update"}:
             return StaffUserUpdateSerializer
         return StaffUserListSerializer
-
-    @extend_schema(
-        methods=["GET"],
-        summary="List peer Barangay Admins",
-        description="Returns other administrator accounts belonging to the authenticated Admin's Barangay.",
-        request=None,
-        responses={
-            200: StaffUserListSerializer(many=True),
-            403: OpenApiResponse(description="Restricted to Barangay Admins with assigned Barangay."),
-        },
-    )
-    @extend_schema(
-        methods=["POST"],
-        summary="Invite a Barangay Admin",
-        description=(
-            "Creates a new ADMIN account in the authenticated Admin's Barangay. Role and Barangay are "
-            "selected by the server. The recipient sets their password using a private setup link. "
-            "The first administrator remains an operator-bootstrap responsibility."
-        ),
-        request=BarangayAdminCreateSerializer,
-        responses={
-            201: StaffUserListSerializer,
-            400: OpenApiResponse(description="Validation error or duplicate credentials."),
-            403: OpenApiResponse(description="Restricted to Barangay Admins with assigned Barangay."),
-        },
-    )
-    @action(detail=False, methods=["get", "post"], url_path="admins")
-    def admins(self, request):
-        if request.method == "GET":
-            serializer = StaffUserListSerializer(self.get_queryset(), many=True)
-            return Response(serializer.data)
-
-        if not request.user.barangay:
-            return Response(
-                {"detail": "Administrator is not assigned to an active Barangay."},
-                status=status.HTTP_403_FORBIDDEN,
-            )
-
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        data = serializer.validated_data
-
-        with transaction.atomic():
-            user = User(
-                username=data["username"],
-                email=data["email"].strip().lower(),
-                first_name=data["first_name"],
-                last_name=data["last_name"],
-                role=User.Role.ADMIN,
-                barangay=request.user.barangay,
-                is_staff=True,
-                is_superuser=False,
-                is_active=True,
-            )
-            user.set_unusable_password()
-            user.save()
-
-            log_action(
-                user=request.user,
-                action_type=AuditLog.ActionType.USER_ACTION,
-                description=(
-                    f"Admin {request.user.username} created peer administrator account "
-                    f"'{user.username}' for Barangay {request.user.barangay.name}."
-                ),
-                request=request,
-            )
-
-            uid = urlsafe_base64_encode(force_bytes(user.pk))
-            token = default_token_generator.make_token(user)
-            setup_link = (
-                f"{settings.FRONTEND_URL.rstrip('/')}/set-password"
-                f"?uidb64={uid}&token={token}"
-            )
-            transaction.on_commit(
-                lambda email=user.email, full_name=user.get_full_name(),
-                barangay_name=request.user.barangay.name, link=setup_link:
-                    send_barangay_admin_setup_email.delay(
-                        email,
-                        full_name,
-                        barangay_name,
-                        link,
-                    )
-            )
-
-        return Response(StaffUserListSerializer(user).data, status=status.HTTP_201_CREATED)
 
     @extend_schema(
         summary="List Barangay Field Officials",

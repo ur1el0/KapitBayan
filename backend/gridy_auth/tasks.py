@@ -115,7 +115,7 @@ def send_barangay_admin_setup_email(user_email, full_name, barangay_name, setup_
         subject = "KapitBayan Barangay Admin account setup"
         message = (
             f"Hello {full_name},\n\n"
-            f"A Barangay Admin account was created for you by Barangay {barangay_name}. "
+            f"A Barangay Admin account for Barangay {barangay_name} is ready. "
             "Set your password using the private link below:\n\n"
             f"{setup_link}\n\n"
             "This link expires and can be used once. If it expires or you did not request "

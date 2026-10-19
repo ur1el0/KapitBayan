@@ -8,7 +8,7 @@ All application API routes are mounted below `/api/v1/` unless noted.
 
 | Prefix or route | Owner | Purpose |
 |---|---|---|
-| `/auth/` | `gridy_auth` | Resident registration, login, refresh, logout, profile, resident verification/import, public barangay directory, sessions, barangay-scoped Field Official management, and superuser-only platform account support |
+| `/auth/` | `gridy_auth` | Resident registration, login, refresh, logout, profile, resident verification/import, public Barangay directory and pending-only onboarding applications, sessions, barangay-scoped staff management, and superuser-only platform account/application review |
 | `/document-requests/` | `gridy_services` | Digital and walk-in document request lifecycle, fee assessment, payment evidence, receipt and PDF operations |
 | `/tickets/` | `gridy_services` | Ticket creation, resident status, staff queue operations, and live desk status |
 | `/aid-requests/` | `gridy_services` | Assistance request submission and authorized review |

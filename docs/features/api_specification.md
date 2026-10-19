@@ -19,6 +19,8 @@ Application endpoints are mounted below `/api/v1/`:
 
 Exact URL actions and HTTP methods are defined by `backend/config/urls.py` and the Django app URL configurations. Use `/api/schema/` to inspect the current resolved schema.
 
+New Barangay onboarding uses `POST /api/v1/auth/public/barangay-applications/` to create a pending-only request. Active Django superusers review requests through `GET /api/v1/auth/platform/barangay-applications/?status=PENDING`, then call the per-application `/approve/` or `/reject/` action. Approval creates the tenant and first Admin only after an explicit verification attestation. Exact field contracts are in generated OpenAPI.
+
 ## Client integration rules
 
 - Use the repository's configured API client; keep provider credentials and integrations on the server.

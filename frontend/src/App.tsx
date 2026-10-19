@@ -56,6 +56,12 @@ const BarangaySettings = lazy(() =>
 const PlatformAccountSupport = lazy(() =>
     import("./pages/admin/PlatformAccountSupport").then(({ PlatformAccountSupport }) => ({ default: PlatformAccountSupport })),
 );
+const PlatformBarangayApplications = lazy(() =>
+    import("./pages/admin/PlatformBarangayApplications").then(({ PlatformBarangayApplications }) => ({ default: PlatformBarangayApplications })),
+);
+const BarangayOnboarding = lazy(() =>
+    import("./pages/auth/BarangayOnboarding").then(({ BarangayOnboarding }) => ({ default: BarangayOnboarding })),
+);
 const ForgotPassword = lazy(() =>
     import("./pages/auth/ForgotPassword").then(({ ForgotPassword }) => ({ default: ForgotPassword })),
 );
@@ -148,6 +154,7 @@ export function App() {
                             {/* Public Auth Routes */}
                             <Route path="/login" element={<Login />} />
                             <Route path="/official-login" element={<Login />} />
+                            <Route path="/register/barangay" element={<BarangayOnboarding />} />
                             <Route path="/field-official-mobile" element={<FieldOfficialWebNotice />} />
                             <Route path="/register" element={<Register />} />
                             <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -181,6 +188,7 @@ export function App() {
                             {/* Controlled platform account recovery; backend requires Django superuser. */}
                             <Route element={<ProtectedRoute requireSuperuser />}>
                                 <Route path="/platform/accounts" element={<PlatformAccountSupport />} />
+                                <Route path="/platform/barangay-applications" element={<PlatformBarangayApplications />} />
                             </Route>
 
                             {/* Citizen Desktop Portal (Tier 4: Residents & Self-Service Kiosks) */}
