@@ -95,9 +95,15 @@ class RegisterSerializer(serializers.ModelSerializer):
         barangay_id = attrs.get('barangay_id')
         if barangay_id:
             try:
-                attrs['barangay_obj'] = Barangay.objects.get(id=barangay_id)
+                barangay_obj = Barangay.objects.get(id=barangay_id)
             except Barangay.DoesNotExist:
                 raise serializers.ValidationError({"barangay_id": "Selected Barangay does not exist."})
+            
+            if not barangay_obj.is_approved_and_active():
+                raise serializers.ValidationError({
+                    "barangay_id": "Selected Barangay is not approved or is currently inactive for registration."
+                })
+            attrs['barangay_obj'] = barangay_obj
             
         # Validate Guardian ID mapping
         if guardian_id:
