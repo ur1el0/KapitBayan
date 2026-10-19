@@ -277,6 +277,7 @@ REST_FRAMEWORK = {
         'staff_management': '30/minute',
         'platform_account_support': '30/minute',
         'barangay_onboarding_application': '5/hour',
+        'barangay_onboarding_verification': '10/hour',
     }
 }
 

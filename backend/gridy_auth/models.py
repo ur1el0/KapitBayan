@@ -4,8 +4,18 @@ from django.db.models.functions import Lower
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import RegexValidator
 from django.utils import timezone
+from uuid import uuid4
+from pathlib import PurePosixPath
 
 # Create your models here.
+
+
+def barangay_authority_proof_upload_to(_instance, filename):
+    """Use an opaque private path; the serializer has already checked the suffix."""
+    suffix = PurePosixPath(filename).suffix.lower()
+    if suffix not in {".pdf", ".jpg", ".png"}:
+        suffix = ".bin"
+    return f"barangay_onboarding/{uuid4().hex}{suffix}"
 
 class Barangay(models.Model):
     name = models.CharField(max_length=255)
@@ -57,6 +67,13 @@ class BarangayApplication(models.Model):
     applicant_position = models.CharField(max_length=120)
     applicant_email = models.EmailField()
     applicant_phone = models.CharField(max_length=30)
+    proof_of_authority = models.FileField(
+        upload_to=barangay_authority_proof_upload_to,
+        blank=True,
+        help_text="Private supporting evidence, removed after a review decision.",
+    )
+    email_verified_at = models.DateTimeField(null=True, blank=True)
+    email_verification_sent_at = models.DateTimeField(null=True, blank=True)
     admin_username = models.CharField(max_length=150, blank=True, default="")
     applicant_user = models.OneToOneField(
         "gridy_auth.User",
@@ -83,6 +100,7 @@ class BarangayApplication(models.Model):
     )
     reviewed_at = models.DateTimeField(null=True, blank=True)
     review_verified = models.BooleanField(default=False)
+    proof_reviewed = models.BooleanField(default=False)
     created_barangay = models.ForeignKey(
         Barangay,
         on_delete=models.SET_NULL,
@@ -206,14 +224,20 @@ class RefreshSession(models.Model):
 
 
 class PrivateMediaCleanup(models.Model):
-    """Durable, non-user-linked work item for deleting private resident evidence."""
+    """Durable, non-user-linked work item for deleting private evidence."""
 
     class ResidentField(models.TextChoices):
         PHILSYS_ID_PHOTO = "philsys_id_photo", "PhilSys ID photo"
         SECONDARY_ID_PHOTO = "secondary_id_photo", "Secondary ID photo"
         UTILITY_BILLING_PHOTO = "utility_billing_photo", "Utility billing photo"
+        PROOF_OF_AUTHORITY = "proof_of_authority", "Barangay authority proof"
 
     field_name = models.CharField(max_length=32, choices=ResidentField.choices)
+    storage_model = models.CharField(
+        max_length=64,
+        default="gridy_auth.Resident",
+        help_text="Allowlisted model that owns the private media storage field.",
+    )
     encrypted_file_name = models.TextField()
     attempt_count = models.PositiveIntegerField(default=0)
     next_attempt_at = models.DateTimeField(default=timezone.now, db_index=True)

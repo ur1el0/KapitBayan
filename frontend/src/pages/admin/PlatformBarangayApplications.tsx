@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Building2, CheckCircle2, ClipboardCheck, LogOut, ShieldCheck, XCircle } from 'lucide-react';
 import { InlineErrorState } from '../../components/ui/InlineErrorState';
 import { useAuth } from '../../context/auth-context';
 import {
     approveBarangayApplication,
+    downloadBarangayApplicationProof,
     fetchBarangayApplications,
     rejectBarangayApplication,
     type BarangayApplication,
@@ -17,7 +18,7 @@ function apiErrorMessage(error: unknown, fallback: string) {
     const data = response.response?.data;
     if (!data || typeof data !== 'object') return fallback;
     if (typeof data.detail === 'string') return data.detail;
-    for (const key of ['applicant_email', 'contact_verified', 'reason']) {
+    for (const key of ['applicant_email', 'contact_verified', 'proof_reviewed', 'reason']) {
         const value = data[key];
         if (typeof value === 'string') return value;
         if (Array.isArray(value) && typeof value[0] === 'string') return value[0];
@@ -40,10 +41,19 @@ export function PlatformBarangayApplications() {
     const [retrying, setRetrying] = useState(false);
     const [loadError, setLoadError] = useState(false);
     const [verified, setVerified] = useState<Record<number, boolean>>({});
+    const [proofReviewed, setProofReviewed] = useState<Record<number, boolean>>({});
+    const [proofDownloads, setProofDownloads] = useState<Record<number, { url: string; filename: string }>>({});
+    const [proofLoadingId, setProofLoadingId] = useState<number | null>(null);
     const [approvalNotes, setApprovalNotes] = useState<Record<number, string>>({});
     const [rejectionReasons, setRejectionReasons] = useState<Record<number, string>>({});
     const [busyId, setBusyId] = useState<number | null>(null);
     const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+    const proofDownloadUrls = useRef(new Map<number, string>());
+
+    useEffect(() => () => {
+        proofDownloadUrls.current.forEach((url) => URL.revokeObjectURL(url));
+        proofDownloadUrls.current.clear();
+    }, []);
 
     const loadApplications = useCallback(async (isRetry = false) => {
         if (isRetry) setRetrying(true);
@@ -65,14 +75,17 @@ export function PlatformBarangayApplications() {
 
     const applyReview = async (application: BarangayApplication) => {
         if (!verified[application.id]) return;
+        if (application.has_applicant_account && !proofReviewed[application.id]) return;
         if (!window.confirm(`Approve ${application.name}, ${application.municipality}, ${application.province} and activate the applicant's Admin account?`)) return;
         setBusyId(application.id);
         setMessage(null);
         try {
             const updated = await approveBarangayApplication(application.id, {
                 contact_verified: true,
+                proof_reviewed: application.has_applicant_account ? true : false,
                 review_note: approvalNotes[application.id]?.trim() || '',
             });
+            clearProofDownload(application.id);
             setApplications((current) => current.map((item) => item.id === updated.id ? updated : item).filter((item) => filter !== 'PENDING' || item.status === 'PENDING'));
             setCount((current) => filter === 'PENDING' ? Math.max(0, current - 1) : current);
             setMessage({
@@ -88,6 +101,33 @@ export function PlatformBarangayApplications() {
         }
     };
 
+    const prepareProofDownload = async (application: BarangayApplication) => {
+        setProofLoadingId(application.id);
+        setMessage(null);
+        try {
+            const download = await downloadBarangayApplicationProof(application.id);
+            const previousUrl = proofDownloadUrls.current.get(application.id);
+            if (previousUrl) URL.revokeObjectURL(previousUrl);
+            proofDownloadUrls.current.set(application.id, download.url);
+            setProofDownloads((current) => ({ ...current, [application.id]: download }));
+        } catch (error) {
+            setMessage({ type: 'error', text: apiErrorMessage(error, 'Could not securely retrieve this authority document.') });
+        } finally {
+            setProofLoadingId(null);
+        }
+    };
+
+    const clearProofDownload = (applicationId: number) => {
+        const url = proofDownloadUrls.current.get(applicationId);
+        if (url) URL.revokeObjectURL(url);
+        proofDownloadUrls.current.delete(applicationId);
+        setProofDownloads((current) => {
+            const remaining = { ...current };
+            delete remaining[applicationId];
+            return remaining;
+        });
+    };
+
     const reject = async (application: BarangayApplication) => {
         const reason = rejectionReasons[application.id]?.trim() ?? '';
         if (reason.length < 5) {
@@ -98,6 +138,7 @@ export function PlatformBarangayApplications() {
         setMessage(null);
         try {
             const updated = await rejectBarangayApplication(application.id, reason);
+            clearProofDownload(application.id);
             setApplications((current) => current.map((item) => item.id === updated.id ? updated : item).filter((item) => filter !== 'PENDING' || item.status === 'PENDING'));
             setCount((current) => filter === 'PENDING' ? Math.max(0, current - 1) : current);
             setMessage({ type: 'success', text: `Application KB-${updated.id} rejected and the reason was recorded.` });
@@ -174,6 +215,9 @@ export function PlatformBarangayApplications() {
                                     <p className="mt-1 font-semibold text-slate-900">{application.applicant_name}</p>
                                     <p className="text-sm text-slate-600">{application.applicant_position}</p>
                                     <p className="mt-2 break-all text-sm text-slate-700">Official sign-in email: <strong>{application.applicant_email}</strong></p>
+                                    {application.has_applicant_account && <p className={`mt-1 text-sm font-semibold ${application.email_verified_at ? 'text-emerald-700' : 'text-amber-800'}`}>
+                                        {application.email_verified_at ? `Email verified ${dateLabel(application.email_verified_at)}` : 'Email ownership is not verified'}
+                                    </p>}
                                     <p className="text-sm text-slate-700">{application.applicant_phone}</p>
                                     {application.admin_username && <p className="mt-2 text-sm text-slate-600">Historical username: <strong className="text-slate-800">@{application.admin_username}</strong></p>}
                                     {application.status === 'PENDING' && application.has_applicant_account && <p className="mt-2 text-sm font-semibold text-amber-800">Applicant account is inactive until approval.</p>}
@@ -181,6 +225,18 @@ export function PlatformBarangayApplications() {
                                 <div className="space-y-2 rounded-lg border border-slate-200 p-3 text-sm text-slate-700">
                                     <p className="flex items-start gap-2"><CheckCircle2 className={`mt-0.5 h-4 w-4 shrink-0 ${application.applicant_authorized ? 'text-emerald-600' : 'text-rose-600'}`} aria-hidden="true" /> Applicant attested that they are authorized to apply.</p>
                                     <p className="flex items-start gap-2"><CheckCircle2 className={`mt-0.5 h-4 w-4 shrink-0 ${application.contact_consent ? 'text-emerald-600' : 'text-rose-600'}`} aria-hidden="true" /> Applicant consented to use of contact details for review.</p>
+                                    {application.has_applicant_account && <div className="border-t border-slate-100 pt-2">
+                                        <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Authority evidence</p>
+                                        {application.has_proof_of_authority ? <>
+                                            <p className="mt-1 text-sm">Private supporting document is available for pending review.</p>
+                                            {application.status === 'PENDING' && <div className="mt-2 flex flex-wrap items-center gap-3">
+                                                <button type="button" disabled={proofLoadingId === application.id} onClick={() => void prepareProofDownload(application)} className="inline-flex min-h-10 items-center justify-center rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50 disabled:cursor-wait disabled:opacity-60">
+                                                    {proofLoadingId === application.id ? 'Preparing secure download…' : 'Prepare secure proof download'}
+                                                </button>
+                                                {proofDownloads[application.id] && <a href={proofDownloads[application.id].url} download={proofDownloads[application.id].filename} className="inline-flex min-h-10 items-center text-sm font-semibold text-primary-text underline">Download proof document</a>}
+                                            </div>}
+                                        </> : <p className="mt-1 text-sm font-semibold text-rose-700">No proof document is attached.</p>}
+                                    </div>}
                                     {application.reviewed_at && <p className="border-t border-slate-100 pt-2 text-xs text-slate-500">Reviewed by {application.reviewed_by_username || 'platform operator'} · {dateLabel(application.reviewed_at)}</p>}
                                     {application.created_barangay_id && <p className="text-xs text-slate-600">Barangay ID: {application.created_barangay_id}</p>}
                                     {application.created_admin_email && <p className="text-xs text-slate-600">Admin sign-in email: {application.created_admin_email}</p>}
@@ -192,13 +248,20 @@ export function PlatformBarangayApplications() {
                             {application.status === 'PENDING' && (
                                 <div className="grid gap-4 border-t border-slate-100 bg-white p-4 sm:p-5 lg:grid-cols-2">
                                     <div className="space-y-3">
+                                        {application.has_applicant_account && <>
+                                            <label className="flex items-start gap-3 text-sm leading-5 text-slate-700">
+                                                <input type="checkbox" checked={Boolean(proofReviewed[application.id])} onChange={(event) => setProofReviewed((current) => ({ ...current, [application.id]: event.target.checked }))} disabled={!application.has_proof_of_authority || !application.email_verified_at} className="mt-0.5 h-4 w-4 rounded border-slate-300 text-primary focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50" />
+                                                <span>I inspected the uploaded document and confirmed it supports the applicant’s stated Barangay role.</span>
+                                            </label>
+                                            {!application.email_verified_at && <p className="rounded-lg bg-amber-50 p-3 text-xs leading-5 text-amber-900">Approval is unavailable until the applicant verifies their official email.</p>}
+                                        </>}
                                         <label className="flex items-start gap-3 text-sm leading-5 text-slate-700">
                                             <input type="checkbox" checked={Boolean(verified[application.id])} onChange={(event) => setVerified((current) => ({ ...current, [application.id]: event.target.checked }))} className="mt-0.5 h-4 w-4 rounded border-slate-300 text-primary focus-visible:ring-2 focus-visible:ring-primary" />
-                                            <span>I verified the Barangay locality and this official’s identity and authority through an independent official channel.</span>
+                                            <span>I verified the Barangay locality and applicant’s identity through an independent official channel.</span>
                                         </label>
                                         <label htmlFor={`approve-note-${application.id}`} className="block text-sm font-semibold text-slate-700">Approval note <span className="font-normal text-slate-500">(optional)</span></label>
                                         <textarea id={`approve-note-${application.id}`} rows={2} maxLength={1000} value={approvalNotes[application.id] ?? ''} onChange={(event) => setApprovalNotes((current) => ({ ...current, [application.id]: event.target.value }))} className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary" />
-                                        <button type="button" disabled={!verified[application.id] || busyId === application.id} onClick={() => void applyReview(application)} className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-primary-foreground hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
+                                        <button type="button" disabled={!verified[application.id] || (application.has_applicant_account && (!application.has_proof_of_authority || !application.email_verified_at || !proofReviewed[application.id])) || busyId === application.id} onClick={() => void applyReview(application)} className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-primary-foreground hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
                                             <ClipboardCheck className="h-4 w-4" aria-hidden="true" /> {busyId === application.id ? 'Approving…' : 'Approve and activate Admin'}
                                         </button>
                                     </div>

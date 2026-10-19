@@ -28,7 +28,10 @@ from .residents import (
 )
 from .onboarding import (
     PlatformBarangayApplicationViewSet,
+    PlatformBarangayApplicationProofView,
     PublicBarangayApplicationCreateView,
+    PublicBarangayApplicationEmailVerificationView,
+    PublicBarangayApplicationVerificationResendView,
     PublicBarangayDirectoryView,
 )
 from .staff import StaffManagementViewSet

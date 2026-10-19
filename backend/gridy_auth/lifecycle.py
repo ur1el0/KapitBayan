@@ -20,6 +20,10 @@ RESIDENT_PRIVATE_MEDIA_FIELDS = (
     "secondary_id_photo",
     "utility_billing_photo",
 )
+PRIVATE_MEDIA_STORAGE_MODELS = {
+    "gridy_auth.Resident": RESIDENT_PRIVATE_MEDIA_FIELDS,
+    "gridy_auth.BarangayApplication": ("proof_of_authority",),
+}
 
 
 def _fernet_for_secret(secret):
@@ -50,6 +54,20 @@ def _decrypt_private_file_name(encrypted_file_name):
     raise InvalidToken
 
 
+def queue_private_media_cleanup(storage_model, field_name, file_name):
+    """Queue encrypted file metadata for durable deletion after a DB commit."""
+    from gridy_auth.models import PrivateMediaCleanup
+
+    if field_name not in PRIVATE_MEDIA_STORAGE_MODELS.get(storage_model, ()):
+        raise ValueError("Unrecognized private media storage field")
+    return PrivateMediaCleanup.objects.create(
+        storage_model=storage_model,
+        field_name=field_name,
+        encrypted_file_name=_encrypt_private_file_name(file_name),
+        next_attempt_at=timezone.now(),
+    )
+
+
 def _record_private_media_retry(cleanup, error):
     now = timezone.now()
     attempt_count = cleanup.attempt_count + 1
@@ -75,7 +93,7 @@ def _record_private_media_retry(cleanup, error):
 
 def attempt_private_media_cleanup(cleanup_id):
     """Delete one queued private file; retain a retry record after any failure."""
-    from gridy_auth.models import PrivateMediaCleanup, Resident
+    from gridy_auth.models import BarangayApplication, PrivateMediaCleanup, Resident
 
     cleanup = PrivateMediaCleanup.objects.filter(pk=cleanup_id).first()
     if cleanup is None:
@@ -86,10 +104,15 @@ def attempt_private_media_cleanup(cleanup_id):
         return "deferred"
 
     try:
-        if cleanup.field_name not in RESIDENT_PRIVATE_MEDIA_FIELDS:
+        allowed_fields = PRIVATE_MEDIA_STORAGE_MODELS.get(cleanup.storage_model)
+        if allowed_fields is None or cleanup.field_name not in allowed_fields:
             raise ValueError("Unrecognized private media field")
         file_name = _decrypt_private_file_name(cleanup.encrypted_file_name)
-        storage = Resident._meta.get_field(cleanup.field_name).storage
+        model = {
+            "gridy_auth.Resident": Resident,
+            "gridy_auth.BarangayApplication": BarangayApplication,
+        }[cleanup.storage_model]
+        storage = model._meta.get_field(cleanup.field_name).storage
         if storage.exists(file_name):
             storage.delete(file_name)
         if storage.exists(file_name):
@@ -156,6 +179,7 @@ def erase_user_account(user, reason, request=None, actor=None):
                 file_field = getattr(resident, field_name, None)
                 if file_field and file_field.name:
                     cleanup = PrivateMediaCleanup.objects.create(
+                        storage_model="gridy_auth.Resident",
                         field_name=field_name,
                         encrypted_file_name=_encrypt_private_file_name(
                             file_field.name

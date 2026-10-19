@@ -13,7 +13,10 @@ class ProtectedMediaView(APIView):
     permission_classes = [AllowAny]
 
     # Directories containing sensitive PII under RA 10173
-    SENSITIVE_DIRECTORIES = ('resident_ids/', 'resident_billings/', 'blotter/', 'payment_proofs/')
+    SENSITIVE_DIRECTORIES = (
+        'resident_ids/', 'resident_billings/', 'blotter/', 'payment_proofs/',
+        'barangay_onboarding/',
+    )
 
     def get(self, request, path):
         if not hasattr(settings, "MEDIA_ROOT"):

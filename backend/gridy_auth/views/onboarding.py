@@ -2,28 +2,39 @@ from django.conf import settings
 from django.contrib.auth.tokens import default_token_generator
 from django.db import IntegrityError, transaction
 from django.db.models import Q
+from django.http import FileResponse, Http404
 from django.utils import timezone
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import mixins, permissions, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.parsers import JSONParser, FormParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from datetime import timedelta
+from urllib.parse import quote, urlencode
 
 from gridy_audit.models import AuditLog
 from gridy_audit.services import log_action
+from gridy_auth.lifecycle import attempt_private_media_cleanup_safely, queue_private_media_cleanup
 from gridy_auth.models import Barangay, BarangayApplication, User
 from gridy_auth.permissions import IsBarangayOnboardingReviewer
 from gridy_auth.serializers.onboarding import (
     BarangayApplicationApproveSerializer,
     BarangayApplicationCreateSerializer,
+    BarangayApplicationEmailVerificationSerializer,
     BarangayApplicationOperatorSerializer,
     BarangayApplicationReceiptSerializer,
     BarangayApplicationRejectSerializer,
+    BarangayApplicationVerificationResendSerializer,
     PublicBarangaySerializer,
 )
-from gridy_auth.tasks import send_barangay_admin_setup_email
+from gridy_auth.tasks import (
+    send_barangay_admin_setup_email,
+    send_barangay_application_verification_email,
+)
+from gridy_auth.tokens import barangay_application_email_token_generator
 from gridy_auth.throttling import SharedDatabaseScopedRateThrottle
 
 
@@ -46,6 +57,7 @@ class PublicBarangayApplicationCreateView(APIView):
     permission_classes = [permissions.AllowAny]
     throttle_classes = [SharedDatabaseScopedRateThrottle]
     throttle_scope = "barangay_onboarding_application"
+    parser_classes = [MultiPartParser, FormParser]
 
     @extend_schema(
         summary="Submit a new Barangay onboarding application",
@@ -62,6 +74,7 @@ class PublicBarangayApplicationCreateView(APIView):
         try:
             with transaction.atomic():
                 application = serializer.save()
+                _schedule_barangay_application_verification(application)
         except IntegrityError:
             return Response(
                 {"detail": "A matching pending application already exists. Contact KapitBayan support if you need help."},
@@ -72,6 +85,193 @@ class PublicBarangayApplicationCreateView(APIView):
             BarangayApplicationReceiptSerializer(application).data,
             status=status.HTTP_201_CREATED,
         )
+
+
+def _schedule_barangay_application_verification(application):
+    applicant = application.applicant_user
+    if applicant is None:
+        return
+    token = barangay_application_email_token_generator.make_token(applicant)
+    application_query = urlencode({"application": application.pk})
+    verification_url = (
+        f"{settings.FRONTEND_URL.rstrip('/')}/verify-barangay-email"
+        f"?{application_query}#token={quote(token, safe='')}"
+    )
+    transaction.on_commit(
+        lambda email=application.applicant_email,
+        name=application.applicant_name,
+        barangay_name=application.name,
+        link=verification_url: send_barangay_application_verification_email.delay(
+            email, name, barangay_name, link
+        )
+    )
+
+
+@extend_schema(tags=["Barangay Onboarding"])
+class PublicBarangayApplicationEmailVerificationView(APIView):
+    """Verify email ownership after an explicit POST from the applicant."""
+
+    permission_classes = [permissions.AllowAny]
+    throttle_classes = [SharedDatabaseScopedRateThrottle]
+    throttle_scope = "barangay_onboarding_verification"
+    parser_classes = [JSONParser]
+
+    @extend_schema(
+        summary="Verify the official email for a pending Barangay application",
+        request=BarangayApplicationEmailVerificationSerializer,
+        responses={
+            200: OpenApiResponse(description="Email verified; DILG review is still required."),
+            400: OpenApiResponse(description="The verification link is invalid, expired, or already used."),
+            404: OpenApiResponse(description="Application not found."),
+            429: OpenApiResponse(description="Verification request limit reached."),
+        },
+    )
+    def post(self, request, application_id):
+        serializer = BarangayApplicationEmailVerificationSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            with transaction.atomic():
+                application = (
+                    BarangayApplication.objects.select_for_update()
+                    .select_related("applicant_user")
+                    .get(pk=application_id)
+                )
+                applicant = application.applicant_user
+                if application.email_verified_at is not None:
+                    return Response(
+                        {"detail": "This verification link is invalid, expired, or already used."},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                if (
+                    application.status != BarangayApplication.Status.PENDING
+                    or applicant is None
+                    or applicant.is_active
+                    or not barangay_application_email_token_generator.check_token(
+                        applicant, serializer.validated_data["token"]
+                    )
+                ):
+                    return Response(
+                        {"detail": "This verification link is invalid or expired. Request a new link and try again."},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+
+                application.email_verified_at = timezone.now()
+                application.save(update_fields=["email_verified_at", "updated_at"])
+        except BarangayApplication.DoesNotExist:
+            return Response({"detail": "Application not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        return Response({"detail": "Email verified. The application still requires DILG review."})
+
+
+@extend_schema(tags=["Barangay Onboarding"])
+class PublicBarangayApplicationVerificationResendView(APIView):
+    """Resend a pending applicant's link without exposing account existence."""
+
+    permission_classes = [permissions.AllowAny]
+    throttle_classes = [SharedDatabaseScopedRateThrottle]
+    throttle_scope = "barangay_onboarding_verification"
+    parser_classes = [JSONParser]
+    COOLDOWN = timedelta(minutes=10)
+
+    @extend_schema(
+        summary="Request another email verification link",
+        request=BarangayApplicationVerificationResendSerializer,
+        responses={
+            202: OpenApiResponse(description="A generic response is returned whether or not a link was sent."),
+            400: OpenApiResponse(description="Invalid request fields."),
+            429: OpenApiResponse(description="Verification request limit reached."),
+        },
+    )
+    def post(self, request):
+        serializer = BarangayApplicationVerificationResendSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        application_id = serializer.validated_data["application_id"]
+        email = serializer.validated_data["applicant_email"]
+
+        with transaction.atomic():
+            application = (
+                BarangayApplication.objects.select_for_update()
+                .select_related("applicant_user")
+                .filter(
+                    pk=application_id,
+                    applicant_email__iexact=email,
+                    status=BarangayApplication.Status.PENDING,
+                    email_verified_at__isnull=True,
+                )
+                .first()
+            )
+            now = timezone.now()
+            if (
+                application is not None
+                and application.applicant_user is not None
+                and (
+                    application.email_verification_sent_at is None
+                    or application.email_verification_sent_at <= now - self.COOLDOWN
+                )
+            ):
+                application.email_verification_sent_at = now
+                application.save(update_fields=["email_verification_sent_at", "updated_at"])
+                _schedule_barangay_application_verification(application)
+
+        return Response(
+            {"detail": "If this application is pending and needs email verification, a new link will be sent when eligible."},
+            status=status.HTTP_202_ACCEPTED,
+        )
+
+
+@extend_schema(tags=["Barangay Onboarding Review"])
+class PlatformBarangayApplicationProofView(APIView):
+    """Stream pending authority proof only to authorized onboarding reviewers."""
+
+    permission_classes = [permissions.IsAuthenticated, IsBarangayOnboardingReviewer]
+    throttle_classes = [SharedDatabaseScopedRateThrottle]
+    throttle_scope = "platform_account_support"
+
+    @extend_schema(
+        summary="Download pending Barangay application authority proof",
+        responses={
+            200: OpenApiResponse(description="Private authority document download."),
+            403: OpenApiResponse(description="Restricted to active DILG reviewers and Django superusers."),
+            404: OpenApiResponse(description="Application or pending proof not found."),
+        },
+    )
+    def get(self, request, application_id):
+        application = BarangayApplication.objects.filter(
+            pk=application_id,
+            status=BarangayApplication.Status.PENDING,
+        ).first()
+        if application is None or not application.proof_of_authority:
+            raise Http404("Private application proof not found.")
+
+        proof = application.proof_of_authority
+        file_name = proof.name
+        extension = file_name.rsplit(".", 1)[-1].lower() if "." in file_name else ""
+        content_types = {"pdf": "application/pdf", "jpg": "image/jpeg", "png": "image/png"}
+        content_type = content_types.get(extension)
+        if content_type is None:
+            raise Http404("Private application proof not found.")
+
+        try:
+            storage = proof.storage
+            if hasattr(storage, "open_private_media"):
+                file_handle = storage.open_private_media(file_name, "rb")
+            elif hasattr(storage, "open_private_resident_media"):
+                file_handle = storage.open_private_resident_media(file_name, "rb")
+            else:
+                file_handle = storage.open(file_name, "rb")
+        except (FileNotFoundError, OSError):
+            raise Http404("Private application proof not found.")
+
+        response = FileResponse(
+            file_handle,
+            as_attachment=True,
+            filename=f"barangay-authority-proof-{application.pk}.{extension}",
+            content_type=content_type,
+        )
+        response["Cache-Control"] = "private, no-store, max-age=0"
+        response["X-Content-Type-Options"] = "nosniff"
+        response["Referrer-Policy"] = "no-referrer"
+        return response
 
 
 @extend_schema(tags=["Barangay Onboarding Review"])
@@ -143,6 +343,21 @@ class PlatformBarangayApplicationViewSet(
                 applicant = application.applicant_user
                 if applicant is not None:
                     applicant = User.objects.select_for_update().get(pk=applicant.pk)
+                    if application.email_verified_at is None:
+                        return Response(
+                            {"detail": "The applicant must verify the official email before approval."},
+                            status=status.HTTP_409_CONFLICT,
+                        )
+                    if not application.proof_of_authority:
+                        return Response(
+                            {"detail": "A pending authority document is required before approval."},
+                            status=status.HTTP_409_CONFLICT,
+                        )
+                    if not serializer.validated_data["proof_reviewed"]:
+                        return Response(
+                            {"proof_reviewed": "Confirm that you reviewed the uploaded authority document."},
+                            status=status.HTTP_400_BAD_REQUEST,
+                        )
                     if (
                         applicant.is_active
                         or applicant.role != User.Role.ADMIN
@@ -258,12 +473,29 @@ class PlatformBarangayApplicationViewSet(
                 application.reviewed_by = request.user
                 application.reviewed_at = timezone.now()
                 application.review_verified = True
+                application.proof_reviewed = bool(
+                    applicant is not None and serializer.validated_data["proof_reviewed"]
+                )
                 application.created_barangay = barangay
                 application.created_admin = admin
+                proof_cleanup = None
+                if application.proof_of_authority:
+                    proof_cleanup = queue_private_media_cleanup(
+                        "gridy_auth.BarangayApplication",
+                        "proof_of_authority",
+                        application.proof_of_authority.name,
+                    )
+                    application.proof_of_authority = ""
                 application.save(update_fields=[
                     "status", "review_note", "reviewed_by", "reviewed_at",
-                    "review_verified", "created_barangay", "created_admin", "updated_at",
+                    "review_verified", "proof_reviewed", "created_barangay", "created_admin",
+                    "proof_of_authority", "updated_at",
                 ])
+                if proof_cleanup is not None:
+                    transaction.on_commit(
+                        lambda cleanup_id=proof_cleanup.pk:
+                            attempt_private_media_cleanup_safely(cleanup_id)
+                    )
 
                 log_action(
                     user=request.user,
@@ -344,10 +576,23 @@ class PlatformBarangayApplicationViewSet(
                 application.reviewed_by = request.user
                 application.reviewed_at = timezone.now()
                 application.review_verified = False
+                proof_cleanup = None
+                if application.proof_of_authority:
+                    proof_cleanup = queue_private_media_cleanup(
+                        "gridy_auth.BarangayApplication",
+                        "proof_of_authority",
+                        application.proof_of_authority.name,
+                    )
+                    application.proof_of_authority = ""
                 application.save(update_fields=[
                     "status", "review_note", "reviewed_by", "reviewed_at",
-                    "review_verified", "applicant_user", "updated_at",
+                    "review_verified", "applicant_user", "proof_of_authority", "updated_at",
                 ])
+                if proof_cleanup is not None:
+                    transaction.on_commit(
+                        lambda cleanup_id=proof_cleanup.pk:
+                            attempt_private_media_cleanup_safely(cleanup_id)
+                    )
 
                 if applicant is not None:
                     applicant.delete()

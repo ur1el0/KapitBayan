@@ -138,6 +138,41 @@ def send_barangay_admin_setup_email(user_email, full_name, barangay_name, setup_
 
 
 @async_task
+def send_barangay_application_verification_email(
+    user_email, applicant_name, barangay_name, verification_link
+):
+    """Send the one-time email-ownership link for a pending Barangay application."""
+    try:
+        sent_count = send_mail(
+            subject="Verify your official email for KapitBayan",
+            message=(
+                f"Hello {applicant_name},\n\n"
+                f"A first Admin application was submitted for Barangay {barangay_name} "
+                "using this email address. Confirm that you can receive mail here by "
+                "opening the link and selecting Verify email:\n\n"
+                f"{verification_link}\n\n"
+                "This link expires after the configured password-reset timeout and can "
+                "verify this application only once. Email verification does not approve "
+                "the Barangay Admin account; DILG must still review the application. "
+                "If you did not submit this request, ignore this email."
+            ),
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[user_email],
+            fail_silently=False,
+        )
+    except Exception as exc:
+        logger.error(
+            "Barangay application verification email delivery failed (%s).",
+            type(exc).__name__,
+        )
+        return None
+
+    if sent_count != 1:
+        logger.error("Email backend did not accept the Barangay application verification message.")
+    return sent_count
+
+
+@async_task
 def send_password_reset_email(user_email, reset_link):
     """
     Sends password reset email in a non-blocking background thread.

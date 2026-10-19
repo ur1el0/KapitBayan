@@ -7,13 +7,20 @@ from django.core.exceptions import ImproperlyConfigured
 
 
 class ResidentAwareCloudinaryStorage(MediaCloudinaryStorage):
-    """Store resident evidence as authenticated Cloudinary assets."""
+    """Store private resident and onboarding evidence as authenticated assets."""
 
-    PRIVATE_DIRECTORIES = {"resident_ids", "resident_billings", "payment_proofs"}
+    PRIVATE_DIRECTORIES = {
+        "resident_ids", "resident_billings", "payment_proofs", "barangay_onboarding",
+    }
+
+    @classmethod
+    def is_private_media(cls, name):
+        return bool(cls.PRIVATE_DIRECTORIES.intersection(PurePosixPath(name).parts))
 
     @classmethod
     def is_private_resident_media(cls, name):
-        return bool(cls.PRIVATE_DIRECTORIES.intersection(PurePosixPath(name).parts))
+        """Backward-compatible name used by resident profile media code."""
+        return cls.is_private_media(name)
 
     def _upload(self, name, content):
         resource_type = self._get_resource_type(name)
@@ -37,7 +44,7 @@ class ResidentAwareCloudinaryStorage(MediaCloudinaryStorage):
             options["folder"] = folder
         return cloudinary.uploader.upload(content, **options)
 
-    def open_private_resident_media(self, name, mode="rb"):
+    def open_private_media(self, name, mode="rb"):
         resource = cloudinary.CloudinaryResource(
             self._prepend_prefix(name),
             type="authenticated",
@@ -45,8 +52,11 @@ class ResidentAwareCloudinaryStorage(MediaCloudinaryStorage):
         )
         return self._download(resource.build_url(sign_url=True, secure=True), name, mode)
 
+    def open_private_resident_media(self, name, mode="rb"):
+        return self.open_private_media(name, mode)
+
     def _get_url(self, name):
-        if not self.is_private_resident_media(name):
+        if not self.is_private_media(name):
             return super()._get_url(name)
 
         resource = cloudinary.CloudinaryResource(
@@ -71,8 +81,8 @@ class ResidentAwareCloudinaryStorage(MediaCloudinaryStorage):
         return file_obj
 
     def url(self, name):
-        if self.is_private_resident_media(name):
+        if self.is_private_media(name):
             raise ImproperlyConfigured(
-                "Resident evidence must be served through the authorized media endpoint."
+                "Private evidence must be served through an authorized media endpoint."
             )
         return super().url(name)

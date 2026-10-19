@@ -62,6 +62,9 @@ const PlatformBarangayApplications = lazy(() =>
 const BarangayOnboarding = lazy(() =>
     import("./pages/auth/BarangayOnboarding").then(({ BarangayOnboarding }) => ({ default: BarangayOnboarding })),
 );
+const VerifyBarangayEmail = lazy(() =>
+    import("./pages/auth/VerifyBarangayEmail").then(({ VerifyBarangayEmail }) => ({ default: VerifyBarangayEmail })),
+);
 const ForgotPassword = lazy(() =>
     import("./pages/auth/ForgotPassword").then(({ ForgotPassword }) => ({ default: ForgotPassword })),
 );
@@ -158,6 +161,7 @@ export function App() {
                             <Route path="/login" element={<Login />} />
                             <Route path="/official-login" element={<Login />} />
                             <Route path="/register/barangay" element={<BarangayOnboarding />} />
+                            <Route path="/verify-barangay-email" element={<VerifyBarangayEmail />} />
                             <Route path="/field-official-mobile" element={<FieldOfficialWebNotice />} />
                             <Route path="/register" element={<Register />} />
                             <Route path="/forgot-password" element={<ForgotPassword />} />

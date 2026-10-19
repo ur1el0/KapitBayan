@@ -194,7 +194,7 @@ export function StaffManagementSettings() {
             </div>
 
             <p className="mt-4 rounded-lg border border-blue-100 bg-blue-50 p-3 text-sm leading-6 text-blue-900">
-                Barangay Admin accounts are created by a platform operator after onboarding review. Use this page to create and manage Field Officials only.
+                The first Barangay Admin applies with an official email through the public onboarding page and waits for email verification and DILG review. Use this page to create and manage Field Officials only.
             </p>
 
             {message && (
