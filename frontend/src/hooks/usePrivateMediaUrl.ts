@@ -11,6 +11,26 @@ interface PrivateMediaRequestState extends PrivateMediaState {
     path?: string | null;
 }
 
+function toApiRelativePath(path: string): string {
+    const baseURL = axiosPrivate.defaults?.baseURL;
+    if (!baseURL || !path.startsWith("/")) {
+        return path;
+    }
+
+    let basePath: string;
+    try {
+        basePath = new URL(baseURL, "http://gridy.local").pathname.replace(/\/+$/, "");
+    } catch {
+        return path;
+    }
+
+    if (!basePath || basePath === "/" || !path.startsWith(`${basePath}/`)) {
+        return path;
+    }
+
+    return path.slice(basePath.length + 1);
+}
+
 export function usePrivateMediaUrl(path?: string | null): PrivateMediaState {
     const [state, setState] = useState<PrivateMediaRequestState>({
         path,
@@ -29,7 +49,7 @@ export function usePrivateMediaUrl(path?: string | null): PrivateMediaState {
         let objectUrl: string | null = null;
         setState({ path, url: null, isLoading: true, hasError: false });
 
-        axiosPrivate.get<Blob>(path, {
+        axiosPrivate.get<Blob>(toApiRelativePath(path), {
             responseType: "blob",
             signal: controller.signal,
         }).then(({ data }) => {

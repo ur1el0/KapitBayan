@@ -268,7 +268,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                     const SizedBox(height: 18),
 
-                    // 2. Metric Counters Row (Announcements & Pending Requests)
+                    // 2. Recent Notifications, visible near the top of the dashboard
+                    RecentNotificationsSection(
+                      notifications: _data.notifications,
+                      hasError: _data.hasNotificationsError,
+                      errorMessage: _data.notificationsErrorMessage,
+                      onRetry: _loadDashboardData,
+                      onViewAll: () => _showNotificationModalSheet(context),
+                      onNotificationTap: (item) =>
+                          _showNotificationDetailModal(context, item),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // 3. Metric Counters Row (Announcements & Pending Requests)
                     MetricSummaryRow(
                       announcementCount: _data.announcements.length,
                       pendingRequestCount: _data.pendingRequestsCount,
@@ -291,9 +304,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       },
                     ),
 
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 16),
 
-                    // 3. Quick Services Action Cards (MOVED UP FOR FAST EMERGENCY & HOTLINE ACCESS)
+                    // 4. Quick Services Action Cards (MOVED UP FOR FAST EMERGENCY & HOTLINE ACCESS)
                     QuickServicesSection(
                       onRequestDocument: () {
                         Navigator.of(context).push(
@@ -346,19 +359,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         );
                       },
                     ),
-                    const SizedBox(height: 24),
-
-                    // 4. Recent Notifications Section (WIRED ONNOTIFICATIONTAP)
-                    RecentNotificationsSection(
-                      notifications: _data.notifications,
-                      hasError: _data.hasNotificationsError,
-                      errorMessage: _data.notificationsErrorMessage,
-                      onRetry: _loadDashboardData,
-                      onViewAll: () => _showNotificationModalSheet(context),
-                      onNotificationTap: (item) =>
-                          _showNotificationDetailModal(context, item),
-                    ),
-
                     const SizedBox(height: 24),
 
                     // 5. Community Schedule Timeline

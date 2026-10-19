@@ -356,7 +356,9 @@ class AuthService {
   Future<Uint8List> fetchPrivateMedia(String relativePath) async {
     final response = await apiClient.get(
       relativePath,
-      headers: const {'Accept': 'image/*'},
+      // DRF rejects `image/*` during renderer negotiation before the view
+      // can return its private FileResponse.
+      headers: const {'Accept': '*/*'},
       requiresAuth: true,
     );
     final contentType = response.headers['content-type']

@@ -28,7 +28,7 @@ class QuickServicesSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('Quick Services', style: Theme.of(context).textTheme.titleLarge),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
 
         // Row 1: Request Document & Report Issue
         Row(
@@ -40,7 +40,7 @@ class QuickServicesSection extends StatelessWidget {
                 onTap: onRequestDocument,
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 8),
             Expanded(
               child: _QuickServiceCard(
                 icon: Icons.pest_control_outlined,
@@ -50,13 +50,13 @@ class QuickServicesSection extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
         _QuickServiceCard(
           icon: Icons.volunteer_activism_outlined,
           title: 'Request Assistance',
           onTap: onRequestAid,
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
 
         // Row 2: Barangay Hotline & My Reports
         Row(
@@ -68,7 +68,7 @@ class QuickServicesSection extends StatelessWidget {
                 onTap: onBarangayHotline,
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 8),
             Expanded(
               child: _QuickServiceCard(
                 icon: Icons.history_outlined,
@@ -78,7 +78,7 @@ class QuickServicesSection extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
         _QuickServiceCard(
           icon: Icons.help_outline_rounded,
           title: 'Help & FAQs',
@@ -103,10 +103,12 @@ class _QuickServiceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ConstrainedBox(
-      constraints: const BoxConstraints(minHeight: 104),
+      // Keep the visible cards compact while preserving a generous full-card
+      // tap target for residents using smaller phones.
+      constraints: const BoxConstraints(minHeight: 80),
       child: AppSurface(
         onTap: onTap,
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -120,9 +122,9 @@ class _QuickServiceCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: SizedBox(
-                    width: 36,
-                    height: 36,
-                    child: Icon(icon, color: AppColors.primaryNavy, size: 20),
+                    width: 32,
+                    height: 32,
+                    child: Icon(icon, color: AppColors.primaryNavy, size: 18),
                   ),
                 ),
                 const Icon(
@@ -132,7 +134,7 @@ class _QuickServiceCard extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             Text(
               title,
               style: Theme.of(context).textTheme.labelLarge?.copyWith(

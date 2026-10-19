@@ -607,6 +607,7 @@ class _DocumentPaymentSectionState extends State<DocumentPaymentSection> {
                     decoration: const InputDecoration(
                       labelText: 'Transfer reference',
                       border: OutlineInputBorder(),
+                      helperText: 'Required before submitting',
                       counterText: '',
                     ),
                   ),
