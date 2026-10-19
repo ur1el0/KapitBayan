@@ -56,6 +56,6 @@ class ResidentAwareCloudinaryStorageTests(TestCase):
     def test_storage_does_not_expose_private_cloudinary_urls(self):
         with self.assertRaisesMessage(
             ImproperlyConfigured,
-            "Resident evidence must be served through the authorized media endpoint.",
+            "Private evidence must be served through an authorized media endpoint.",
         ):
             self.storage.url("media/resident_ids/random-id")

@@ -1,9 +1,10 @@
 import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Building2, CheckCircle2, ClipboardCheck } from 'lucide-react';
+import { ArrowLeft, Building2, CheckCircle2, ClipboardCheck, MailCheck } from 'lucide-react';
 import { getSafeApiErrorMessage } from '../../api/error-message';
 import {
     submitBarangayApplication,
+    resendBarangayApplicationVerification,
     type BarangayApplicationInput,
 } from '../../api/barangayOnboarding';
 
@@ -43,6 +44,9 @@ export function BarangayOnboarding() {
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
     const [applicationId, setApplicationId] = useState<number | null>(null);
+    const [proofFile, setProofFile] = useState<File | null>(null);
+    const [resending, setResending] = useState(false);
+    const [resendMessage, setResendMessage] = useState('');
 
     const update = (field: keyof typeof EMPTY_FORM, value: string) => {
         setForm((current) => ({ ...current, [field]: value }));
@@ -53,6 +57,10 @@ export function BarangayOnboarding() {
         setError('');
         setSubmitting(true);
         try {
+            if (!proofFile) {
+                setError('Upload one proof-of-authority document before submitting.');
+                return;
+            }
             const payload: BarangayApplicationInput = {
                 ...form,
                 name: form.name.trim(),
@@ -62,6 +70,7 @@ export function BarangayOnboarding() {
                 applicant_position: form.applicant_position.trim(),
                 applicant_email: form.applicant_email.trim().toLowerCase(),
                 applicant_phone: form.applicant_phone.trim(),
+                proof_of_authority: proofFile,
                 password: form.password,
                 password_confirm: form.password_confirm,
                 applicant_authorized: true,
@@ -81,6 +90,23 @@ export function BarangayOnboarding() {
             ));
         } finally {
             setSubmitting(false);
+        }
+    };
+
+    const resendVerification = async () => {
+        if (applicationId === null) return;
+        setResending(true);
+        setResendMessage('');
+        try {
+            const result = await resendBarangayApplicationVerification(
+                applicationId,
+                form.applicant_email.trim().toLowerCase(),
+            );
+            setResendMessage(result.detail);
+        } catch (requestError) {
+            setResendMessage(fieldError(requestError) || 'We could not request another link. Please wait and try again.');
+        } finally {
+            setResending(false);
         }
     };
 
@@ -146,6 +172,11 @@ export function BarangayOnboarding() {
                                         <label htmlFor="application-phone" className="block text-sm font-semibold text-slate-700">Official contact number</label>
                                         <input id="application-phone" type="tel" className={inputClass} value={form.applicant_phone} onChange={(event) => update('applicant_phone', event.target.value)} autoComplete="tel" maxLength={30} required />
                                     </div>
+                                    <div className="sm:col-span-2">
+                                        <label htmlFor="authority-proof" className="block text-sm font-semibold text-slate-700">Proof of official authority</label>
+                                        <input id="authority-proof" type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" onChange={(event) => setProofFile(event.target.files?.[0] ?? null)} className={`${inputClass} file:mr-3 file:rounded-md file:border-0 file:bg-blue-50 file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-primary-text`} required />
+                                        <p className="mt-1 text-xs leading-5 text-slate-500">Upload one appointment, designation, authorization, or Barangay endorsement document (PDF, JPEG, or PNG, up to 5 MiB). Do not upload a government ID or resident record. The file is visible only to authorized reviewers and is deleted after a decision.</p>
+                                    </div>
                                     <div>
                                         <label htmlFor="application-password" className="block text-sm font-semibold text-slate-700">Set password</label>
                                         <input id="application-password" type="password" className={inputClass} value={form.password} onChange={(event) => update('password', event.target.value)} autoComplete="new-password" minLength={8} required />
@@ -165,7 +196,7 @@ export function BarangayOnboarding() {
                                         <input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} className="mt-0.5 h-4 w-4 rounded border-slate-300 text-primary focus-visible:ring-2 focus-visible:ring-primary" required />
                                         <span>I consent to use the applicant contact details only to review this onboarding request and contact the listed official.</span>
                                     </label>
-                                    <p className="text-xs leading-5 text-slate-500">Your official email will be your sign-in identity. The password is hashed before it is stored, and the account stays locked until approval. Do not share your password or enter one-time codes here.</p>
+                                    <p className="text-xs leading-5 text-slate-500">Your official email will be your sign-in identity. We will email a verification link before DILG review. The password is hashed before storage, and the account stays locked until approval. Do not share your password or enter one-time codes here.</p>
                                 </div>
 
                                 <button type="submit" disabled={submitting || !authorized || !consent} className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-lg bg-primary px-5 py-3 text-sm font-bold text-primary-foreground hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 sm:w-auto">
@@ -179,8 +210,13 @@ export function BarangayOnboarding() {
                             <CheckCircle2 className="mx-auto h-12 w-12 text-emerald-600" aria-hidden="true" />
                             <h1 className="mt-4 text-2xl font-extrabold text-slate-900">Application submitted</h1>
                             <p role="status" className="mx-auto mt-3 max-w-xl text-sm leading-6 text-slate-600">
-                                Your request reference is <strong>KB-{applicationId}</strong>. The Barangay and listed official are pending DILG verification. Your account stays inactive until approval; after approval, sign in with the official email and password you set here.
+                                Your request reference is <strong>KB-{applicationId}</strong>. Check the official email inbox and spam folder for a verification link. After verifying your email, DILG will review the Barangay and supporting authority document. Your account stays inactive until approval.
                             </p>
+                            <button type="button" onClick={() => void resendVerification()} disabled={resending} className="mt-5 inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-5 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50 disabled:cursor-wait disabled:opacity-60">
+                                <MailCheck className="h-4 w-4" aria-hidden="true" /> {resending ? 'Requesting…' : 'Resend verification email'}
+                            </button>
+                            <p role="status" className="mx-auto mt-2 max-w-xl text-xs leading-5 text-slate-500">For privacy, we show the same message either way. A new link can be requested once every 10 minutes.</p>
+                            {resendMessage && <p role="status" className="mx-auto mt-2 max-w-xl text-sm text-slate-700">{resendMessage}</p>}
                             <Link to="/official-login" className="mt-6 inline-flex min-h-11 items-center justify-center rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary-hover">Return to official sign in</Link>
                         </div>
                     )}

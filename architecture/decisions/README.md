@@ -27,6 +27,7 @@ This index lists the decision records present in this repository snapshot. Read 
 | [021](021-barangay-only-product-scope-and-platform-recovery.md) | Barangay tenant scope and superuser platform recovery; onboarding reviewer scope amended by ADR 023 |
 | [022](022-reviewed-new-barangay-onboarding.md) | Superseded: initial reviewed public application and operator-created first Admin flow |
 | [023](023-dilg-reviewed-barangay-admin-registration.md) | DILG-reviewed Barangay Admin self-registration using official email |
+| [024](024-barangay-onboarding-email-and-authority-evidence.md) | Email verification and private authority evidence for Barangay onboarding |
 
 ## Implementation notes
 

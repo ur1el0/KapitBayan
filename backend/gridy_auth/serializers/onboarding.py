@@ -1,9 +1,9 @@
 import uuid
 from collections.abc import Mapping
-
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db.models import Q
+from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
@@ -28,6 +28,7 @@ class BarangayApplicationCreateSerializer(serializers.Serializer):
     applicant_position = serializers.CharField(min_length=2, max_length=120, trim_whitespace=True)
     applicant_email = serializers.EmailField(max_length=254)
     applicant_phone = serializers.CharField(min_length=7, max_length=30, trim_whitespace=True)
+    proof_of_authority = serializers.FileField(write_only=True, allow_empty_file=False)
     password = serializers.CharField(write_only=True, trim_whitespace=False)
     password_confirm = serializers.CharField(write_only=True, trim_whitespace=False)
     applicant_authorized = serializers.BooleanField(write_only=True)
@@ -38,7 +39,8 @@ class BarangayApplicationCreateSerializer(serializers.Serializer):
             allowed_fields = {
                 "name", "municipality", "province", "applicant_name",
                 "applicant_position", "applicant_email", "applicant_phone",
-                "password", "password_confirm", "applicant_authorized", "contact_consent",
+                "proof_of_authority", "password", "password_confirm",
+                "applicant_authorized", "contact_consent",
             }
             unexpected = set(self.initial_data) - allowed_fields
             if unexpected:
@@ -98,6 +100,33 @@ class BarangayApplicationCreateSerializer(serializers.Serializer):
 
         return attrs
 
+    def validate_proof_of_authority(self, uploaded_file):
+        maximum_size = 5 * 1024 * 1024
+        if uploaded_file.size > maximum_size:
+            raise serializers.ValidationError("The authority document must be 5 MiB or smaller.")
+
+        try:
+            uploaded_file.seek(0)
+            signature = uploaded_file.read(8)
+            uploaded_file.seek(0)
+        except (AttributeError, OSError) as exc:
+            raise serializers.ValidationError("The authority document could not be read.") from exc
+
+        if signature.startswith(b"%PDF-"):
+            extension = "pdf"
+        elif signature.startswith(b"\xff\xd8\xff"):
+            extension = "jpg"
+        elif signature.startswith(b"\x89PNG\r\n\x1a\n"):
+            extension = "png"
+        else:
+            raise serializers.ValidationError(
+                "Upload a PDF, JPEG, or PNG document with a valid file signature."
+            )
+
+        # Do not preserve applicant-supplied filenames in private storage paths.
+        uploaded_file.name = f"authority-proof.{extension}"
+        return uploaded_file
+
     def create(self, validated_data):
         password = validated_data.pop("password")
         validated_data.pop("password_confirm")
@@ -114,6 +143,7 @@ class BarangayApplicationCreateSerializer(serializers.Serializer):
         )
         validated_data["admin_username"] = ""
         validated_data["applicant_user"] = applicant
+        validated_data["email_verification_sent_at"] = timezone.now()
         return BarangayApplication.objects.create(**validated_data)
 
 
@@ -131,6 +161,7 @@ class BarangayApplicationOperatorSerializer(serializers.ModelSerializer):
     has_applicant_account = serializers.SerializerMethodField()
     admin_can_sign_in = serializers.SerializerMethodField()
     created_barangay_id = serializers.IntegerField(read_only=True, allow_null=True)
+    has_proof_of_authority = serializers.SerializerMethodField()
 
     class Meta:
         model = BarangayApplication
@@ -138,7 +169,9 @@ class BarangayApplicationOperatorSerializer(serializers.ModelSerializer):
             "id", "name", "municipality", "province", "applicant_name",
             "applicant_position", "applicant_email", "applicant_phone",
             "admin_username", "applicant_authorized", "contact_consent",
+            "email_verified_at", "has_proof_of_authority",
             "status", "review_note", "review_verified", "reviewed_by_username",
+            "proof_reviewed",
             "reviewed_at", "created_barangay_id", "created_admin_username",
             "created_admin_email", "has_applicant_account", "admin_can_sign_in",
             "created_at", "updated_at",
@@ -160,14 +193,38 @@ class BarangayApplicationOperatorSerializer(serializers.ModelSerializer):
         admin = obj.created_admin or obj.applicant_user
         return bool(admin and admin.is_active and admin.has_usable_password())
 
+    @extend_schema_field(OpenApiTypes.BOOL)
+    def get_has_proof_of_authority(self, obj):
+        return bool(obj.proof_of_authority and obj.proof_of_authority.name)
+
+
+class BarangayApplicationEmailVerificationSerializer(serializers.Serializer):
+    token = serializers.CharField(max_length=128, trim_whitespace=True)
+
+
+class BarangayApplicationVerificationResendSerializer(serializers.Serializer):
+    application_id = serializers.IntegerField(min_value=1)
+    applicant_email = serializers.EmailField(max_length=254)
+
+    def validate(self, attrs):
+        if isinstance(self.initial_data, Mapping):
+            unexpected = set(self.initial_data) - {"application_id", "applicant_email"}
+            if unexpected:
+                raise serializers.ValidationError({
+                    "detail": f"Unexpected fields: {', '.join(sorted(unexpected))}."
+                })
+        attrs["applicant_email"] = attrs["applicant_email"].strip().lower()
+        return attrs
+
 
 class BarangayApplicationApproveSerializer(serializers.Serializer):
     contact_verified = serializers.BooleanField()
+    proof_reviewed = serializers.BooleanField(required=False, default=False)
     review_note = serializers.CharField(max_length=1000, required=False, allow_blank=True, default="")
 
     def validate(self, attrs):
         if isinstance(self.initial_data, Mapping):
-            unexpected = set(self.initial_data) - {"contact_verified", "review_note"}
+            unexpected = set(self.initial_data) - {"contact_verified", "proof_reviewed", "review_note"}
             if unexpected:
                 raise serializers.ValidationError({
                     "detail": f"Unexpected fields: {', '.join(sorted(unexpected))}."

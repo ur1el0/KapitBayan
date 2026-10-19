@@ -11,6 +11,9 @@ export interface BarangayApplication {
     applicant_position: string;
     applicant_email: string;
     applicant_phone: string;
+    has_proof_of_authority: boolean;
+    email_verified_at: string | null;
+    proof_reviewed: boolean;
     admin_username: string;
     applicant_authorized: boolean;
     contact_consent: boolean;
@@ -43,6 +46,7 @@ export interface BarangayApplicationInput {
     applicant_position: string;
     applicant_email: string;
     applicant_phone: string;
+    proof_of_authority: File;
     password: string;
     password_confirm: string;
     applicant_authorized: true;
@@ -50,8 +54,33 @@ export interface BarangayApplicationInput {
 }
 
 export async function submitBarangayApplication(payload: BarangayApplicationInput) {
-    const response = await axiosPublic.post('/auth/public/barangay-applications/', payload);
+    const form = new FormData();
+    Object.entries(payload).forEach(([key, value]) => {
+        form.append(key, value instanceof Blob ? value : String(value));
+    });
+    const response = await axiosPublic.post('/auth/public/barangay-applications/', form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+    });
     return response.data as { id: number; status: 'PENDING'; created_at: string };
+}
+
+export async function verifyBarangayApplicationEmail(applicationId: number, token: string) {
+    const response = await axiosPublic.post(
+        `/auth/public/barangay-applications/${applicationId}/verify-email/`,
+        { token },
+    );
+    return response.data as { detail: string };
+}
+
+export async function resendBarangayApplicationVerification(
+    applicationId: number,
+    applicantEmail: string,
+) {
+    const response = await axiosPublic.post(
+        '/auth/public/barangay-applications/resend-verification/',
+        { application_id: applicationId, applicant_email: applicantEmail },
+    );
+    return response.data as { detail: string };
 }
 
 export async function fetchBarangayApplications(
@@ -66,13 +95,34 @@ export async function fetchBarangayApplications(
 
 export async function approveBarangayApplication(
     applicationId: number,
-    payload: { contact_verified: true; review_note?: string },
+    payload: { contact_verified: true; proof_reviewed: boolean; review_note?: string },
 ): Promise<BarangayApplication> {
     const response = await axiosPrivate.post(
         `/auth/platform/barangay-applications/${applicationId}/approve/`,
         payload,
     );
     return response.data;
+}
+
+export async function downloadBarangayApplicationProof(
+    applicationId: number,
+): Promise<{ url: string; filename: string }> {
+    const response = await axiosPrivate.get(
+        `/auth/platform/barangay-applications/${applicationId}/proof/`,
+        { responseType: 'blob' },
+    );
+    const contentType = String(response.headers['content-type'] ?? '').split(';', 1)[0].trim().toLowerCase();
+    const extension = contentType === 'application/pdf'
+        ? 'pdf'
+        : contentType === 'image/jpeg'
+            ? 'jpg'
+            : contentType === 'image/png'
+                ? 'png'
+                : 'bin';
+    return {
+        url: URL.createObjectURL(response.data as Blob),
+        filename: `barangay-authority-proof-${applicationId}.${extension}`,
+    };
 }
 
 export async function rejectBarangayApplication(
