@@ -188,7 +188,7 @@ class AuthService {
       return UserModel.fromJson(responseData);
     } else {
       throw ApiException(
-        'Registration failed',
+        _extractErrorMessage(responseData, 'Registration failed'),
         statusCode: response.statusCode,
         details: responseData,
       );
