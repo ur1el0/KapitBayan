@@ -184,6 +184,9 @@ def send_password_reset_email(user_email, reset_link):
             f"Hello,\n\n"
             f"You requested a password reset. Click the link below to set a new password:\n\n"
             f"{reset_link}\n\n"
+            "In the KapitBayan mobile app, copy the complete link and paste it into "
+            "Password Recovery. The app will read the reset details from the link. "
+            "You can also open the link in your browser to set your password.\n\n"
             f"If you did not request this, please ignore this email."
         )
         sent_count = send_mail(

@@ -102,6 +102,8 @@ class PasswordResetTests(IsolatedAuthAPITestCase):
             call_kwargs = mock_send_mail.call_args.kwargs
             self.assertEqual(call_kwargs.get("from_email"), settings.DEFAULT_FROM_EMAIL)
             self.assertEqual(call_kwargs.get("recipient_list"), ["test@example.com"])
+            self.assertIn("copy the complete link", call_kwargs.get("message", ""))
+            self.assertIn("Password Recovery", call_kwargs.get("message", ""))
 
     def test_send_password_reset_email_task_survives_exception_without_logging_secrets(self):
         with patch('gridy_auth.tasks.send_mail', side_effect=Exception("SMTP connection timeout")):
