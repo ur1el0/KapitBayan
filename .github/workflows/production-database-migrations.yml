@@ -1,0 +1,179 @@
+name: Production database migrations
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Inspect the live migration plan first; apply only after reviewing that plan.
+        type: choice
+        options:
+          - plan_only
+          - apply_confirmed_plan
+        default: plan_only
+        required: true
+      expected_migrations:
+        description: For apply only, paste the exact ordered migration IDs from a plan_only run, comma-separated.
+        type: string
+        required: false
+      confirm_production:
+        description: Check only after verifying the exact pending plan and authorizing these schema changes.
+        type: boolean
+        required: false
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-database-migrations
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+      DEBUG: "False"
+
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install backend dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      - name: Validate database secret without displaying it
+        run: |
+          python - <<'PY'
+          import os
+          import sys
+
+          if not os.environ.get("DATABASE_URL", "").strip():
+              print("PRODUCTION_DATABASE_URL is not configured in the production environment.", file=sys.stderr)
+              raise SystemExit(1)
+          PY
+
+      - name: Set an ephemeral Django settings key
+        run: |
+          python - <<'PY' >> "$GITHUB_ENV"
+          import secrets
+          print(f"SECRET_KEY={secrets.token_urlsafe(64)}")
+          PY
+
+      - name: Display current pending migration plan
+        run: |
+          set -euo pipefail
+          python - <<'PY' | tee "$RUNNER_TEMP/pending-migrations.txt"
+          import os
+          os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
+
+          import django
+          django.setup()
+
+          from django.db import connections
+          from django.db.migrations.executor import MigrationExecutor
+
+          connection = connections["default"]
+          if connection.vendor != "postgresql":
+              raise SystemExit("PRODUCTION_DATABASE_URL must point to PostgreSQL.")
+          executor = MigrationExecutor(connection)
+          plan = executor.migration_plan(executor.loader.graph.leaf_nodes())
+          pending = []
+          for migration, backwards in plan:
+              if backwards:
+                  raise SystemExit("Reverse migrations are not supported by this workflow.")
+              pending.append(f"{migration.app_label}.{migration.name}")
+
+          if not pending:
+              print("(none)")
+          else:
+              print("\n".join(pending))
+          PY
+
+      - name: Validate the exact plan and production confirmation
+        if: ${{ inputs.mode == 'apply_confirmed_plan' }}
+        env:
+          EXPECTED_MIGRATIONS: ${{ inputs.expected_migrations }}
+          CONFIRM_PRODUCTION: ${{ inputs.confirm_production }}
+        run: |
+          python - <<'PY'
+          import os
+          import sys
+          from pathlib import Path
+
+          plan_path = Path(os.environ["RUNNER_TEMP"]) / "pending-migrations.txt"
+          actual = [
+              line.strip()
+              for line in plan_path.read_text(encoding="utf-8").splitlines()
+              if line.strip() and line.strip() != "(none)"
+          ]
+          expected = [
+              item.strip()
+              for item in os.environ.get("EXPECTED_MIGRATIONS", "").split(",")
+              if item.strip()
+          ]
+          allowed = {
+              "gridy_auth.0018_alter_user_role",
+              "gridy_auth.0019_barangay_application_first_admin",
+              "gridy_auth.0020_dilg_reviewed_admin_registration",
+              "gridy_auth.0021_barangayapplication_email_verification_sent_at_and_more",
+          }
+
+          if os.environ.get("CONFIRM_PRODUCTION", "").lower() != "true":
+              raise SystemExit("Production confirmation is required before applying migrations.")
+          if not actual:
+              raise SystemExit("No pending migrations were found; nothing will be applied.")
+          if actual != expected:
+              print("The live plan differs from the exact plan supplied for approval.", file=sys.stderr)
+              print("Review the displayed plan and start a new run with the complete ordered IDs.", file=sys.stderr)
+              raise SystemExit(1)
+          unexpected = [migration for migration in actual if migration not in allowed]
+          if unexpected:
+              print("This recovery workflow only permits the reviewed auth migration chain.", file=sys.stderr)
+              print("Unexpected pending migrations: " + ", ".join(unexpected), file=sys.stderr)
+              raise SystemExit(1)
+          print("Confirmed migration plan matches the approved auth migration chain.")
+          PY
+
+      - name: Apply the confirmed migrations
+        if: ${{ inputs.mode == 'apply_confirmed_plan' }}
+        run: python manage.py migrate --noinput
+
+      - name: Verify all migrations are applied
+        if: ${{ inputs.mode == 'apply_confirmed_plan' }}
+        run: |
+          python - <<'PY'
+          import os
+          os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
+
+          import django
+          django.setup()
+
+          from django.db import connections
+          from django.db.migrations.executor import MigrationExecutor
+
+          connection = connections["default"]
+          if connection.vendor != "postgresql":
+              raise SystemExit("PRODUCTION_DATABASE_URL must point to PostgreSQL.")
+          executor = MigrationExecutor(connection)
+          plan = executor.migration_plan(executor.loader.graph.leaf_nodes())
+          pending = [f"{migration.app_label}.{migration.name}" for migration, backwards in plan if not backwards]
+          if pending:
+              raise SystemExit("Migrations remain unapplied: " + ", ".join(pending))
+          print("No pending migrations remain.")
+          PY
