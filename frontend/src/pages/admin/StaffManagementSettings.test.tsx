@@ -56,7 +56,8 @@ describe('StaffManagementSettings', () => {
 
         expect(await screen.findByText(/setup instructions are being sent to carding@barangay.gov.ph/i)).toBeInTheDocument();
         expect(screen.getByText('Ricardo Dalisay')).toBeInTheDocument();
-        expect(screen.getByText('carding@barangay.gov.ph')).toBeInTheDocument();
+        expect(screen.getByRole('alert')).toHaveTextContent('Setup instructions are being sent to carding@barangay.gov.ph.');
+        expect(screen.getAllByText('carding@barangay.gov.ph')).toHaveLength(2);
         expect(screen.queryByLabelText(/password/i)).not.toBeInTheDocument();
     });
 
@@ -126,10 +127,10 @@ describe('StaffManagementSettings', () => {
         render(<StaffManagementSettings />);
         await screen.findByText('Juan Dela Cruz');
         fireEvent.click(screen.getByRole('button', { name: 'Edit Juan Dela Cruz' }));
-        expect(screen.getByLabelText('First Name')).toHaveFocus();
+        expect(screen.getByLabelText('First Name for Juan Dela Cruz')).toHaveFocus();
 
-        fireEvent.change(screen.getByLabelText('First Name'), { target: { value: 'Juan Miguel' } });
-        fireEvent.change(screen.getByLabelText('Official Email (sign-in)'), { target: { value: 'JUAN.NEW@BARANGAY.GOV.PH' } });
+        fireEvent.change(screen.getByLabelText('First Name for Juan Dela Cruz'), { target: { value: 'Juan Miguel' } });
+        fireEvent.change(screen.getByLabelText('Official Email (sign-in) for Juan Dela Cruz'), { target: { value: 'JUAN.NEW@BARANGAY.GOV.PH' } });
         fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
 
         await waitFor(() => {
@@ -140,9 +141,9 @@ describe('StaffManagementSettings', () => {
             });
         });
         expect(await screen.findByText('Juan Miguel Dela Cruz')).toBeInTheDocument();
-        expect(screen.getByText('juan.new@barangay.gov.ph')).toBeInTheDocument();
+        expect(screen.getAllByText('juan.new@barangay.gov.ph')).toHaveLength(2);
         expect(screen.getByRole('alert')).toHaveTextContent('Profile updated for juan@barangay.gov.ph.');
-        expect(screen.queryByLabelText('Official Email (sign-in)')).not.toBeInTheDocument();
+        expect(screen.queryByLabelText(/Official Email \(sign-in\) for/)).not.toBeInTheDocument();
     });
 
     it('discards staged profile changes on cancel without sending a request', async () => {
@@ -162,13 +163,13 @@ describe('StaffManagementSettings', () => {
         render(<StaffManagementSettings />);
         await screen.findByText('Maria Santos');
         fireEvent.click(screen.getByRole('button', { name: 'Edit Maria Santos' }));
-        fireEvent.change(screen.getByLabelText('First Name'), { target: { value: 'Changed Draft' } });
+        fireEvent.change(screen.getByLabelText('First Name for Maria Santos'), { target: { value: 'Changed Draft' } });
         fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
 
         expect(axiosPrivate.patch).not.toHaveBeenCalled();
         expect(screen.getByText('Maria Santos')).toBeInTheDocument();
         expect(screen.queryByText('Changed Draft')).not.toBeInTheDocument();
-        expect(screen.queryByLabelText('First Name')).not.toBeInTheDocument();
+        expect(screen.queryByLabelText(/First Name for/)).not.toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Edit Maria Santos' })).toHaveFocus();
     });
 
@@ -192,11 +193,11 @@ describe('StaffManagementSettings', () => {
         render(<StaffManagementSettings />);
         await screen.findByText('Pedro Reyes');
         fireEvent.click(screen.getByRole('button', { name: 'Edit Pedro Reyes' }));
-        fireEvent.change(screen.getByLabelText('Official Email (sign-in)'), { target: { value: 'duplicate@example.com' } });
+        fireEvent.change(screen.getByLabelText('Official Email (sign-in) for Pedro Reyes'), { target: { value: 'duplicate@example.com' } });
         fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
 
         expect(await screen.findByRole('alert')).toHaveTextContent('email: A user with that email address already exists.');
-        expect(screen.getByLabelText('Official Email (sign-in)')).toHaveValue('duplicate@example.com');
+        expect(screen.getByLabelText('Official Email (sign-in) for Pedro Reyes')).toHaveValue('duplicate@example.com');
         expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
     });
 });

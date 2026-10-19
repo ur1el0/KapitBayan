@@ -297,7 +297,7 @@ export function StaffManagementSettings() {
                                         </div>
                                         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                                             <label className="text-sm font-medium text-slate-700">
-                                                First Name
+                                                First Name for {staff.full_name}
                                                 <input
                                                     ref={editFirstNameInputRef}
                                                     className={inputClass}
@@ -310,7 +310,7 @@ export function StaffManagementSettings() {
                                                 />
                                             </label>
                                             <label className="text-sm font-medium text-slate-700">
-                                                Last Name
+                                                Last Name for {staff.full_name}
                                                 <input
                                                     className={inputClass}
                                                     value={editValues.last_name}
@@ -322,7 +322,7 @@ export function StaffManagementSettings() {
                                                 />
                                             </label>
                                             <label className="text-sm font-medium text-slate-700">
-                                                Official Email (sign-in)
+                                                Official Email (sign-in) for {staff.full_name}
                                                 <input
                                                     type="email"
                                                     className={inputClass}
