@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:mobile/core/network/api_client.dart';
+import 'package:mobile/core/network/api_exception.dart';
 import 'package:mobile/services/auth_service.dart';
 import 'package:mobile/models/barangay_model.dart';
 import 'package:mobile/services/storage_service.dart';
@@ -70,6 +71,49 @@ void main() {
         'resident-v1',
       );
       expect(apiClient.capturedRequiresAuth, isFalse);
+    },
+  );
+
+  test(
+    'throws ApiException with backend validation message when registration is rejected',
+    () async {
+      SharedPreferences.setMockInitialValues({});
+      final preferences = await SharedPreferences.getInstance();
+      final mockClient = MockClient((request) async {
+        return http.Response(
+          '{"barangay_id":["Selected Barangay is not approved or is currently inactive for registration."]}',
+          400,
+          headers: {'content-type': 'application/json'},
+        );
+      });
+      addTearDown(mockClient.close);
+      final service = AuthService(
+        apiClient: ApiClient(
+          client: mockClient,
+          baseUrl: 'https://kapitbayan.test/api/v1',
+        ),
+        storageService: StorageService(preferences),
+      );
+
+      expect(
+        () => service.register(
+          fullName: 'Test Resident',
+          username: 'resident1',
+          email: 'resident@example.com',
+          password: 'Password123!',
+          birthDate: '1990-01-01',
+          voterStatus: false,
+          privacyConsent: true,
+          barangayId: 999,
+        ),
+        throwsA(
+          isA<ApiException>().having(
+            (e) => e.message,
+            'message',
+            'Selected Barangay is not approved or is currently inactive for registration.',
+          ),
+        ),
+      );
     },
   );
 }
