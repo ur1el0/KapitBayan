@@ -132,7 +132,7 @@ class PublicBarangayApplicationEmailVerificationView(APIView):
         try:
             with transaction.atomic():
                 application = (
-                    BarangayApplication.objects.select_for_update()
+                    BarangayApplication.objects.select_for_update(of=("self",))
                     .select_related("applicant_user")
                     .get(pk=application_id)
                 )
@@ -190,7 +190,7 @@ class PublicBarangayApplicationVerificationResendView(APIView):
 
         with transaction.atomic():
             application = (
-                BarangayApplication.objects.select_for_update()
+                BarangayApplication.objects.select_for_update(of=("self",))
                 .select_related("applicant_user")
                 .filter(
                     pk=application_id,

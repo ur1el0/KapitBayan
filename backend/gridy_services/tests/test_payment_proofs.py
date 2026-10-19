@@ -146,7 +146,7 @@ class PaymentProofStorageAndEndpointTests(APITestCase):
                 storage = ResidentAwareCloudinaryStorage()
                 with self.assertRaisesMessage(
                     ImproperlyConfigured,
-                    "Resident evidence must be served through the authorized media endpoint.",
+                    "Private evidence must be served through an authorized media endpoint.",
                 ):
                     storage.url("payment_proofs/receipt-1.png")
 
