@@ -1,18 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../core/network/api_client.dart';
 import '../core/theme/app_colors.dart';
 import '../services/auth_service.dart';
 import '../services/storage_service.dart';
+import '../utils/password_reset_link.dart';
 import '../widgets/custom_text_field.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   final AuthService? authService;
 
-  const ForgotPasswordScreen({
-    super.key,
-    this.authService,
-  });
+  const ForgotPasswordScreen({super.key, this.authService});
 
   @override
   State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
@@ -21,8 +20,7 @@ class ForgotPasswordScreen extends StatefulWidget {
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
-  final _uidController = TextEditingController();
-  final _tokenController = TextEditingController();
+  final _resetLinkController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
@@ -43,8 +41,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   @override
   void dispose() {
     _emailController.dispose();
-    _uidController.dispose();
-    _tokenController.dispose();
+    _resetLinkController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
@@ -77,13 +74,21 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       if (!mounted) return;
 
       if (_requestSent) {
+        final resetLink = PasswordResetLink.parse(_resetLinkController.text);
+        if (resetLink == null) return;
+
         await service.confirmPasswordReset(
           newPassword: _passwordController.text,
-          uidb64: _uidController.text.trim(),
-          token: _tokenController.text.trim(),
+          uidb64: resetLink.uidb64,
+          token: resetLink.token,
         );
         if (!mounted) return;
-        setState(() => _completed = true);
+        setState(() {
+          _completed = true;
+          _resetLinkController.clear();
+          _passwordController.clear();
+          _confirmPasswordController.clear();
+        });
       } else {
         await service.requestPasswordReset(_emailController.text);
         if (!mounted) return;
@@ -145,19 +150,13 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           const SizedBox(height: 8),
           Text(
             _requestSent
-                ? 'If the address is registered, a reset link was sent. To finish in this app, enter the uidb64 and token values from that link. You can also open the link in the web app.'
+                ? 'If the address is registered, a reset link was sent. Open it in your browser, or copy the complete link and paste it below to finish in this app.'
                 : 'Enter the email address associated with your account. We will send reset instructions if it is registered.',
-            style: const TextStyle(
-              color: AppColors.textSecondary,
-              height: 1.5,
-            ),
+            style: const TextStyle(color: AppColors.textSecondary, height: 1.5),
           ),
           if (_errorMessage != null) ...[
             const SizedBox(height: 16),
-            Text(
-              _errorMessage!,
-              style: const TextStyle(color: Colors.red),
-            ),
+            Text(_errorMessage!, style: const TextStyle(color: Colors.red)),
           ],
           const SizedBox(height: 24),
           if (!_requestSent) ...[
@@ -179,23 +178,22 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             ),
           ] else ...[
             CustomTextField(
-              label: 'User ID (uidb64)',
-              controller: _uidController,
-              hintText: 'Copy the uidb64 value from the reset link',
-              prefixIcon: Icons.badge_outlined,
-              validator: (value) => value?.trim().isNotEmpty == true
+              label: 'Reset link from email',
+              controller: _resetLinkController,
+              hintText: 'Paste the complete password reset link',
+              prefixIcon: Icons.link_outlined,
+              keyboardType: TextInputType.url,
+              validator: (value) => PasswordResetLink.parse(value ?? '') != null
                   ? null
-                  : 'Enter the user ID from the reset link.',
+                  : 'Paste the complete, valid reset link from your email.',
             ),
-            const SizedBox(height: 16),
-            CustomTextField(
-              label: 'Reset token',
-              controller: _tokenController,
-              hintText: 'Copy the token value from the reset link',
-              prefixIcon: Icons.key_outlined,
-              validator: (value) => value?.trim().isNotEmpty == true
-                  ? null
-                  : 'Enter the reset token.',
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: _isSubmitting ? null : _pasteResetLink,
+                icon: const Icon(Icons.content_paste_outlined),
+                label: const Text('Paste reset link'),
+              ),
             ),
             const SizedBox(height: 16),
             CustomTextField(
@@ -225,9 +223,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               obscureText: _obscureConfirmation,
               suffixIcon: IconButton(
                 onPressed: () {
-                  setState(
-                    () => _obscureConfirmation = !_obscureConfirmation,
-                  );
+                  setState(() => _obscureConfirmation = !_obscureConfirmation);
                 },
                 icon: Icon(
                   _obscureConfirmation
@@ -235,10 +231,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       : Icons.visibility_off,
                 ),
               ),
-              validator: (value) =>
-                  value == _passwordController.text
-                      ? null
-                      : 'Passwords do not match.',
+              validator: (value) => value == _passwordController.text
+                  ? null
+                  : 'Passwords do not match.',
             ),
           ],
           const SizedBox(height: 24),
@@ -272,6 +267,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       setState(() {
                         _requestSent = false;
                         _errorMessage = null;
+                        _resetLinkController.clear();
+                        _passwordController.clear();
+                        _confirmPasswordController.clear();
                       });
                     },
               child: const Text('Use a different email'),
@@ -280,6 +278,24 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _pasteResetLink() async {
+    final clipboardData = await Clipboard.getData(Clipboard.kTextPlain);
+    if (!mounted) return;
+
+    final copiedLink = clipboardData?.text?.trim();
+    if (copiedLink == null || copiedLink.isEmpty) {
+      setState(
+        () => _errorMessage = 'Copy the reset link from your email first.',
+      );
+      return;
+    }
+
+    setState(() {
+      _resetLinkController.text = copiedLink;
+      _errorMessage = null;
+    });
   }
 
   Widget _buildCompletion() {
@@ -305,10 +321,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         const Text(
           'You can now return to the login screen and sign in with your new password.',
           textAlign: TextAlign.center,
-          style: TextStyle(
-            color: AppColors.textSecondary,
-            height: 1.5,
-          ),
+          style: TextStyle(color: AppColors.textSecondary, height: 1.5),
         ),
         const SizedBox(height: 24),
         ElevatedButton(
