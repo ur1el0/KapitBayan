@@ -13,6 +13,9 @@ class ApiClient {
   final String _baseUrl;
   String? _accessToken;
   String? _cookieHeader;
+  Future<bool>? _refreshInFlight;
+  int _authSessionRevision = 0;
+  int _credentialsRevision = 0;
 
   /// Optional listener triggered whenever a token refresh succeeds with the new access token and cookie header.
   Future<void> Function(String newAccessToken, String? newCookieHeader)?
@@ -28,30 +31,53 @@ class ApiClient {
 
   /// Update active in-memory tokens and cookies
   void setAuthCredentials({String? accessToken, String? cookieHeader}) {
-    _accessToken = accessToken;
-    if (cookieHeader != null) {
-      _cookieHeader = cookieHeader;
+    final nextCookieHeader = cookieHeader ?? _cookieHeader;
+    if (accessToken != _accessToken || nextCookieHeader != _cookieHeader) {
+      _authSessionRevision++;
+      _credentialsRevision++;
     }
+    _accessToken = accessToken;
+    _cookieHeader = nextCookieHeader;
   }
 
   /// Clear stored credentials
   void clearAuthCredentials() {
+    if (_accessToken != null || _cookieHeader != null) {
+      _authSessionRevision++;
+      _credentialsRevision++;
+    }
     _accessToken = null;
     _cookieHeader = null;
   }
 
   /// Performs a silent token refresh using the stored refresh cookie or token payload
-  Future<bool> refreshAccessToken() async {
+  Future<bool> refreshAccessToken() {
+    final currentRefresh = _refreshInFlight;
+    if (currentRefresh != null) return currentRefresh;
+
+    late final Future<bool> refreshFuture;
+    refreshFuture = _performAccessTokenRefresh().whenComplete(() {
+      if (identical(_refreshInFlight, refreshFuture)) {
+        _refreshInFlight = null;
+      }
+    });
+    _refreshInFlight = refreshFuture;
+    return refreshFuture;
+  }
+
+  Future<bool> _performAccessTokenRefresh() async {
+    final sessionRevision = _authSessionRevision;
+    final cookieHeader = _cookieHeader;
     try {
-      if (_cookieHeader == null || _cookieHeader!.isEmpty) return false;
+      if (cookieHeader == null || cookieHeader.isEmpty) return false;
 
       // Extract raw token value if stored in cookie format (e.g., refresh_token=...)
       String? rawRefreshToken;
-      final match = RegExp(r'refresh_token=([^;]+)').firstMatch(_cookieHeader!);
+      final match = RegExp(r'refresh_token=([^;]+)').firstMatch(cookieHeader);
       if (match != null) {
         rawRefreshToken = match.group(1);
       } else {
-        rawRefreshToken = _cookieHeader;
+        rawRefreshToken = cookieHeader;
       }
 
       final response = await _client
@@ -60,7 +86,7 @@ class ApiClient {
             headers: {
               'Content-Type': 'application/json',
               'Accept': 'application/json',
-              'Cookie': _cookieHeader!,
+              'Cookie': cookieHeader,
             },
             body: rawRefreshToken != null
                 ? jsonEncode({'refresh': rawRefreshToken})
@@ -73,15 +99,20 @@ class ApiClient {
           utf8.decode(response.bodyBytes),
         );
         final newAccess = data['access'] as String?;
-        final newCookie = extractSetCookie(response) ?? _cookieHeader;
+        final newCookie = extractSetCookie(response) ?? cookieHeader;
 
         if (newAccess != null) {
+          // Do not let a late refresh from the previous login replace the
+          // active user's stored or in-memory credentials.
+          if (_authSessionRevision != sessionRevision) return false;
+
           final tokenRefreshHandler = onTokenRefreshed;
           if (tokenRefreshHandler != null) {
             await tokenRefreshHandler(newAccess, newCookie);
           }
 
-          setAuthCredentials(accessToken: newAccess, cookieHeader: newCookie);
+          if (_authSessionRevision != sessionRevision) return false;
+          _setRefreshedCredentials(newAccess, newCookie);
           return true;
         }
       }
@@ -89,6 +120,12 @@ class ApiClient {
     } catch (_) {
       return false;
     }
+  }
+
+  void _setRefreshedCredentials(String accessToken, String? cookieHeader) {
+    _accessToken = accessToken;
+    _cookieHeader = cookieHeader;
+    _credentialsRevision++;
   }
 
   /// Extracts the `refresh_token` or cookie string from response headers
@@ -332,7 +369,9 @@ class ApiClient {
     Future<http.Response> Function() requestFn,
   ) async {
     try {
-      final response = await requestFn().timeout(AppConfig.requestTimeout);
+      final sessionRevisionAtRequest = _authSessionRevision;
+      final credentialsRevisionAtRequest = _credentialsRevision;
+      var response = await requestFn().timeout(AppConfig.requestTimeout);
 
       // Check if response indicates success (2xx)
       if (response.statusCode >= 200 && response.statusCode < 300) {
@@ -340,18 +379,30 @@ class ApiClient {
       }
 
       // Automatic silent retry on 401 Unauthorized if refresh cookie is present
-      if (response.statusCode == 401 &&
-          _cookieHeader != null &&
-          _cookieHeader!.isNotEmpty) {
-        final refreshed = await refreshAccessToken();
-        if (refreshed) {
-          final retriedResponse = await requestFn().timeout(
-            AppConfig.requestTimeout,
-          );
-          if (retriedResponse.statusCode >= 200 &&
-              retriedResponse.statusCode < 300) {
-            return retriedResponse;
+      if (response.statusCode == 401 && _hasRefreshCookie) {
+        if (_authSessionRevision != sessionRevisionAtRequest) {
+          _handleHttpError(response);
+          return response;
+        }
+
+        // Another request may already have rotated the token while this
+        // request was in flight. Retry with the updated credentials instead
+        // of rotating the new refresh token again.
+        if (_credentialsRevision != credentialsRevisionAtRequest) {
+          response = await requestFn().timeout(AppConfig.requestTimeout);
+        } else {
+          final refreshed = await refreshAccessToken();
+          if (_authSessionRevision != sessionRevisionAtRequest) {
+            _handleHttpError(response);
+            return response;
           }
+          if (refreshed) {
+            response = await requestFn().timeout(AppConfig.requestTimeout);
+          }
+        }
+
+        if (response.statusCode >= 200 && response.statusCode < 300) {
+          return response;
         }
       }
       // Handle HTTP error statuses

@@ -118,14 +118,13 @@ class DashboardService {
       );
     }
 
-    // Merge persistent queue alerts with existing document/announcement alerts.
-    final notifications = hasNotificationsError
-        ? <NotificationItemModel>[]
-        : _generateNotifications(
-            documentRequests: documentRequests,
-            announcements: announcements,
-            residentNotifications: residentNotificationResult.data ?? [],
-          );
+    // Keep successful sources visible when another source fails. The error
+    // state still lets the resident retry the missing data.
+    final notifications = _generateNotifications(
+      documentRequests: documentRequests,
+      announcements: announcements,
+      residentNotifications: residentNotificationResult.data ?? [],
+    );
 
     return DashboardData(
       user: currentUser,

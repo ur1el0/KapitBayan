@@ -92,8 +92,10 @@ class RecentNotificationsSection extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Unable to load notifications',
+                      Text(
+                        notifications.isNotEmpty
+                            ? 'Some notifications could not load'
+                            : 'Unable to load notifications',
                         style: TextStyle(
                           fontSize: 14.5,
                           fontWeight: FontWeight.w700,
@@ -129,8 +131,8 @@ class RecentNotificationsSection extends StatelessWidget {
                   ),
               ],
             ),
-          )
-        else if (notifications.isEmpty)
+          ),
+        if (!hasError && notifications.isEmpty)
           Container(
             padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
             decoration: BoxDecoration(
@@ -144,8 +146,8 @@ class RecentNotificationsSection extends StatelessWidget {
                 style: TextStyle(fontSize: 13.5, color: AppColors.textMuted),
               ),
             ),
-          )
-        else
+          ),
+        if (notifications.isNotEmpty)
           Column(
             children: notifications.take(2).map((item) {
               return Padding(
