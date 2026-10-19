@@ -107,6 +107,9 @@ function RootRedirect() {
     if (user?.is_superuser) {
         return <Navigate to="/platform/accounts" replace />;
     }
+    if (user?.role === 'DILG_ADMIN') {
+        return <Navigate to="/dilg/barangay-applications" replace />;
+    }
     if (user?.role === 'FIELD_OFFICIAL') {
         return <Navigate to="/field-official-mobile" replace />;
     }
@@ -189,6 +192,9 @@ export function App() {
                             <Route element={<ProtectedRoute requireSuperuser />}>
                                 <Route path="/platform/accounts" element={<PlatformAccountSupport />} />
                                 <Route path="/platform/barangay-applications" element={<PlatformBarangayApplications />} />
+                            </Route>
+                            <Route element={<ProtectedRoute allowedRoles={['DILG_ADMIN']} />}>
+                                <Route path="/dilg/barangay-applications" element={<PlatformBarangayApplications />} />
                             </Route>
 
                             {/* Citizen Desktop Portal (Tier 4: Residents & Self-Service Kiosks) */}

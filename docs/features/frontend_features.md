@@ -8,7 +8,7 @@ Resident self-service routes use the resident layout and `RESIDENT` guard. Staff
 
 ## Staff capabilities
 
-Depending on role and barangay assignment, staff can process documents and fees, advance queues, manage announcements and activities, maintain residents and verification records, triage reports, and review authorized analytics. Barangay `ADMIN` users can also manage Field Official accounts from `/settings`, including allowed profile edits and activation status; account setup is sent through an expiring email link. Field Officials have no web staff workspace and use the Flutter client. Exact visibility is defined in the route tree and backend permission classes.
+Depending on role and barangay assignment, staff can process documents and fees, advance queues, manage announcements and activities, maintain residents and verification records, triage reports, and review authorized analytics. Barangay `ADMIN` users can also manage Field Official accounts from `/settings`, including allowed profile edits and activation status; account setup is sent through an expiring email link. Field Officials use their email to sign in to the Flutter client. Only Residents choose usernames. Exact visibility is defined in the route tree and backend permission classes.
 
 ## Resident capabilities
 

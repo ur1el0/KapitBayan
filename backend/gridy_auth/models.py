@@ -58,6 +58,13 @@ class BarangayApplication(models.Model):
     applicant_email = models.EmailField()
     applicant_phone = models.CharField(max_length=30)
     admin_username = models.CharField(max_length=150, blank=True, default="")
+    applicant_user = models.OneToOneField(
+        "gridy_auth.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="barangay_admin_application",
+    )
     applicant_authorized = models.BooleanField(default=False)
     contact_consent = models.BooleanField(default=False)
     status = models.CharField(
@@ -113,6 +120,11 @@ class BarangayApplication(models.Model):
                 condition=Q(status="PENDING") & ~Q(admin_username=""),
                 name="unique_pending_admin_email",
             ),
+            models.UniqueConstraint(
+                Lower("applicant_email"),
+                condition=Q(status="PENDING") & Q(applicant_user__isnull=False),
+                name="unique_pending_linked_admin_email",
+            ),
         ]
 
     def __str__(self):
@@ -124,6 +136,7 @@ class User(AbstractUser):
         ADMIN = 'ADMIN', 'Admin'
         RESIDENT = 'RESIDENT', 'Resident'
         FIELD_OFFICIAL = 'FIELD_OFFICIAL', 'Field Official'
+        DILG_ADMIN = 'DILG_ADMIN', 'DILG Onboarding Reviewer'
 
     role = models.CharField(
         max_length=50,

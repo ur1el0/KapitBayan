@@ -4,7 +4,7 @@ This page summarizes current workflow boundaries. Exact transition rules live in
 
 ## New Barangay onboarding
 
-An official submits a public application with the Barangay locality and proposed Admin details. The request remains pending and creates no account or tenant. An active Django superuser independently verifies the official and locality, then approves or rejects the application with an audit record. Approval provisions the Barangay and its Admin with no usable password, then requests a private Set Password email. Barangay Admins can provision and manage Field Officials in their own Barangay; they cannot create or list other Admin accounts. See [ADR 022](decisions/022-reviewed-new-barangay-onboarding.md).
+An official submits a public application with the Barangay locality, official contact details, official email, and a password they choose. The applicant does not create a username. Submission creates an inactive, unassigned Admin account and a pending application, but no tenant or service access. An active DILG reviewer (or controlled Django superuser) independently verifies the official and locality, then approves or rejects the application with an audit record. Approval creates or matches the Barangay and activates the same applicant account; the official signs in using their email and chosen password. Historical applications without a linked applicant account retain their prior setup-email flow. Barangay Admins can provision and manage Field Officials in their own Barangay using email sign-in without choosing usernames; only Residents choose usernames. Admins cannot create or list other Admin accounts. See [ADR 023](decisions/023-dilg-reviewed-barangay-admin-registration.md).
 
 ## Document request and treasury workflow
 

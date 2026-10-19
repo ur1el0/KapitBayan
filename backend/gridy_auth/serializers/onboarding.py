@@ -1,9 +1,14 @@
-import re
+import uuid
 from collections.abc import Mapping
 
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
+from django.db.models import Q
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
-from gridy_auth.models import Barangay, BarangayApplication
+from gridy_auth.models import Barangay, BarangayApplication, User
 
 
 class PublicBarangaySerializer(serializers.ModelSerializer):
@@ -14,7 +19,7 @@ class PublicBarangaySerializer(serializers.ModelSerializer):
 
 
 class BarangayApplicationCreateSerializer(serializers.Serializer):
-    """Collect an onboarding request without creating a tenant or user."""
+    """Create an inactive applicant account and a pending onboarding request."""
 
     name = serializers.CharField(min_length=2, max_length=255, trim_whitespace=True)
     municipality = serializers.CharField(min_length=2, max_length=120, trim_whitespace=True)
@@ -23,7 +28,8 @@ class BarangayApplicationCreateSerializer(serializers.Serializer):
     applicant_position = serializers.CharField(min_length=2, max_length=120, trim_whitespace=True)
     applicant_email = serializers.EmailField(max_length=254)
     applicant_phone = serializers.CharField(min_length=7, max_length=30, trim_whitespace=True)
-    admin_username = serializers.CharField(min_length=3, max_length=150, trim_whitespace=True)
+    password = serializers.CharField(write_only=True, trim_whitespace=False)
+    password_confirm = serializers.CharField(write_only=True, trim_whitespace=False)
     applicant_authorized = serializers.BooleanField(write_only=True)
     contact_consent = serializers.BooleanField(write_only=True)
 
@@ -32,7 +38,7 @@ class BarangayApplicationCreateSerializer(serializers.Serializer):
             allowed_fields = {
                 "name", "municipality", "province", "applicant_name",
                 "applicant_position", "applicant_email", "applicant_phone",
-                "admin_username", "applicant_authorized", "contact_consent",
+                "password", "password_confirm", "applicant_authorized", "contact_consent",
             }
             unexpected = set(self.initial_data) - allowed_fields
             if unexpected:
@@ -49,13 +55,19 @@ class BarangayApplicationCreateSerializer(serializers.Serializer):
                 "contact_consent": "Consent is required to use the applicant contact details to review this request."
             })
 
-        username = attrs["admin_username"].strip()
-        if not re.fullmatch(r"[\w.@+-]{3,150}", username):
-            raise serializers.ValidationError({
-                "admin_username": "Use 3–150 letters, numbers, or @/./+/-/_ characters."
-            })
-        attrs["admin_username"] = username
         attrs["applicant_email"] = attrs["applicant_email"].strip().lower()
+
+        if attrs["password"] != attrs["password_confirm"]:
+            raise serializers.ValidationError({"password_confirm": "Passwords do not match."})
+
+        password_user = User(
+            email=attrs["applicant_email"],
+            first_name=attrs["applicant_name"],
+        )
+        try:
+            validate_password(attrs["password"], user=password_user)
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError({"password": list(exc.messages)}) from exc
 
         duplicate_application = BarangayApplication.objects.filter(
             status=BarangayApplication.Status.PENDING,
@@ -68,17 +80,18 @@ class BarangayApplicationCreateSerializer(serializers.Serializer):
                 "detail": "A pending application already exists for this Barangay and locality."
             })
 
-        if BarangayApplication.objects.filter(
-            status=BarangayApplication.Status.PENDING,
-            admin_username__iexact=username,
-        ).exclude(admin_username="").exists():
+        if User.objects.filter(
+            Q(email__iexact=attrs["applicant_email"])
+            | Q(username__iexact=attrs["applicant_email"])
+        ).exists():
             raise serializers.ValidationError({
-                "admin_username": "That username is already proposed in another pending application."
+                "applicant_email": "That email is already associated with an account. Contact support if you need help."
             })
+
         if BarangayApplication.objects.filter(
             status=BarangayApplication.Status.PENDING,
             applicant_email__iexact=attrs["applicant_email"],
-        ).exclude(admin_username="").exists():
+        ).exists():
             raise serializers.ValidationError({
                 "applicant_email": "That email address is already proposed in another pending application."
             })
@@ -86,6 +99,21 @@ class BarangayApplicationCreateSerializer(serializers.Serializer):
         return attrs
 
     def create(self, validated_data):
+        password = validated_data.pop("password")
+        validated_data.pop("password_confirm")
+        applicant = User.objects.create_user(
+            username=f"pending-admin-{uuid.uuid4().hex}",
+            email=validated_data["applicant_email"],
+            first_name=validated_data["applicant_name"],
+            password=password,
+            role=User.Role.ADMIN,
+            barangay=None,
+            is_active=False,
+            is_staff=False,
+            is_superuser=False,
+        )
+        validated_data["admin_username"] = ""
+        validated_data["applicant_user"] = applicant
         return BarangayApplication.objects.create(**validated_data)
 
 
@@ -98,7 +126,10 @@ class BarangayApplicationReceiptSerializer(serializers.ModelSerializer):
 
 class BarangayApplicationOperatorSerializer(serializers.ModelSerializer):
     reviewed_by_username = serializers.CharField(source="reviewed_by.username", read_only=True, allow_null=True)
-    created_admin_username = serializers.CharField(source="created_admin.username", read_only=True, allow_null=True)
+    created_admin_username = serializers.SerializerMethodField()
+    created_admin_email = serializers.EmailField(source="created_admin.email", read_only=True, allow_null=True)
+    has_applicant_account = serializers.SerializerMethodField()
+    admin_can_sign_in = serializers.SerializerMethodField()
     created_barangay_id = serializers.IntegerField(read_only=True, allow_null=True)
 
     class Meta:
@@ -109,9 +140,25 @@ class BarangayApplicationOperatorSerializer(serializers.ModelSerializer):
             "admin_username", "applicant_authorized", "contact_consent",
             "status", "review_note", "review_verified", "reviewed_by_username",
             "reviewed_at", "created_barangay_id", "created_admin_username",
+            "created_admin_email", "has_applicant_account", "admin_can_sign_in",
             "created_at", "updated_at",
         ]
         read_only_fields = fields
+
+    def get_created_admin_username(self, obj):
+        # Do not expose the generated internal username for new email-only accounts.
+        if not obj.admin_username or obj.created_admin is None:
+            return None
+        return obj.created_admin.username
+
+    @extend_schema_field(OpenApiTypes.BOOL)
+    def get_has_applicant_account(self, obj):
+        return obj.applicant_user_id is not None
+
+    @extend_schema_field(OpenApiTypes.BOOL)
+    def get_admin_can_sign_in(self, obj):
+        admin = obj.created_admin or obj.applicant_user
+        return bool(admin and admin.is_active and admin.has_usable_password())
 
 
 class BarangayApplicationApproveSerializer(serializers.Serializer):

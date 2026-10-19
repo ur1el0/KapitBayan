@@ -17,7 +17,7 @@ function apiErrorMessage(error: unknown, fallback: string) {
     const data = response.response?.data;
     if (!data || typeof data !== 'object') return fallback;
     if (typeof data.detail === 'string') return data.detail;
-    for (const key of ['admin_username', 'applicant_email', 'contact_verified', 'reason']) {
+    for (const key of ['applicant_email', 'contact_verified', 'reason']) {
         const value = data[key];
         if (typeof value === 'string') return value;
         if (Array.isArray(value) && typeof value[0] === 'string') return value[0];
@@ -31,7 +31,7 @@ function dateLabel(value: string) {
 }
 
 export function PlatformBarangayApplications() {
-    const { logout } = useAuth();
+    const { logout, user } = useAuth();
     const [applications, setApplications] = useState<BarangayApplication[]>([]);
     const [count, setCount] = useState(0);
     const [filter, setFilter] = useState<BarangayApplicationStatus>('PENDING');
@@ -65,7 +65,7 @@ export function PlatformBarangayApplications() {
 
     const applyReview = async (application: BarangayApplication) => {
         if (!verified[application.id]) return;
-        if (!window.confirm(`Approve ${application.name}, ${application.municipality}, ${application.province} and create its first Admin account?`)) return;
+        if (!window.confirm(`Approve ${application.name}, ${application.municipality}, ${application.province} and activate the applicant's Admin account?`)) return;
         setBusyId(application.id);
         setMessage(null);
         try {
@@ -77,7 +77,9 @@ export function PlatformBarangayApplications() {
             setCount((current) => filter === 'PENDING' ? Math.max(0, current - 1) : current);
             setMessage({
                 type: 'success',
-                text: `Barangay approved. Admin @${updated.created_admin_username ?? updated.admin_username} was created with no password and a private setup email was requested. If it does not arrive, use Account Support to verify the email and resend a setup link.`,
+                text: updated.admin_can_sign_in
+                    ? `Barangay approved. ${updated.created_admin_email} can now sign in with the official email and password set during the application.`
+                    : `Historical application approved. A private password setup email was requested for ${updated.created_admin_email ?? updated.applicant_email}.`,
             });
         } catch (error) {
             setMessage({ type: 'error', text: apiErrorMessage(error, 'Could not approve this application.') });
@@ -112,15 +114,15 @@ export function PlatformBarangayApplications() {
         <main className="mx-auto max-w-6xl space-y-6 p-4 sm:p-8">
             <header className="flex flex-wrap items-start justify-between gap-4">
                 <div>
-                    <Link to="/platform/accounts" className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-primary-text hover:underline">
+                    {user?.is_superuser && <Link to="/platform/accounts" className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-primary-text hover:underline">
                         <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Account support
-                    </Link>
-                    <p className="mt-3 text-xs font-bold uppercase tracking-[0.16em] text-primary-text">Platform operations</p>
+                    </Link>}
+                    <p className="mt-3 text-xs font-bold uppercase tracking-[0.16em] text-primary-text">Barangay identity review</p>
                     <h1 className="mt-1 flex items-center gap-3 text-2xl font-extrabold text-slate-900 sm:text-3xl">
-                        <Building2 className="h-7 w-7 text-primary-text" aria-hidden="true" /> Barangay applications
+                        <Building2 className="h-7 w-7 text-primary-text" aria-hidden="true" /> DILG Barangay review
                     </h1>
                     <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-                        Review requests for Barangays without an Admin account. Verify the official and locality through an independent official channel before approving. Approval creates the tenant and first Admin; it does not set a password.
+                        Review requests for Barangays without an Admin account. Verify the official and locality through an independent official channel before approving. Approval creates or matches the Barangay tenant and activates the applicant’s existing account.
                     </p>
                 </div>
                 <button type="button" onClick={() => void logout()} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
@@ -130,7 +132,7 @@ export function PlatformBarangayApplications() {
 
             <aside className="flex gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
                 <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
-                <p>Applicant contact details are visible only to platform superusers. Do not approve from this form alone: independently verify the official and Barangay. This workflow provisions the first Admin for a Barangay; existing Barangay Admins manage Field Officials from staff management.</p>
+                <p>Applicant contact details are visible only to DILG reviewers and controlled platform superusers. Do not approve from this form alone: independently verify the official and Barangay. This review grants no access to resident or service records. Existing Barangay Admins manage Field Officials from staff management.</p>
             </aside>
 
             {message && <p role={message.type === 'error' ? 'alert' : 'status'} className={`rounded-lg border p-3 text-sm ${message.type === 'error' ? 'border-rose-200 bg-rose-50 text-rose-800' : 'border-emerald-200 bg-emerald-50 text-emerald-900'}`}>{message.text}</p>}
@@ -171,16 +173,18 @@ export function PlatformBarangayApplications() {
                                     <h3 className="text-xs font-bold uppercase tracking-wide text-slate-500">Proposed first Admin</h3>
                                     <p className="mt-1 font-semibold text-slate-900">{application.applicant_name}</p>
                                     <p className="text-sm text-slate-600">{application.applicant_position}</p>
-                                    <p className="mt-2 break-all text-sm text-slate-700">{application.applicant_email}</p>
+                                    <p className="mt-2 break-all text-sm text-slate-700">Official sign-in email: <strong>{application.applicant_email}</strong></p>
                                     <p className="text-sm text-slate-700">{application.applicant_phone}</p>
-                                    <p className="mt-2 text-sm text-slate-600">Requested username: <strong className="text-slate-800">@{application.admin_username || 'not supplied'}</strong></p>
+                                    {application.admin_username && <p className="mt-2 text-sm text-slate-600">Historical username: <strong className="text-slate-800">@{application.admin_username}</strong></p>}
+                                    {application.status === 'PENDING' && application.has_applicant_account && <p className="mt-2 text-sm font-semibold text-amber-800">Applicant account is inactive until approval.</p>}
                                 </div>
                                 <div className="space-y-2 rounded-lg border border-slate-200 p-3 text-sm text-slate-700">
                                     <p className="flex items-start gap-2"><CheckCircle2 className={`mt-0.5 h-4 w-4 shrink-0 ${application.applicant_authorized ? 'text-emerald-600' : 'text-rose-600'}`} aria-hidden="true" /> Applicant attested that they are authorized to apply.</p>
                                     <p className="flex items-start gap-2"><CheckCircle2 className={`mt-0.5 h-4 w-4 shrink-0 ${application.contact_consent ? 'text-emerald-600' : 'text-rose-600'}`} aria-hidden="true" /> Applicant consented to use of contact details for review.</p>
                                     {application.reviewed_at && <p className="border-t border-slate-100 pt-2 text-xs text-slate-500">Reviewed by {application.reviewed_by_username || 'platform operator'} · {dateLabel(application.reviewed_at)}</p>}
                                     {application.created_barangay_id && <p className="text-xs text-slate-600">Barangay ID: {application.created_barangay_id}</p>}
-                                    {application.created_admin_username && <p className="text-xs text-slate-600">Created Admin: @{application.created_admin_username}</p>}
+                                    {application.created_admin_email && <p className="text-xs text-slate-600">Admin sign-in email: {application.created_admin_email}</p>}
+                                    {application.created_admin_username && <p className="text-xs text-slate-600">Historical Admin username: @{application.created_admin_username}</p>}
                                     {application.review_note && <p className="border-t border-slate-100 pt-2 text-sm"><strong>Review note:</strong> {application.review_note}</p>}
                                 </div>
                             </div>
@@ -195,7 +199,7 @@ export function PlatformBarangayApplications() {
                                         <label htmlFor={`approve-note-${application.id}`} className="block text-sm font-semibold text-slate-700">Approval note <span className="font-normal text-slate-500">(optional)</span></label>
                                         <textarea id={`approve-note-${application.id}`} rows={2} maxLength={1000} value={approvalNotes[application.id] ?? ''} onChange={(event) => setApprovalNotes((current) => ({ ...current, [application.id]: event.target.value }))} className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary" />
                                         <button type="button" disabled={!verified[application.id] || busyId === application.id} onClick={() => void applyReview(application)} className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-primary-foreground hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
-                                            <ClipboardCheck className="h-4 w-4" aria-hidden="true" /> {busyId === application.id ? 'Approving…' : 'Approve and create first Admin'}
+                                            <ClipboardCheck className="h-4 w-4" aria-hidden="true" /> {busyId === application.id ? 'Approving…' : 'Approve and activate Admin'}
                                         </button>
                                     </div>
                                     <div className="space-y-3">

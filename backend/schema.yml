@@ -1040,6 +1040,167 @@ paths:
           description: Invalid state or last active barangay administrator guard
         '404':
           description: Account not found or not eligible
+  /api/v1/auth/platform/barangay-applications/:
+    get:
+      operationId: api_v1_auth_platform_barangay_applications_list
+      description: Let DILG reviewers or controlled superusers review new Barangays.
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - Barangay Onboarding Review
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedBarangayApplicationOperatorList'
+          description: ''
+  /api/v1/auth/platform/barangay-applications/{id}/:
+    get:
+      operationId: api_v1_auth_platform_barangay_applications_retrieve
+      description: Let DILG reviewers or controlled superusers review new Barangays.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this barangay application.
+        required: true
+      tags:
+      - Barangay Onboarding Review
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BarangayApplicationOperator'
+          description: ''
+  /api/v1/auth/platform/barangay-applications/{id}/approve/:
+    post:
+      operationId: api_v1_auth_platform_barangay_applications_approve_create
+      description: Let DILG reviewers or controlled superusers review new Barangays.
+      summary: Approve a verified Barangay application and activate its applicant
+        Admin
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this barangay application.
+        required: true
+      tags:
+      - Barangay Onboarding Review
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BarangayApplicationApprove'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/BarangayApplicationApprove'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/BarangayApplicationApprove'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BarangayApplicationOperator'
+          description: ''
+        '400':
+          description: Verification attestation or application state is invalid.
+        '403':
+          description: Restricted to active DILG reviewers and Django superusers.
+        '409':
+          description: A matching tenant/Admin or account conflict prevents provisioning.
+  /api/v1/auth/platform/barangay-applications/{id}/reject/:
+    post:
+      operationId: api_v1_auth_platform_barangay_applications_reject_create
+      description: Let DILG reviewers or controlled superusers review new Barangays.
+      summary: Reject a Barangay onboarding application with a recorded reason
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this barangay application.
+        required: true
+      tags:
+      - Barangay Onboarding Review
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BarangayApplicationReject'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/BarangayApplicationReject'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/BarangayApplicationReject'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BarangayApplicationOperator'
+          description: ''
+        '400':
+          description: A rejection reason is required or application state is invalid.
+        '403':
+          description: Restricted to active DILG reviewers and Django superusers.
+        '409':
+          description: Only pending applications can be rejected.
+  /api/v1/auth/public/barangay-applications/:
+    post:
+      operationId: api_v1_auth_public_barangay_applications_create
+      description: Accept a request and inactive applicant account; activation waits
+        for review.
+      summary: Submit a new Barangay onboarding application
+      tags:
+      - Barangay Onboarding
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BarangayApplicationCreate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/BarangayApplicationCreate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/BarangayApplicationCreate'
+        required: true
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BarangayApplicationReceipt'
+          description: ''
+        '400':
+          description: Invalid application details.
+        '429':
+          description: Application request limit reached.
   /api/v1/auth/public/barangays/:
     get:
       operationId: api_v1_auth_public_barangays_list
@@ -1372,8 +1533,8 @@ paths:
     put:
       operationId: api_v1_auth_staff_update
       description: Updates a Field Official's first name, last name, and/or email.
-        The target must belong to the authenticated Admin's Barangay. Username, role,
-        Barangay, password, and privilege fields cannot be changed here.
+        The target must belong to the authenticated Admin's Barangay. Sign-in email,
+        role, Barangay, password, and privilege fields cannot be changed here.
       summary: Update Field Official Profile
       parameters:
       - in: path
@@ -1412,8 +1573,8 @@ paths:
     patch:
       operationId: api_v1_auth_staff_partial_update
       description: Updates a Field Official's first name, last name, and/or email.
-        The target must belong to the authenticated Admin's Barangay. Username, role,
-        Barangay, password, and privilege fields cannot be changed here.
+        The target must belong to the authenticated Admin's Barangay. Sign-in email,
+        role, Barangay, password, and privilege fields cannot be changed here.
       summary: Partially Update Field Official Profile
       parameters:
       - in: path
@@ -3259,6 +3420,206 @@ components:
       - municipality
       - name
       - province
+    BarangayApplicationApprove:
+      type: object
+      properties:
+        contact_verified:
+          type: boolean
+        review_note:
+          type: string
+          default: ''
+          maxLength: 1000
+      required:
+      - contact_verified
+    BarangayApplicationCreate:
+      type: object
+      description: Create an inactive applicant account and a pending onboarding request.
+      properties:
+        name:
+          type: string
+          maxLength: 255
+          minLength: 2
+        municipality:
+          type: string
+          maxLength: 120
+          minLength: 2
+        province:
+          type: string
+          maxLength: 120
+          minLength: 2
+        applicant_name:
+          type: string
+          maxLength: 255
+          minLength: 2
+        applicant_position:
+          type: string
+          maxLength: 120
+          minLength: 2
+        applicant_email:
+          type: string
+          format: email
+          maxLength: 254
+        applicant_phone:
+          type: string
+          maxLength: 30
+          minLength: 7
+        password:
+          type: string
+          writeOnly: true
+        password_confirm:
+          type: string
+          writeOnly: true
+        applicant_authorized:
+          type: boolean
+          writeOnly: true
+        contact_consent:
+          type: boolean
+          writeOnly: true
+      required:
+      - applicant_authorized
+      - applicant_email
+      - applicant_name
+      - applicant_phone
+      - applicant_position
+      - contact_consent
+      - municipality
+      - name
+      - password
+      - password_confirm
+      - province
+    BarangayApplicationOperator:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+        municipality:
+          type: string
+          readOnly: true
+        province:
+          type: string
+          readOnly: true
+        applicant_name:
+          type: string
+          readOnly: true
+        applicant_position:
+          type: string
+          readOnly: true
+        applicant_email:
+          type: string
+          format: email
+          readOnly: true
+        applicant_phone:
+          type: string
+          readOnly: true
+        admin_username:
+          type: string
+          readOnly: true
+        applicant_authorized:
+          type: boolean
+          readOnly: true
+        contact_consent:
+          type: boolean
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/StatusBdeEnum'
+          readOnly: true
+        review_note:
+          type: string
+          readOnly: true
+        review_verified:
+          type: boolean
+          readOnly: true
+        reviewed_by_username:
+          type: string
+          readOnly: true
+          nullable: true
+        reviewed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        created_barangay_id:
+          type: integer
+          readOnly: true
+          nullable: true
+        created_admin_username:
+          type: string
+          readOnly: true
+        created_admin_email:
+          type: string
+          format: email
+          readOnly: true
+          nullable: true
+        has_applicant_account:
+          type: boolean
+          readOnly: true
+        admin_can_sign_in:
+          type: boolean
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - admin_can_sign_in
+      - admin_username
+      - applicant_authorized
+      - applicant_email
+      - applicant_name
+      - applicant_phone
+      - applicant_position
+      - contact_consent
+      - created_admin_email
+      - created_admin_username
+      - created_at
+      - created_barangay_id
+      - has_applicant_account
+      - id
+      - municipality
+      - name
+      - province
+      - review_note
+      - review_verified
+      - reviewed_at
+      - reviewed_by_username
+      - status
+      - updated_at
+    BarangayApplicationReceipt:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/StatusBdeEnum'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - status
+    BarangayApplicationReject:
+      type: object
+      properties:
+        reason:
+          type: string
+          maxLength: 1000
+          minLength: 5
+      required:
+      - reason
     CustomTokenObtainPair:
       type: object
       properties:
@@ -3813,6 +4174,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Announcement'
+    PaginatedBarangayApplicationOperatorList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/BarangayApplicationOperator'
     PaginatedBarangayList:
       type: object
       required:
@@ -5379,22 +5763,20 @@ components:
       - ADMIN
       - RESIDENT
       - FIELD_OFFICIAL
+      - DILG_ADMIN
       type: string
       description: |-
         * `ADMIN` - Admin
         * `RESIDENT` - Resident
         * `FIELD_OFFICIAL` - Field Official
+        * `DILG_ADMIN` - DILG Onboarding Reviewer
     StaffUserCreate:
       type: object
       description: |-
         Validates payload for onboarding a new Field Official.
-        Enforces strict field boundaries and case-insensitive uniqueness. New
-        field officials set their own password through the private setup flow.
+        Enforces strict field boundaries and case-insensitive email uniqueness. New
+        field officials use email sign-in and set a password through the private setup flow.
       properties:
-        username:
-          type: string
-          maxLength: 150
-          minLength: 3
         email:
           type: string
           format: email
@@ -5411,7 +5793,6 @@ components:
       - email
       - first_name
       - last_name
-      - username
     StaffUserList:
       type: object
       description: Represents a Field Official in the administrator's Barangay.
@@ -5419,11 +5800,6 @@ components:
         id:
           type: integer
           readOnly: true
-        username:
-          type: string
-          readOnly: true
-          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
-            only.
         email:
           type: string
           format: email
@@ -5467,7 +5843,6 @@ components:
       - last_login
       - last_name
       - role
-      - username
     StaffUserUpdate:
       type: object
       description: Validate the small set of profile fields a Barangay Admin may edit.
@@ -5500,6 +5875,16 @@ components:
         * `UNDER_REVIEW` - Under review
         * `APPROVED` - Approved
         * `DECLINED` - Declined
+    StatusBdeEnum:
+      enum:
+      - PENDING
+      - APPROVED
+      - REJECTED
+      type: string
+      description: |-
+        * `PENDING` - Pending review
+        * `APPROVED` - Approved
+        * `REJECTED` - Rejected
     TokenRefresh:
       type: object
       properties:

@@ -57,13 +57,13 @@ describe('web login role boundaries', () => {
             </MemoryRouter>,
         );
 
-        fireEvent.change(screen.getByPlaceholderText('Enter your username or email'), {
+        fireEvent.change(screen.getByPlaceholderText('Enter your official email'), {
             target: { value: 'field.staff@example.gov.ph' },
         });
         fireEvent.change(screen.getByPlaceholderText('........'), {
             target: { value: 'not-a-web-password' },
         });
-        fireEvent.click(screen.getByRole('button', { name: 'Login as Barangay Official' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Sign in to Official Portal' }));
 
         expect(await screen.findByText(/must use the KapitBayan mobile app/i)).toBeInTheDocument();
         expect(axiosPublic.post).toHaveBeenNthCalledWith(1, '/auth/login/', {
@@ -91,13 +91,13 @@ describe('web login role boundaries', () => {
             </MemoryRouter>,
         );
 
-        fireEvent.change(screen.getByPlaceholderText('Enter your username or email'), {
+        fireEvent.change(screen.getByPlaceholderText('Enter your official email'), {
             target: { value: 'platform.operator@example.test' },
         });
         fireEvent.change(screen.getByPlaceholderText('........'), {
             target: { value: 'operator-password' },
         });
-        fireEvent.click(screen.getByRole('button', { name: 'Login as Barangay Official' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Sign in to Official Portal' }));
 
         await waitFor(() => {
             expect(screen.getByTestId('current-path')).toHaveTextContent('/platform/accounts');

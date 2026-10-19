@@ -45,41 +45,38 @@ class AuthAPITests(IsolatedAuthAPITestCase):
         self.assertEqual(cookie['samesite'], 'Strict')
         self.assertEqual(cookie['path'], '/api/v1/auth/')
 
-    def test_retired_role_cannot_login_refresh_or_use_an_existing_access_token(self):
-        legacy_user = User.objects.create_user(
-            username="legacy_platform_account",
+    def test_dilg_reviewer_can_login_but_access_is_limited_to_onboarding(self):
+        reviewer = User.objects.create_user(
+            username="dilg_reviewer",
             password=self.password,
-            email="legacy-platform@example.test",
+            email="reviewer@example.test",
             role="DILG_ADMIN",
         )
         login_response = self.client.post(
             reverse("auth_login"),
-            {"username": legacy_user.username, "password": self.password},
+            {"username": reviewer.email, "password": self.password},
             format="json",
         )
-        self.assertEqual(login_response.status_code, status.HTTP_401_UNAUTHORIZED)
-        self.assertFalse(RefreshSession.objects.filter(user=legacy_user).exists())
+        self.assertEqual(login_response.status_code, status.HTTP_200_OK)
+        self.assertTrue(RefreshSession.objects.filter(user=reviewer, is_revoked=False).exists())
 
-        refresh = RefreshToken.for_user(legacy_user)
-        RefreshSession.objects.create(
-            user=legacy_user,
-            refresh_token_jti=refresh["jti"],
-            expires_at=timezone.now() + timedelta(days=1),
-        )
-        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {refresh.access_token}")
-        access_response = self.client.get(reverse("auth_me"))
-        self.assertEqual(access_response.status_code, status.HTTP_401_UNAUTHORIZED)
+        access = login_response.data["access"]
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {access}")
+        profile_response = self.client.get(reverse("auth_me"))
+        self.assertEqual(profile_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(profile_response.data["role"], User.Role.DILG_ADMIN)
+
+        service_response = self.client.get("/api/v1/auth/pending-residents/")
+        self.assertEqual(service_response.status_code, status.HTTP_401_UNAUTHORIZED)
 
         self.client.credentials()
+        refresh = login_response.cookies["refresh_token"].value
         refresh_response = self.client.post(
             reverse("auth_token_refresh"),
-            {"refresh": str(refresh)},
+            {"refresh": refresh},
             format="json",
         )
-        self.assertEqual(refresh_response.status_code, status.HTTP_401_UNAUTHORIZED)
-        self.assertTrue(
-            RefreshSession.objects.filter(user=legacy_user, is_revoked=True).exists()
-        )
+        self.assertEqual(refresh_response.status_code, status.HTTP_200_OK)
 
     def test_production_login_blocks_configured_username_and_email_identifier(self):
         with self.settings(

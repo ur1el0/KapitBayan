@@ -5,7 +5,6 @@ import { ShieldCheck, UserPlus, Users } from 'lucide-react';
 
 export interface StaffMember {
     id: number;
-    username: string;
     email: string;
     first_name: string;
     last_name: string;
@@ -35,7 +34,6 @@ export function StaffManagementSettings() {
     const [staffList, setStaffList] = useState<StaffMember[]>([]);
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
-    const [username, setUsername] = useState('');
     const [email, setEmail] = useState('');
 
     const [loading, setLoading] = useState(true);
@@ -93,13 +91,11 @@ export function StaffManagementSettings() {
             const response = await axiosPrivate.post('/auth/staff/', {
                 first_name: firstName.trim(),
                 last_name: lastName.trim(),
-                username: username.trim(),
                 email: email.trim().toLowerCase(),
             });
             setStaffList((current) => [response.data, ...current]);
             setFirstName('');
             setLastName('');
-            setUsername('');
             setEmail('');
             setMessage({
                 text: `Field Official account created. Setup instructions are being sent to ${response.data.email}. If the email does not arrive or the link expires, they can use Forgot Password.`,
@@ -153,7 +149,7 @@ export function StaffManagementSettings() {
             focusAfterEditTransitionId.current = staff.id;
             setEditingStaffId(null);
             setEditValues(null);
-            setMessage({ text: `Profile updated for @${staff.username}.`, type: 'success' });
+            setMessage({ text: `Profile updated for ${staff.email}.`, type: 'success' });
         } catch (error: unknown) {
             setEditError(getApiErrorMessage(error, 'Could not update this field official. Please review the details and try again.'));
         } finally {
@@ -170,12 +166,12 @@ export function StaffManagementSettings() {
                 current.map((item) => (item.id === staff.id ? response.data : item))
             );
             setMessage({
-                text: `Field official '${staff.username}' is now ${response.data.is_active ? 'active' : 'inactive'}.`,
+                text: `Field Official ${staff.email} is now ${response.data.is_active ? 'active' : 'inactive'}.`,
                 type: 'success',
             });
         } catch {
             setMessage({
-                text: `Could not change status for ${staff.username}.`,
+                text: `Could not change status for ${staff.email}.`,
                 type: 'error',
             });
         } finally {
@@ -192,7 +188,7 @@ export function StaffManagementSettings() {
                 <div>
                     <h2 className="text-xl font-bold text-slate-900">Barangay Field Officials & Staff</h2>
                     <p className="mt-0.5 text-sm leading-6 text-slate-600">
-                        Create and manage Field Official accounts for your Barangay. Field Officials set their password through an emailed setup link and use the mobile app for their work.
+                        Create and manage Field Official accounts for your Barangay. They sign in with their official email, set a password through an emailed setup link, and use the mobile app for their work.
                     </p>
                 </div>
             </div>
@@ -242,19 +238,7 @@ export function StaffManagementSettings() {
                         />
                     </label>
                     <label className="text-sm font-medium text-slate-700">
-                        Username
-                        <input
-                            className={inputClass}
-                            value={username}
-                            onChange={(e) => setUsername(e.target.value)}
-                            maxLength={150}
-                            required
-                            autoComplete="off"
-                            placeholder="e.g. tanod_carding"
-                        />
-                    </label>
-                    <label className="text-sm font-medium text-slate-700">
-                        Email Address
+                        Official Email (sign-in)
                         <input
                             type="email"
                             className={inputClass}
@@ -309,11 +293,11 @@ export function StaffManagementSettings() {
                                     <form onSubmit={(event) => void submitEdit(event, staff)} className="space-y-4" aria-busy={editSaving}>
                                         <div className="flex flex-wrap items-center gap-2">
                                             <h4 className="font-semibold text-slate-900 text-sm">Edit {staff.full_name}</h4>
-                                            <span className="text-xs text-slate-500">Username @{staff.username} cannot be changed here.</span>
+                                            <span className="text-xs text-slate-500">This Field Official signs in with {staff.email}.</span>
                                         </div>
                                         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                                             <label className="text-sm font-medium text-slate-700">
-                                                First Name for @{staff.username}
+                                                First Name for {staff.full_name}
                                                 <input
                                                     ref={editFirstNameInputRef}
                                                     className={inputClass}
@@ -326,7 +310,7 @@ export function StaffManagementSettings() {
                                                 />
                                             </label>
                                             <label className="text-sm font-medium text-slate-700">
-                                                Last Name for @{staff.username}
+                                                Last Name for {staff.full_name}
                                                 <input
                                                     className={inputClass}
                                                     value={editValues.last_name}
@@ -338,7 +322,7 @@ export function StaffManagementSettings() {
                                                 />
                                             </label>
                                             <label className="text-sm font-medium text-slate-700">
-                                                Email Address for @{staff.username}
+                                                Official Email (sign-in) for {staff.full_name}
                                                 <input
                                                     type="email"
                                                     className={inputClass}
@@ -375,7 +359,7 @@ export function StaffManagementSettings() {
                                         <div className="space-y-1">
                                             <div className="flex flex-wrap items-center gap-2">
                                                 <h4 className="font-semibold text-slate-900 text-sm">{staff.full_name}</h4>
-                                                <span className="text-xs text-slate-400">@{staff.username}</span>
+                                                <span className="text-xs text-slate-500">{staff.email}</span>
                                                 <span
                                                     className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold ${
                                                         staff.is_active

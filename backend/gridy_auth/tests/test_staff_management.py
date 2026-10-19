@@ -158,7 +158,6 @@ class TestStaffManagementPermissions:
         create_resp = api_client.post(
             "/api/v1/auth/staff/",
             {
-                "username": "tanod_new",
                 "email": "tanod@example.com",
                 "first_name": "Test",
                 "last_name": "Tanod",
@@ -182,7 +181,6 @@ class TestStaffManagementPermissions:
         response = api_client.post(
             "/api/v1/auth/staff/",
             {
-                "username": "dilg_created_staff",
                 "email": "staff@example.com",
                 "first_name": "Dilg",
                 "last_name": "Created",
@@ -205,7 +203,7 @@ class TestStaffManagementEndpoints:
         assert len(results) == 1
         record = results[0]
         assert record["id"] == field_official_a.id
-        assert record["username"] == "tanod_isidro_1"
+        assert "username" not in record
         assert record["role"] == User.Role.FIELD_OFFICIAL
         assert record["full_name"] == "Juan Dela Cruz"
         assert record["is_active"] is True
@@ -223,21 +221,20 @@ class TestStaffManagementEndpoints:
     ):
         api_client.force_authenticate(user=admin_a)
         payload = {
-            "username": "tanod_carding",
             "email": "carding@isidro.example.gov.ph",
             "first_name": "Ricardo",
             "last_name": "Dalisay",
         }
         response = api_client.post("/api/v1/auth/staff/", payload, format="json")
         assert response.status_code == status.HTTP_201_CREATED
-        assert response.data["username"] == "tanod_carding"
+        assert "username" not in response.data
         assert response.data["email"] == "carding@isidro.example.gov.ph"
         assert response.data["full_name"] == "Ricardo Dalisay"
         assert response.data["role"] == User.Role.FIELD_OFFICIAL
         assert response.data["is_active"] is True
 
         # Verify database record
-        created_user = User.objects.get(username="tanod_carding")
+        created_user = User.objects.get(email="carding@isidro.example.gov.ph")
         assert created_user.barangay_id == barangay_a.id
         assert created_user.role == User.Role.FIELD_OFFICIAL
         assert created_user.is_staff is False
@@ -262,7 +259,7 @@ class TestStaffManagementEndpoints:
             action_by=admin_a,
             action_type=AuditLog.ActionType.USER_ACTION,
         ).latest("timestamp")
-        assert "tanod_carding" in audit.description
+        assert "carding@isidro.example.gov.ph" not in audit.description
         assert barangay_a.name in audit.description
 
     def test_disallowed_extra_fields_are_rejected(self, api_client, admin_a, barangay_b):
@@ -283,7 +280,7 @@ class TestStaffManagementEndpoints:
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert "Disallowed fields" in str(response.data)
 
-    def test_duplicate_username_rejected(self, api_client, admin_a, field_official_a):
+    def test_user_chosen_username_is_rejected(self, api_client, admin_a, field_official_a):
         api_client.force_authenticate(user=admin_a)
         payload = {
             "username": field_official_a.username,  # Duplicate
@@ -293,12 +290,11 @@ class TestStaffManagementEndpoints:
         }
         response = api_client.post("/api/v1/auth/staff/", payload, format="json")
         assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert "username" in response.data
+        assert "Disallowed fields" in str(response.data)
 
     def test_duplicate_email_rejected(self, api_client, admin_a, field_official_a):
         api_client.force_authenticate(user=admin_a)
         payload = {
-            "username": "unique_username",
             "email": field_official_a.email.upper(),  # Case-insensitive duplicate
             "first_name": "Duplicate",
             "last_name": "Email",
@@ -310,7 +306,6 @@ class TestStaffManagementEndpoints:
     def test_password_field_is_rejected_from_staff_creation_payload(self, api_client, admin_a):
         api_client.force_authenticate(user=admin_a)
         payload = {
-            "username": "tanod_weak",
             "email": "field@example.com",
             "first_name": "Field",
             "last_name": "Staff",
@@ -354,7 +349,7 @@ class TestStaffManagementEndpoints:
             action_type=AuditLog.ActionType.USER_ACTION,
         ).latest("timestamp")
         assert "deactivated" in audit.description
-        assert field_official_a.username in audit.description
+        assert field_official_a.email in audit.description
 
         # 2. Reactivate
         response_reactivate = api_client.post(toggle_url)
@@ -398,7 +393,7 @@ class TestStaffManagementEndpoints:
         assert response.data["first_name"] == "Maria"
         assert response.data["last_name"] == "Santos"
         assert response.data["email"] == "maria.santos@example.com"
-        assert response.data["username"] == field_official_a.username
+        assert "username" not in response.data
         assert response.data["role"] == User.Role.FIELD_OFFICIAL
 
         field_official_a.refresh_from_db()
@@ -411,7 +406,7 @@ class TestStaffManagementEndpoints:
             action_by=admin_a,
             action_type=AuditLog.ActionType.USER_ACTION,
         ).latest("timestamp")
-        assert field_official_a.username in audit.description
+        assert f"Field Official account ID {field_official_a.pk}" in audit.description
         assert "first_name" in audit.description
         assert "last_name" in audit.description
         assert "email" in audit.description

@@ -1,6 +1,7 @@
 from rest_framework import serializers
+from django.db.models import Q
 from django.urls import reverse
-from gridy_auth.models import User, Resident, Barangay
+from gridy_auth.models import User, Resident, Barangay, RefreshSession
 
 
 class ResidentPrivateImageField(serializers.ImageField):
@@ -212,23 +213,63 @@ class UserSerializer(serializers.ModelSerializer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         instance = getattr(self, 'instance', None)
+        if isinstance(instance, User) and instance.role in {
+            User.Role.ADMIN,
+            User.Role.FIELD_OFFICIAL,
+            User.Role.DILG_ADMIN,
+        }:
+            self.fields['username'].read_only = True
         if isinstance(instance, User) and hasattr(instance, 'profile'):
             self.fields['profile'].instance = getattr(instance, 'profile', None)
 
     def get_full_name(self, obj):
         full_name = getattr(obj.profile, 'full_name', None) if hasattr(obj, 'profile') else None
         if not full_name:
-            full_name = f"{obj.first_name} {obj.last_name}".strip() or obj.username
+            identity = (
+                obj.email
+                if obj.role in {User.Role.ADMIN, User.Role.FIELD_OFFICIAL, User.Role.DILG_ADMIN}
+                else obj.username
+            )
+            full_name = f"{obj.first_name} {obj.last_name}".strip() or identity
         return full_name
+
+    def validate_email(self, value):
+        normalized_email = value.strip().lower()
+        if isinstance(self.instance, User) and self.instance.role in {
+            User.Role.ADMIN,
+            User.Role.FIELD_OFFICIAL,
+            User.Role.DILG_ADMIN,
+        }:
+            if not normalized_email:
+                raise serializers.ValidationError("Official accounts must have an email sign-in identity.")
+            conflicting_accounts = User.objects.filter(
+                Q(email__iexact=normalized_email) | Q(username__iexact=normalized_email)
+            ).exclude(pk=self.instance.pk)
+            if conflicting_accounts.exists():
+                raise serializers.ValidationError("This email must be unique across accounts because it is the official sign-in identity.")
+        return normalized_email
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        if instance.role in {User.Role.ADMIN, User.Role.FIELD_OFFICIAL, User.Role.DILG_ADMIN}:
+            # The model needs an internal unique username, but officials sign in by email.
+            representation['username'] = instance.email
+        return representation
 
     def update(self, instance, validated_data):
         # Extract the profile dictionary from the request
         profile_data = validated_data.pop('profile', None)
+        email_changed = (
+            'email' in validated_data
+            and validated_data['email'].strip().casefold() != instance.email.strip().casefold()
+        )
 
         # Update standard User fields (username, email)
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
+        if email_changed:
+            RefreshSession.objects.filter(user=instance, is_revoked=False).update(is_revoked=True)
 
         # Update nested Resident profile fields via ResidentSerializer
         if profile_data is not None and hasattr(instance, 'profile'):

@@ -32,15 +32,18 @@ class LoginCredentialsSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         CustomTextField(
-          label: 'Citizen ID / Username',
+          label: isOfficialMode ? 'Official Email' : 'Citizen ID / Username',
           controller: usernameController,
-          hintText: 'resident',
+          hintText: isOfficialMode ? 'name@barangay.gov.ph' : 'resident',
           prefixIcon: Icons.person_outline_rounded,
+          keyboardType: isOfficialMode ? TextInputType.emailAddress : TextInputType.text,
           textInputAction: TextInputAction.next,
           enabled: !isLoading,
           validator: (value) {
             if (value == null || value.trim().isEmpty) {
-              return 'Please enter your citizen ID or username';
+              return isOfficialMode
+                  ? 'Please enter your official email address'
+                  : 'Please enter your citizen ID or username';
             }
             return null;
           },

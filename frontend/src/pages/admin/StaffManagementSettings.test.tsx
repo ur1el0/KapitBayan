@@ -27,7 +27,6 @@ describe('StaffManagementSettings', () => {
     it('submits account details without a password and confirms setup instructions', async () => {
         const createdStaff = {
             id: 10,
-            username: 'tanod_carding',
             email: 'carding@barangay.gov.ph',
             first_name: 'Ricardo',
             last_name: 'Dalisay',
@@ -44,29 +43,27 @@ describe('StaffManagementSettings', () => {
 
         fireEvent.change(screen.getByLabelText('First Name'), { target: { value: 'Ricardo' } });
         fireEvent.change(screen.getByLabelText('Last Name'), { target: { value: 'Dalisay' } });
-        fireEvent.change(screen.getByLabelText('Username'), { target: { value: 'tanod_carding' } });
-        fireEvent.change(screen.getByLabelText('Email Address'), { target: { value: 'carding@barangay.gov.ph' } });
+        fireEvent.change(screen.getByLabelText('Official Email (sign-in)'), { target: { value: 'carding@barangay.gov.ph' } });
         fireEvent.click(screen.getByRole('button', { name: 'Register Field Official' }));
 
         await waitFor(() => {
             expect(axiosPrivate.post).toHaveBeenCalledWith('/auth/staff/', {
                 first_name: 'Ricardo',
                 last_name: 'Dalisay',
-                username: 'tanod_carding',
                 email: 'carding@barangay.gov.ph',
             });
         });
 
         expect(await screen.findByText(/setup instructions are being sent to carding@barangay.gov.ph/i)).toBeInTheDocument();
         expect(screen.getByText('Ricardo Dalisay')).toBeInTheDocument();
-        expect(screen.getByText('@tanod_carding')).toBeInTheDocument();
+        expect(screen.getByRole('alert')).toHaveTextContent('Setup instructions are being sent to carding@barangay.gov.ph.');
+        expect(screen.getAllByText('carding@barangay.gov.ph')).toHaveLength(2);
         expect(screen.queryByLabelText(/password/i)).not.toBeInTheDocument();
     });
 
     it('renders existing staff and toggles active status', async () => {
         const staff = {
             id: 5,
-            username: 'tanod_juan',
             email: 'juan@barangay.gov.ph',
             first_name: 'Juan',
             last_name: 'Dela Cruz',
@@ -92,7 +89,7 @@ describe('StaffManagementSettings', () => {
             expect(axiosPrivate.post).toHaveBeenCalledWith('/auth/staff/5/toggle-status/');
         });
 
-        expect(await screen.findByText("Field official 'tanod_juan' is now inactive.")).toBeInTheDocument();
+        expect(await screen.findByText('Field Official juan@barangay.gov.ph is now inactive.')).toBeInTheDocument();
         expect(screen.getByText('Deactivated')).toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Activate' })).toBeInTheDocument();
     });
@@ -109,7 +106,6 @@ describe('StaffManagementSettings', () => {
     it('edits allowed profile fields and updates the displayed row from the response', async () => {
         const staff = {
             id: 15,
-            username: 'tanod_juan',
             email: 'juan@barangay.gov.ph',
             first_name: 'Juan',
             last_name: 'Dela Cruz',
@@ -131,10 +127,10 @@ describe('StaffManagementSettings', () => {
         render(<StaffManagementSettings />);
         await screen.findByText('Juan Dela Cruz');
         fireEvent.click(screen.getByRole('button', { name: 'Edit Juan Dela Cruz' }));
-        expect(screen.getByLabelText('First Name for @tanod_juan')).toHaveFocus();
+        expect(screen.getByLabelText('First Name for Juan Dela Cruz')).toHaveFocus();
 
-        fireEvent.change(screen.getByLabelText('First Name for @tanod_juan'), { target: { value: 'Juan Miguel' } });
-        fireEvent.change(screen.getByLabelText('Email Address for @tanod_juan'), { target: { value: 'JUAN.NEW@BARANGAY.GOV.PH' } });
+        fireEvent.change(screen.getByLabelText('First Name for Juan Dela Cruz'), { target: { value: 'Juan Miguel' } });
+        fireEvent.change(screen.getByLabelText('Official Email (sign-in) for Juan Dela Cruz'), { target: { value: 'JUAN.NEW@BARANGAY.GOV.PH' } });
         fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
 
         await waitFor(() => {
@@ -145,15 +141,14 @@ describe('StaffManagementSettings', () => {
             });
         });
         expect(await screen.findByText('Juan Miguel Dela Cruz')).toBeInTheDocument();
-        expect(screen.getByText('juan.new@barangay.gov.ph')).toBeInTheDocument();
-        expect(screen.getByRole('alert')).toHaveTextContent('Profile updated for @tanod_juan.');
-        expect(screen.queryByLabelText('Email Address for @tanod_juan')).not.toBeInTheDocument();
+        expect(screen.getAllByText('juan.new@barangay.gov.ph')).toHaveLength(2);
+        expect(screen.getByRole('alert')).toHaveTextContent('Profile updated for juan@barangay.gov.ph.');
+        expect(screen.queryByLabelText(/Official Email \(sign-in\) for/)).not.toBeInTheDocument();
     });
 
     it('discards staged profile changes on cancel without sending a request', async () => {
         const staff = {
             id: 16,
-            username: 'tanod_maria',
             email: 'maria@barangay.gov.ph',
             first_name: 'Maria',
             last_name: 'Santos',
@@ -168,20 +163,19 @@ describe('StaffManagementSettings', () => {
         render(<StaffManagementSettings />);
         await screen.findByText('Maria Santos');
         fireEvent.click(screen.getByRole('button', { name: 'Edit Maria Santos' }));
-        fireEvent.change(screen.getByLabelText('First Name for @tanod_maria'), { target: { value: 'Changed Draft' } });
+        fireEvent.change(screen.getByLabelText('First Name for Maria Santos'), { target: { value: 'Changed Draft' } });
         fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
 
         expect(axiosPrivate.patch).not.toHaveBeenCalled();
         expect(screen.getByText('Maria Santos')).toBeInTheDocument();
         expect(screen.queryByText('Changed Draft')).not.toBeInTheDocument();
-        expect(screen.queryByLabelText('First Name for @tanod_maria')).not.toBeInTheDocument();
+        expect(screen.queryByLabelText(/First Name for/)).not.toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Edit Maria Santos' })).toHaveFocus();
     });
 
     it('keeps the editor open and announces a server error when saving fails', async () => {
         const staff = {
             id: 17,
-            username: 'tanod_pedro',
             email: 'pedro@barangay.gov.ph',
             first_name: 'Pedro',
             last_name: 'Reyes',
@@ -199,11 +193,11 @@ describe('StaffManagementSettings', () => {
         render(<StaffManagementSettings />);
         await screen.findByText('Pedro Reyes');
         fireEvent.click(screen.getByRole('button', { name: 'Edit Pedro Reyes' }));
-        fireEvent.change(screen.getByLabelText('Email Address for @tanod_pedro'), { target: { value: 'duplicate@example.com' } });
+        fireEvent.change(screen.getByLabelText('Official Email (sign-in) for Pedro Reyes'), { target: { value: 'duplicate@example.com' } });
         fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
 
         expect(await screen.findByRole('alert')).toHaveTextContent('email: A user with that email address already exists.');
-        expect(screen.getByLabelText('Email Address for @tanod_pedro')).toHaveValue('duplicate@example.com');
+        expect(screen.getByLabelText('Official Email (sign-in) for Pedro Reyes')).toHaveValue('duplicate@example.com');
         expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
     });
 });

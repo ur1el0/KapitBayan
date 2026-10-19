@@ -25,7 +25,8 @@ export const AdminProfile: React.FC = () => {
                     
                     <div className="pt-16 flex flex-col sm:flex-row justify-between items-start gap-4">
                         <div>
-                            <h2 className="text-2xl font-bold text-slate-900">@{user.username}</h2>
+                            <h2 className="text-2xl font-bold text-slate-900">{user.email || user.username}</h2>
+                            <p className="text-sm text-slate-500">Sign-in identity</p>
                             <p className="text-slate-500 font-medium">Barangay Official</p>
                         </div>
                         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-primary/10 text-primary-text border border-primary/20">
