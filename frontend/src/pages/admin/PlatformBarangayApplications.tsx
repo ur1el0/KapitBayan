@@ -155,12 +155,12 @@ export function PlatformBarangayApplications() {
         <main className="mx-auto max-w-6xl space-y-6 p-4 sm:p-8">
             <header className="flex flex-wrap items-start justify-between gap-4">
                 <div>
-                    {user?.is_superuser && <Link to="/platform/accounts" className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-primary-text hover:underline">
+                    {(user?.is_superuser || user?.role === 'BARANGAY_OPERATOR') && <Link to={user?.is_superuser ? "/platform/accounts" : "/operator/accounts"} className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-primary-text hover:underline">
                         <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Account support
                     </Link>}
                     <p className="mt-3 text-xs font-bold uppercase tracking-[0.16em] text-primary-text">Barangay identity review</p>
                     <h1 className="mt-1 flex items-center gap-3 text-2xl font-extrabold text-slate-900 sm:text-3xl">
-                        <Building2 className="h-7 w-7 text-primary-text" aria-hidden="true" /> DILG Barangay review
+                        <Building2 className="h-7 w-7 text-primary-text" aria-hidden="true" /> Barangay onboarding review
                     </h1>
                     <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
                         Review requests for Barangays without an Admin account. Verify the official and locality through an independent official channel before approving. Approval creates or matches the Barangay tenant and activates the applicant’s existing account.
@@ -173,7 +173,7 @@ export function PlatformBarangayApplications() {
 
             <aside className="flex gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
                 <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
-                <p>Applicant contact details are visible only to DILG reviewers and controlled platform superusers. Do not approve from this form alone: independently verify the official and Barangay. This review grants no access to resident or service records. Existing Barangay Admins manage Field Officials from staff management.</p>
+                <p>Applicant contact details are visible only to Barangay Operators and controlled platform superusers. Do not approve from this form alone: independently verify the official and Barangay. This review grants no access to resident or service records. Existing Barangay Admins manage Field Officials from staff management.</p>
             </aside>
 
             {message && <p role={message.type === 'error' ? 'alert' : 'status'} className={`rounded-lg border p-3 text-sm ${message.type === 'error' ? 'border-rose-200 bg-rose-50 text-rose-800' : 'border-emerald-200 bg-emerald-50 text-emerald-900'}`}>{message.text}</p>}

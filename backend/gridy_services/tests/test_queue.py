@@ -425,21 +425,21 @@ class QueueTicketAPITests(ServiceAPIBaseTestCase):
 
     def test_legacy_role_cannot_cancel_queue_ticket(self):
         barangay = Barangay.objects.create(
-            name="DILG Queue Isolation Test Barangay"
+            name="Operator Queue Isolation Test Barangay"
         )
         ticket = QueueTicket.objects.create(
             barangay=barangay,
             service_type="Clearance",
             status=QueueTicket.Status.WAITING,
         )
-        dilg_admin = User.objects.create_user(
-            username="dilg_queue_test",
+        barangay_operator = User.objects.create_user(
+            username="barangay_operator_queue_test",
             password="SecurePassword123!",
-            email="dilg-queue-test@example.com",
-            role="DILG_ADMIN",
+            email="barangay-operator-queue-test@example.com",
+            role="BARANGAY_OPERATOR",
         )
 
-        self.client.force_authenticate(dilg_admin)
+        self.client.force_authenticate(barangay_operator)
         response = self.client.post(
             reverse("ticket-cancel-ticket", args=[ticket.id])
         )

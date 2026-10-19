@@ -83,7 +83,7 @@ describe('BarangaySettings', () => {
         expect(await screen.findByRole('heading', { name: 'Barangay Field Officials & Staff' })).toBeInTheDocument();
 
         vi.mocked(useAuth).mockReturnValue({
-            user: { role: 'DILG_ADMIN' },
+            user: { role: 'BARANGAY_OPERATOR' },
             login: vi.fn(),
             logout: vi.fn(async () => {}),
             isAuthenticated: true,

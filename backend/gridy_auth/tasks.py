@@ -153,7 +153,7 @@ def send_barangay_application_verification_email(
                 f"{verification_link}\n\n"
                 "This link expires after the configured password-reset timeout and can "
                 "verify this application only once. Email verification does not approve "
-                "the Barangay Admin account; DILG must still review the application. "
+                "the Barangay Admin account; a Barangay Operator must still review the application. "
                 "If you did not submit this request, ignore this email."
             ),
             from_email=settings.DEFAULT_FROM_EMAIL,

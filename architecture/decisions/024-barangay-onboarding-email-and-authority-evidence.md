@@ -1,5 +1,7 @@
 # ADR 024: Email Verification and Private Authority Evidence for Barangay Onboarding
 
+> The reviewer identity in this decision is superseded by [ADR 025](025-barangay-operator-onboarding-and-account-support.md). The email-verification, proof-security, and approval safeguards below remain active.
+
 - **Status:** Accepted
 - **Date:** 2026-10-19
 - **Extends:** [ADR 023](023-dilg-reviewed-barangay-admin-registration.md)

@@ -31,7 +31,7 @@ export const Login: React.FC = () => {
             const isAllowedForWeb = userData?.is_superuser === true
                 ? isAdminMode
                 : isAdminMode
-                    ? userData?.role === 'ADMIN' || userData?.role === 'DILG_ADMIN'
+                    ? userData?.role === 'ADMIN' || userData?.role === 'BARANGAY_OPERATOR'
                     : userData?.role === 'RESIDENT';
 
             if (!isAllowedForWeb) {
@@ -58,8 +58,8 @@ export const Login: React.FC = () => {
                 login(access, userData);
                 if (userData?.is_superuser === true) {
                     navigate('/platform/accounts');
-                } else if (userData?.role === 'DILG_ADMIN') {
-                    navigate('/dilg/barangay-applications');
+                } else if (userData?.role === 'BARANGAY_OPERATOR') {
+                    navigate('/operator/barangay-applications');
                 } else if (userData?.role === 'RESIDENT') {
                     navigate('/portal/documents');
                 } else {

@@ -87,11 +87,11 @@ class PaymentProofStorageAndEndpointTests(APITestCase):
             role=User.Role.FIELD_OFFICIAL,
             barangay=None,
         )
-        self.dilg_admin = User.objects.create_user(
-            username="dilg_officer",
+        self.barangay_operator = User.objects.create_user(
+            username="barangay_operator",
             password="SecurePassword123!",
-            email="dilg@test.ph",
-            role="DILG_ADMIN",
+            email="operator@test.ph",
+            role="BARANGAY_OPERATOR",
         )
 
         # Generate sample image bytes
@@ -198,7 +198,7 @@ class PaymentProofStorageAndEndpointTests(APITestCase):
             self.foreign_admin,
             self.foreign_field_official,
             self.unassigned_official,
-            self.dilg_admin,
+            self.barangay_operator,
         ]
         for user in unauthorized_users:
             self.client.force_authenticate(user=user)

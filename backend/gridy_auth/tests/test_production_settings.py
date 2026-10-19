@@ -13,6 +13,7 @@ class ProductionSettingsValidationTests(SimpleTestCase):
             "import os, sys\n"
             "sys.argv = ['manage.py', 'check']\n"
             "import config.settings as s\n"
+            "print(s.STORAGES['default']['BACKEND'])\n"
         )
         self.temp_file = tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False)
         self.temp_file.write('{"type": "service_account"}')
@@ -72,9 +73,47 @@ class ProductionSettingsValidationTests(SimpleTestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("HTTPS FRONTEND_URL", result.stderr)
 
+    def test_normal_production_startup_still_requires_cloudinary(self):
+        result = self._run_subprocess({
+            "CLOUDINARY_CLOUD_NAME": None,
+            "CLOUDINARY_API_KEY": None,
+            "CLOUDINARY_API_SECRET": None,
+        })
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("CLOUDINARY_CLOUD_NAME", result.stderr)
+
     def test_production_succeeds_with_valid_postgresql_and_https_frontend_url(self):
         result = self._run_subprocess({
             "DATABASE_URL": "postgres://gridy:pass@localhost:5432/gridy_db",
             "FRONTEND_URL": "https://kapitbayan.gov.ph",
         })
         self.assertEqual(result.returncode, 0, f"Failed with stderr: {result.stderr}")
+
+    def test_migration_only_runtime_uses_filesystem_storage_without_external_media_secrets(self):
+        with tempfile.TemporaryDirectory() as runner_temp:
+            result = self._run_subprocess({
+                "KAPITBAYAN_MIGRATION_ONLY": "true",
+                "GITHUB_ACTIONS": "true",
+                "RUNNER_TEMP": runner_temp,
+                "CLOUDINARY_CLOUD_NAME": None,
+                "CLOUDINARY_API_KEY": None,
+                "CLOUDINARY_API_SECRET": None,
+                "FIREBASE_SERVICE_ACCOUNT_JSON_PATH": None,
+                "EMAIL_HOST_USER": None,
+                "EMAIL_HOST_PASSWORD": None,
+                "DEFAULT_FROM_EMAIL": None,
+            })
+
+        self.assertEqual(result.returncode, 0, f"Failed with stderr: {result.stderr}")
+        self.assertIn("django.core.files.storage.FileSystemStorage", result.stdout)
+
+    def test_migration_only_runtime_is_rejected_outside_github_actions(self):
+        with tempfile.TemporaryDirectory() as runner_temp:
+            result = self._run_subprocess({
+                "KAPITBAYAN_MIGRATION_ONLY": "true",
+                "GITHUB_ACTIONS": None,
+                "RUNNER_TEMP": runner_temp,
+            })
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("reserved for non-debug GitHub Actions", result.stderr)

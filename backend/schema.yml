@@ -860,8 +860,8 @@ paths:
   /api/v1/auth/platform/accounts/:
     get:
       operationId: api_v1_auth_platform_accounts_list
-      description: Limited superuser recovery and active-state support for barangay
-        accounts.
+      description: Limited operator/superuser recovery and active-state support for
+        barangay accounts.
       summary: Search eligible barangay accounts for platform support
       parameters:
       - in: query
@@ -906,8 +906,8 @@ paths:
   /api/v1/auth/platform/accounts/{id}/:
     get:
       operationId: api_v1_auth_platform_accounts_retrieve
-      description: Limited superuser recovery and active-state support for barangay
-        accounts.
+      description: Limited operator/superuser recovery and active-state support for
+        barangay accounts.
       parameters:
       - in: path
         name: id
@@ -928,8 +928,8 @@ paths:
           description: ''
     patch:
       operationId: api_v1_auth_platform_accounts_partial_update
-      description: Limited superuser recovery and active-state support for barangay
-        accounts.
+      description: Limited operator/superuser recovery and active-state support for
+        barangay accounts.
       summary: Correct a barangay account email and send a secure setup/reset link
       parameters:
       - in: path
@@ -967,8 +967,8 @@ paths:
   /api/v1/auth/platform/accounts/{id}/send-password-link/:
     post:
       operationId: api_v1_auth_platform_accounts_send_password_link_create
-      description: Limited superuser recovery and active-state support for barangay
-        accounts.
+      description: Limited operator/superuser recovery and active-state support for
+        barangay accounts.
       summary: Send a private setup/reset link to the verified account email
       parameters:
       - in: path
@@ -1003,8 +1003,8 @@ paths:
   /api/v1/auth/platform/accounts/{id}/set-active/:
     post:
       operationId: api_v1_auth_platform_accounts_set_active_create
-      description: Limited superuser recovery and active-state support for barangay
-        accounts.
+      description: Limited operator/superuser recovery and active-state support for
+        barangay accounts.
       summary: Activate or deactivate a barangay account
       parameters:
       - in: path
@@ -1043,7 +1043,7 @@ paths:
   /api/v1/auth/platform/barangay-applications/:
     get:
       operationId: api_v1_auth_platform_barangay_applications_list
-      description: Let DILG reviewers or controlled superusers review new Barangays.
+      description: Let Barangay Operators or controlled superusers review new Barangays.
       parameters:
       - name: page
         required: false
@@ -1062,10 +1062,32 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedBarangayApplicationOperatorList'
           description: ''
+  /api/v1/auth/platform/barangay-applications/{application_id}/proof/:
+    get:
+      operationId: api_v1_auth_platform_barangay_applications_proof_retrieve
+      description: Stream pending authority proof only to authorized onboarding reviewers.
+      summary: Download pending Barangay application authority proof
+      parameters:
+      - in: path
+        name: application_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Barangay Onboarding Review
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          description: Private authority document download.
+        '403':
+          description: Restricted to active Barangay Operators and Django superusers.
+        '404':
+          description: Application or pending proof not found.
   /api/v1/auth/platform/barangay-applications/{id}/:
     get:
       operationId: api_v1_auth_platform_barangay_applications_retrieve
-      description: Let DILG reviewers or controlled superusers review new Barangays.
+      description: Let Barangay Operators or controlled superusers review new Barangays.
       parameters:
       - in: path
         name: id
@@ -1087,7 +1109,7 @@ paths:
   /api/v1/auth/platform/barangay-applications/{id}/approve/:
     post:
       operationId: api_v1_auth_platform_barangay_applications_approve_create
-      description: Let DILG reviewers or controlled superusers review new Barangays.
+      description: Let Barangay Operators or controlled superusers review new Barangays.
       summary: Approve a verified Barangay application and activate its applicant
         Admin
       parameters:
@@ -1123,13 +1145,13 @@ paths:
         '400':
           description: Verification attestation or application state is invalid.
         '403':
-          description: Restricted to active DILG reviewers and Django superusers.
+          description: Restricted to active Barangay Operators and Django superusers.
         '409':
           description: A matching tenant/Admin or account conflict prevents provisioning.
   /api/v1/auth/platform/barangay-applications/{id}/reject/:
     post:
       operationId: api_v1_auth_platform_barangay_applications_reject_create
-      description: Let DILG reviewers or controlled superusers review new Barangays.
+      description: Let Barangay Operators or controlled superusers review new Barangays.
       summary: Reject a Barangay onboarding application with a recorded reason
       parameters:
       - in: path
@@ -1164,7 +1186,7 @@ paths:
         '400':
           description: A rejection reason is required or application state is invalid.
         '403':
-          description: Restricted to active DILG reviewers and Django superusers.
+          description: Restricted to active Barangay Operators and Django superusers.
         '409':
           description: Only pending applications can be rejected.
   /api/v1/auth/public/barangay-applications/:
@@ -1177,13 +1199,10 @@ paths:
       - Barangay Onboarding
       requestBody:
         content:
-          application/json:
+          multipart/form-data:
             schema:
               $ref: '#/components/schemas/BarangayApplicationCreate'
           application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/BarangayApplicationCreate'
-          multipart/form-data:
             schema:
               $ref: '#/components/schemas/BarangayApplicationCreate'
         required: true
@@ -1201,6 +1220,60 @@ paths:
           description: Invalid application details.
         '429':
           description: Application request limit reached.
+  /api/v1/auth/public/barangay-applications/{application_id}/verify-email/:
+    post:
+      operationId: api_v1_auth_public_barangay_applications_verify_email_create
+      description: Verify email ownership after an explicit POST from the applicant.
+      summary: Verify the official email for a pending Barangay application
+      parameters:
+      - in: path
+        name: application_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Barangay Onboarding
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BarangayApplicationEmailVerification'
+        required: true
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          description: Email verified; Barangay Operator review is still required.
+        '400':
+          description: The verification link is invalid, expired, or already used.
+        '404':
+          description: Application not found.
+        '429':
+          description: Verification request limit reached.
+  /api/v1/auth/public/barangay-applications/resend-verification/:
+    post:
+      operationId: api_v1_auth_public_barangay_applications_resend_verification_create
+      description: Resend a pending applicant's link without exposing account existence.
+      summary: Request another email verification link
+      tags:
+      - Barangay Onboarding
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BarangayApplicationVerificationResend'
+        required: true
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '202':
+          description: A generic response is returned whether or not a link was sent.
+        '400':
+          description: Invalid request fields.
+        '429':
+          description: Verification request limit reached.
   /api/v1/auth/public/barangays/:
     get:
       operationId: api_v1_auth_public_barangays_list
@@ -3425,6 +3498,9 @@ components:
       properties:
         contact_verified:
           type: boolean
+        proof_reviewed:
+          type: boolean
+          default: false
         review_note:
           type: string
           default: ''
@@ -3463,6 +3539,10 @@ components:
           type: string
           maxLength: 30
           minLength: 7
+        proof_of_authority:
+          type: string
+          format: uri
+          writeOnly: true
         password:
           type: string
           writeOnly: true
@@ -3486,7 +3566,16 @@ components:
       - name
       - password
       - password_confirm
+      - proof_of_authority
       - province
+    BarangayApplicationEmailVerification:
+      type: object
+      properties:
+        token:
+          type: string
+          maxLength: 128
+      required:
+      - token
     BarangayApplicationOperator:
       type: object
       properties:
@@ -3524,6 +3613,14 @@ components:
         contact_consent:
           type: boolean
           readOnly: true
+        email_verified_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        has_proof_of_authority:
+          type: boolean
+          readOnly: true
         status:
           allOf:
           - $ref: '#/components/schemas/StatusBdeEnum'
@@ -3538,6 +3635,9 @@ components:
           type: string
           readOnly: true
           nullable: true
+        proof_reviewed:
+          type: boolean
+          readOnly: true
         reviewed_at:
           type: string
           format: date-time
@@ -3582,10 +3682,13 @@ components:
       - created_admin_username
       - created_at
       - created_barangay_id
+      - email_verified_at
       - has_applicant_account
+      - has_proof_of_authority
       - id
       - municipality
       - name
+      - proof_reviewed
       - province
       - review_note
       - review_verified
@@ -3620,6 +3723,19 @@ components:
           minLength: 5
       required:
       - reason
+    BarangayApplicationVerificationResend:
+      type: object
+      properties:
+        application_id:
+          type: integer
+          minimum: 1
+        applicant_email:
+          type: string
+          format: email
+          maxLength: 254
+      required:
+      - applicant_email
+      - application_id
     CustomTokenObtainPair:
       type: object
       properties:
@@ -5763,13 +5879,13 @@ components:
       - ADMIN
       - RESIDENT
       - FIELD_OFFICIAL
-      - DILG_ADMIN
+      - BARANGAY_OPERATOR
       type: string
       description: |-
         * `ADMIN` - Admin
         * `RESIDENT` - Resident
         * `FIELD_OFFICIAL` - Field Official
-        * `DILG_ADMIN` - DILG Onboarding Reviewer
+        * `BARANGAY_OPERATOR` - Barangay Operator
     StaffUserCreate:
       type: object
       description: |-

@@ -108,4 +108,38 @@ describe('web login role boundaries', () => {
         });
         expect(logout).not.toHaveBeenCalled();
     });
+
+    it('routes a Barangay Operator to the onboarding and account-support workspace', async () => {
+        vi.mocked(axiosPublic.post).mockResolvedValueOnce({
+            data: {
+                access: 'barangay-operator-access-token',
+                user: { role: 'BARANGAY_OPERATOR' },
+            },
+        } as never);
+
+        render(
+            <MemoryRouter initialEntries={['/official-login']}>
+                <>
+                    <Login />
+                    <CurrentPath />
+                </>
+            </MemoryRouter>,
+        );
+
+        fireEvent.change(screen.getByPlaceholderText('Enter your official email'), {
+            target: { value: 'operator@example.test' },
+        });
+        fireEvent.change(screen.getByPlaceholderText('........'), {
+            target: { value: 'operator-password' },
+        });
+        fireEvent.click(screen.getByRole('button', { name: 'Sign in to Official Portal' }));
+
+        await waitFor(() => {
+            expect(screen.getByTestId('current-path')).toHaveTextContent('/operator/barangay-applications');
+        });
+        expect(login).toHaveBeenCalledWith('barangay-operator-access-token', {
+            role: 'BARANGAY_OPERATOR',
+        });
+        expect(logout).not.toHaveBeenCalled();
+    });
 });

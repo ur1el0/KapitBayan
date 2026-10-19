@@ -46,7 +46,7 @@ class UnassignedCommunicationsAPITests(APITestCase):
             username="legacy_platform_comm",
             password="SecurePassword123!",
             email="legacy_platform_comm@example.com",
-            role="DILG_ADMIN",
+            role="BARANGAY_OPERATOR",
             barangay=None,
             is_active=True,
         )
@@ -89,7 +89,7 @@ class UnassignedCommunicationsAPITests(APITestCase):
             created_by=self.unassigned_admin,
         )
 
-    def test_unassigned_non_dilg_users_receive_empty_communications_querysets(self):
+    def test_unassigned_non_operator_users_receive_empty_communications_querysets(self):
         for unassigned_user in [self.unassigned_admin, self.unassigned_resident]:
             self.client.force_login(unassigned_user)
 

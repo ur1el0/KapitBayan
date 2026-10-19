@@ -110,8 +110,8 @@ function RootRedirect() {
     if (user?.is_superuser) {
         return <Navigate to="/platform/accounts" replace />;
     }
-    if (user?.role === 'DILG_ADMIN') {
-        return <Navigate to="/dilg/barangay-applications" replace />;
+    if (user?.role === 'BARANGAY_OPERATOR') {
+        return <Navigate to="/operator/barangay-applications" replace />;
     }
     if (user?.role === 'FIELD_OFFICIAL') {
         return <Navigate to="/field-official-mobile" replace />;
@@ -192,13 +192,16 @@ export function App() {
                                 </Route>
                             </Route>
 
-                            {/* Controlled platform account recovery; backend requires Django superuser. */}
+                            {/* Bounded account recovery for operators; platform route stays superuser-only. */}
+                            <Route element={<ProtectedRoute allowedRoles={['BARANGAY_OPERATOR']} />}>
+                                <Route path="/operator/accounts" element={<PlatformAccountSupport />} />
+                            </Route>
                             <Route element={<ProtectedRoute requireSuperuser />}>
                                 <Route path="/platform/accounts" element={<PlatformAccountSupport />} />
                                 <Route path="/platform/barangay-applications" element={<PlatformBarangayApplications />} />
                             </Route>
-                            <Route element={<ProtectedRoute allowedRoles={['DILG_ADMIN']} />}>
-                                <Route path="/dilg/barangay-applications" element={<PlatformBarangayApplications />} />
+                            <Route element={<ProtectedRoute allowedRoles={['BARANGAY_OPERATOR']} />}>
+                                <Route path="/operator/barangay-applications" element={<PlatformBarangayApplications />} />
                             </Route>
 
                             {/* Citizen Desktop Portal (Tier 4: Residents & Self-Service Kiosks) */}

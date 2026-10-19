@@ -1,5 +1,7 @@
 """Authentication guards for production-only blocked demo accounts."""
 
+import re
+
 from django.conf import settings
 from django.contrib.auth.backends import ModelBackend
 from rest_framework.exceptions import AuthenticationFailed
@@ -45,7 +47,7 @@ def production_user_authentication_rule(user):
     return (
         default_user_authentication_rule(user)
         and not is_production_test_account(user)
-        and getattr(user, "role", None) in {"ADMIN", "RESIDENT", "FIELD_OFFICIAL", "DILG_ADMIN"}
+        and getattr(user, "role", None) in {"ADMIN", "RESIDENT", "FIELD_OFFICIAL", "BARANGAY_OPERATOR"}
     )
 
 
@@ -56,18 +58,19 @@ class ProductionSafeModelBackend(ModelBackend):
         return (
             super().user_can_authenticate(user)
             and not is_production_test_account(user)
-            and getattr(user, "role", None) in {"ADMIN", "RESIDENT", "FIELD_OFFICIAL", "DILG_ADMIN"}
+            and getattr(user, "role", None) in {"ADMIN", "RESIDENT", "FIELD_OFFICIAL", "BARANGAY_OPERATOR"}
         )
 
 class ProductionSafeJWTAuthentication(JWTAuthentication):
-    """Reject test accounts and confine DILG tokens to onboarding review."""
+    """Reject test accounts and confine operator tokens to platform support."""
 
-    _DILG_READ_PATHS = {
+    _OPERATOR_READ_PATHS = {
         "/api/v1/auth/me",
         "/api/v1/auth/sessions",
         "/api/v1/auth/platform/barangay-applications",
+        "/api/v1/auth/platform/accounts",
     }
-    _DILG_POST_PATHS = {
+    _OPERATOR_POST_PATHS = {
         "/api/v1/auth/logout",
         "/api/v1/auth/platform/barangay-applications",
     }
@@ -78,21 +81,37 @@ class ProductionSafeJWTAuthentication(JWTAuthentication):
             return None
 
         user, _token = result
-        if user.role == "DILG_ADMIN":
+        if user.role == "BARANGAY_OPERATOR":
             path = request.path_info.rstrip("/") or "/"
             method = request.method.upper()
-            is_application_route = path.startswith(
-                "/api/v1/auth/platform/barangay-applications/"
+            application_base = "/api/v1/auth/platform/barangay-applications"
+            account_base = "/api/v1/auth/platform/accounts"
+            is_application_detail_route = bool(
+                re.fullmatch(rf"{re.escape(application_base)}/[0-9]+", path)
             )
+            is_application_proof_route = bool(
+                re.fullmatch(rf"{re.escape(application_base)}/[0-9]+/proof", path)
+            )
+            is_application_decision_route = bool(
+                re.fullmatch(rf"{re.escape(application_base)}/[0-9]+/(approve|reject)", path)
+            )
+            is_account_detail_route = bool(re.fullmatch(rf"{re.escape(account_base)}/\d+", path))
+            is_account_action_route = bool(re.fullmatch(
+                rf"{re.escape(account_base)}/\d+/(send-password-link|set-active)", path
+            ))
             allowed = (
-                (path in self._DILG_READ_PATHS and method in {"GET", "HEAD", "OPTIONS"})
-                or (path in self._DILG_POST_PATHS and method == "POST")
-                or (is_application_route and method in {"GET", "HEAD", "OPTIONS", "POST"})
+                (path in self._OPERATOR_READ_PATHS and method in {"GET", "HEAD", "OPTIONS"})
+                or (path in self._OPERATOR_POST_PATHS and method == "POST")
+                or (is_application_detail_route and method in {"GET", "HEAD", "OPTIONS"})
+                or (is_application_proof_route and method in {"GET", "HEAD", "OPTIONS"})
+                or (is_application_decision_route and method in {"POST", "OPTIONS"})
+                or (is_account_detail_route and method in {"GET", "HEAD", "OPTIONS", "PATCH"})
+                or (is_account_action_route and method in {"POST", "OPTIONS"})
             )
             if not allowed:
                 raise AuthenticationFailed(
-                    "DILG accounts are limited to Barangay onboarding review.",
-                    code="dilg_scope_limited",
+                    "Barangay Operator accounts are limited to onboarding and account support.",
+                    code="barangay_operator_scope_limited",
                 )
         return result
 
@@ -100,7 +119,7 @@ class ProductionSafeJWTAuthentication(JWTAuthentication):
         user = super().get_user(validated_token)
         if (
             is_production_test_account(user)
-            or user.role not in {"ADMIN", "RESIDENT", "FIELD_OFFICIAL", "DILG_ADMIN"}
+            or user.role not in {"ADMIN", "RESIDENT", "FIELD_OFFICIAL", "BARANGAY_OPERATOR"}
         ):
             raise AuthenticationFailed(
                 "User is inactive or deleted.",

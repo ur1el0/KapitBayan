@@ -16,7 +16,7 @@ from rest_framework.response import Response
 from gridy_audit.models import AuditLog
 from gridy_audit.services import log_action
 from gridy_auth.models import Barangay, RefreshSession, User
-from gridy_auth.permissions import IsDjangoSuperuser
+from gridy_auth.permissions import IsBarangayOnboardingReviewer
 from gridy_auth.serializers.platform_account_support import (
     ACCOUNT_SUPPORT_ROLES,
     PlatformAccountActiveStateSerializer,
@@ -59,9 +59,9 @@ class PlatformAccountSupportViewSet(
     mixins.UpdateModelMixin,
     viewsets.GenericViewSet,
 ):
-    """Limited superuser recovery and active-state support for barangay accounts."""
+    """Limited operator/superuser recovery and active-state support for barangay accounts."""
 
-    permission_classes = [permissions.IsAuthenticated, IsDjangoSuperuser]
+    permission_classes = [permissions.IsAuthenticated, IsBarangayOnboardingReviewer]
     throttle_classes = [SharedDatabaseScopedRateThrottle]
     throttle_scope = "platform_account_support"
     serializer_class = PlatformAccountSummarySerializer
@@ -69,7 +69,9 @@ class PlatformAccountSupportViewSet(
 
     def get_queryset(self):
         actor = getattr(self.request, "user", None)
-        if not actor or not actor.is_authenticated or not actor.is_superuser:
+        if not actor or not actor.is_authenticated or not (
+            actor.is_superuser or actor.role == User.Role.BARANGAY_OPERATOR
+        ):
             return User.objects.none()
         # Write actions must scope row locks to User: these optional joins
         # otherwise make PostgreSQL reject FOR UPDATE on nullable join sides.
@@ -248,7 +250,7 @@ class PlatformAccountSupportViewSet(
             user=request.user,
             action_type=AuditLog.ActionType.USER_ACTION,
             description=(
-                f"Platform account support: {action}; target account ID={target.pk}; "
+                f"Barangay operator account support: {action}; target account ID={target.pk}; "
                 f"role={target.role}; barangay ID={target.barangay_id or 'unassigned'}; "
                 f"reason={reason}.{verification_note}"
             ),

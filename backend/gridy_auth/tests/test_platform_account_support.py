@@ -6,6 +6,7 @@ from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APIClient
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from gridy_audit.models import AuditLog
 from gridy_auth.models import Barangay, RefreshSession, User
@@ -34,26 +35,32 @@ class PlatformAccountSupportTests(IsolatedAuthAPITestCase):
             role=User.Role.RESIDENT,
             barangay=self.barangay,
         )
-        self.operator = User.objects.create_superuser(
+        self.operator = User.objects.create_user(
             username="support_test_operator",
             email="operator@example.test",
+            password="test-password-123",
+            role=User.Role.BARANGAY_OPERATOR,
+        )
+        self.superuser = User.objects.create_superuser(
+            username="support_test_superuser",
+            email="superuser@example.test",
             password="test-password-123",
         )
         self.client = APIClient()
         self.list_url = reverse("platform-account-support-list")
 
-    def test_only_active_superuser_can_list_supported_accounts(self):
+    def test_only_active_operator_or_superuser_can_list_supported_accounts(self):
         self.assertEqual(self.client.get(self.list_url).status_code, status.HTTP_401_UNAUTHORIZED)
 
         self.client.force_authenticate(self.admin)
         self.assertEqual(self.client.get(self.list_url).status_code, status.HTTP_403_FORBIDDEN)
 
-        legacy = User.objects.create_user(
-            username="support_legacy_role",
+        unsupported = User.objects.create_user(
+            username="support_unsupported_role",
             password="test-password-123",
-            role="DILG_ADMIN",
+            role="UNKNOWN_ROLE",
         )
-        self.client.force_authenticate(legacy)
+        self.client.force_authenticate(unsupported)
         self.assertEqual(self.client.get(self.list_url).status_code, status.HTTP_403_FORBIDDEN)
 
         self.client.force_authenticate(self.operator)
@@ -63,7 +70,22 @@ class PlatformAccountSupportTests(IsolatedAuthAPITestCase):
         self.assertIn(self.admin.pk, returned_ids)
         self.assertIn(self.resident.pk, returned_ids)
         self.assertNotIn(self.operator.pk, returned_ids)
-        self.assertNotIn(legacy.pk, returned_ids)
+        self.assertNotIn(self.superuser.pk, returned_ids)
+        self.client.force_authenticate(self.superuser)
+        self.assertEqual(self.client.get(self.list_url).status_code, status.HTTP_200_OK)
+
+    def test_operator_has_no_service_record_or_unbounded_account_access(self):
+        access = str(RefreshToken.for_user(self.operator).access_token)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {access}")
+        for path in (
+            "/api/v1/auth/pending-residents/",
+            "/api/v1/document-requests/",
+            "/api/v1/tickets/",
+            "/api/v1/aid-requests/",
+        ):
+            with self.subTest(path=path):
+                response = self.client.get(path)
+                self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_email_correction_is_audited_revokes_sessions_and_dispatches_after_commit(self):
         session = RefreshSession.objects.create(

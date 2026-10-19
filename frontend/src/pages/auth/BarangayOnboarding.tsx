@@ -130,7 +130,7 @@ export function BarangayOnboarding() {
                                     <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary-text">New Barangay onboarding</p>
                                     <h1 className="mt-1 text-2xl font-extrabold text-slate-900 sm:text-3xl">Request your Barangay’s first Admin account</h1>
                                     <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
-                                        Apply using the official’s work email and set the password for that account. A DILG reviewer verifies the Barangay and applicant before the account is activated. Existing Barangays should contact their Admin about Field Official accounts.
+                                        Apply using the official’s work email and set the password for that account. A Barangay Operator verifies the Barangay and applicant before the account is activated. Existing Barangays should contact their Admin about Field Official accounts.
                                     </p>
                                 </div>
                             </div>
@@ -196,12 +196,12 @@ export function BarangayOnboarding() {
                                         <input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} className="mt-0.5 h-4 w-4 rounded border-slate-300 text-primary focus-visible:ring-2 focus-visible:ring-primary" required />
                                         <span>I consent to use the applicant contact details only to review this onboarding request and contact the listed official.</span>
                                     </label>
-                                    <p className="text-xs leading-5 text-slate-500">Your official email will be your sign-in identity. We will email a verification link before DILG review. The password is hashed before storage, and the account stays locked until approval. Do not share your password or enter one-time codes here.</p>
+                                    <p className="text-xs leading-5 text-slate-500">Your official email will be your sign-in identity. We will email a verification link before Barangay Operator review. The password is hashed before storage, and the account stays locked until approval. Do not share your password or enter one-time codes here.</p>
                                 </div>
 
                                 <button type="submit" disabled={submitting || !authorized || !consent} className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-lg bg-primary px-5 py-3 text-sm font-bold text-primary-foreground hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 sm:w-auto">
                                     <ClipboardCheck className="h-4 w-4" aria-hidden="true" />
-                                    {submitting ? 'Submitting request…' : 'Submit for DILG review'}
+                                    {submitting ? 'Submitting request…' : 'Submit for Barangay Operator review'}
                                 </button>
                             </form>
                         </>
@@ -210,7 +210,7 @@ export function BarangayOnboarding() {
                             <CheckCircle2 className="mx-auto h-12 w-12 text-emerald-600" aria-hidden="true" />
                             <h1 className="mt-4 text-2xl font-extrabold text-slate-900">Application submitted</h1>
                             <p role="status" className="mx-auto mt-3 max-w-xl text-sm leading-6 text-slate-600">
-                                Your request reference is <strong>KB-{applicationId}</strong>. Check the official email inbox and spam folder for a verification link. After verifying your email, DILG will review the Barangay and supporting authority document. Your account stays inactive until approval.
+                                Your request reference is <strong>KB-{applicationId}</strong>. Check the official email inbox and spam folder for a verification link. After verifying your email, a Barangay Operator will review the Barangay and supporting authority document. Your account stays inactive until approval.
                             </p>
                             <button type="button" onClick={() => void resendVerification()} disabled={resending} className="mt-5 inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-5 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50 disabled:cursor-wait disabled:opacity-60">
                                 <MailCheck className="h-4 w-4" aria-hidden="true" /> {resending ? 'Requesting…' : 'Resend verification email'}

@@ -166,16 +166,16 @@ class TestStaffManagementPermissions:
         )
         assert create_resp.status_code == status.HTTP_403_FORBIDDEN
 
-    def test_dilg_admin_cannot_manage_field_staff(self, api_client):
-        dilg_admin = User.objects.create_user(
-            username="dilg_admin_staff_test",
-            email="dilg.staff.test@example.com",
+    def test_barangay_operator_cannot_manage_field_staff(self, api_client):
+        barangay_operator = User.objects.create_user(
+            username="barangay_operator_staff_test",
+            email="barangay-operator.staff.test@example.com",
             password="AdminPassword123!",
-            role="DILG_ADMIN",
+            role="BARANGAY_OPERATOR",
             barangay=None,
             is_staff=True,
         )
-        api_client.force_authenticate(user=dilg_admin)
+        api_client.force_authenticate(user=barangay_operator)
 
         assert api_client.get("/api/v1/auth/staff/").status_code == status.HTTP_403_FORBIDDEN
         response = api_client.post(

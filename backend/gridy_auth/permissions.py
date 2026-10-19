@@ -69,7 +69,7 @@ class IsDjangoSuperuser(BasePermission):
 
 
 class IsBarangayOnboardingReviewer(BasePermission):
-    """Allow only active DILG reviewers or controlled Django superusers."""
+    """Allow active Barangay Operators or controlled Django superusers."""
 
     def has_permission(self, request, view):
         user = request.user
@@ -77,5 +77,5 @@ class IsBarangayOnboardingReviewer(BasePermission):
             user
             and user.is_authenticated
             and user.is_active
-            and (user.is_superuser or user.role == User.Role.DILG_ADMIN)
+            and (user.is_superuser or user.role == User.Role.BARANGAY_OPERATOR)
         )
