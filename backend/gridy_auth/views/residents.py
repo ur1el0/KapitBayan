@@ -28,6 +28,9 @@ from rest_framework.exceptions import PermissionDenied
 
 logger = logging.getLogger(__name__)
 
+MAX_RESIDENT_IMPORT_SIZE_BYTES = 5 * 1024 * 1024
+MAX_RESIDENT_IMPORT_ROWS = 1000
+
 class FileUploadSerializer(serializers.Serializer):
     file = serializers.FileField(help_text="CSV file containing resident accounts to import.")
 
@@ -62,12 +65,15 @@ class ResidentRejectionSerializer(serializers.Serializer):
         207: ResidentImportResponseSerializer,
         400: OpenApiTypes.OBJECT,
         403: OpenApiTypes.OBJECT,
+        413: OpenApiTypes.OBJECT,
+        429: OpenApiTypes.OBJECT,
     }
 )
 
 class ResidentImportView(APIView):
     permission_classes = [permissions.IsAuthenticated, IsBarangayOfficial]
     parser_classes = [MultiPartParser, FormParser]
+    throttle_scope = "resident_import"
 
     def post(self, request, *args, **kwargs):
         if request.user.barangay_id is None:
@@ -78,11 +84,23 @@ class ResidentImportView(APIView):
             return Response({"detail": "No file was uploaded"}, status=status.HTTP_400_BAD_REQUEST)
         if not file_obj.name.endswith('.csv'):
             return Response({"detail": "File is not a CSV."}, status=status.HTTP_400_BAD_REQUEST)
+        if file_obj.size > MAX_RESIDENT_IMPORT_SIZE_BYTES:
+            return Response(
+                {"detail": "The CSV file exceeds the 5 MiB upload limit."},
+                status=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            )
 
         try:
             decoded_file = file_obj.read().decode('utf-8')
             io_string = io.StringIO(decoded_file)
-            reader = csv.DictReader(io_string)
+            rows = []
+            for row_idx, row in enumerate(csv.DictReader(io_string), start=1):
+                if row_idx > MAX_RESIDENT_IMPORT_ROWS:
+                    return Response(
+                        {"detail": "The CSV file exceeds the 1,000 resident row limit."},
+                        status=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                    )
+                rows.append(row)
         except Exception:
             logger.exception("Failed to read uploaded resident import file.")
             return Response(
@@ -98,7 +116,7 @@ class ResidentImportView(APIView):
 
         try:
             with transaction.atomic():
-                for row_idx, row in enumerate(reader, start=1):
+                for row_idx, row in enumerate(rows, start=1):
                     # Sanitize inputs by stripping whitespace
                     username = (row.get('username') or '').strip()
                     email = (row.get('email') or '').strip().lower()
