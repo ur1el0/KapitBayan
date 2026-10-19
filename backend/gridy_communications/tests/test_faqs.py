@@ -14,7 +14,7 @@ class FAQAPITests(APITestCase):
             username="legacy_platform_faq",
             password="SecurePassword123!",
             email="legacy_platform@example.com",
-            role="DILG_ADMIN",
+            role="BARANGAY_OPERATOR",
             is_active=True,
         )
         self.admin_a = User.objects.create_user(

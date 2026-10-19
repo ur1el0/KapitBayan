@@ -59,7 +59,7 @@ class SeedBarangaysCommandTests(TestCase):
             username="legacy_scope_user",
             email="legacy-scope@example.test",
             password="legacy-password",
-            role="DILG_ADMIN",
+            role="BARANGAY_OPERATOR",
             first_name="Historical",
             is_staff=False,
         )
@@ -67,7 +67,7 @@ class SeedBarangaysCommandTests(TestCase):
         call_command("seed_barangays", confirm_demo_only=True)
 
         legacy_user.refresh_from_db()
-        self.assertEqual(legacy_user.role, "DILG_ADMIN")
+        self.assertEqual(legacy_user.role, "BARANGAY_OPERATOR")
         self.assertEqual(legacy_user.first_name, "Historical")
         self.assertFalse(legacy_user.is_staff)
 

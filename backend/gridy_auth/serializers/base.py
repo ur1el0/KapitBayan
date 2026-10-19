@@ -216,7 +216,7 @@ class UserSerializer(serializers.ModelSerializer):
         if isinstance(instance, User) and instance.role in {
             User.Role.ADMIN,
             User.Role.FIELD_OFFICIAL,
-            User.Role.DILG_ADMIN,
+            User.Role.BARANGAY_OPERATOR,
         }:
             self.fields['username'].read_only = True
         if isinstance(instance, User) and hasattr(instance, 'profile'):
@@ -227,7 +227,7 @@ class UserSerializer(serializers.ModelSerializer):
         if not full_name:
             identity = (
                 obj.email
-                if obj.role in {User.Role.ADMIN, User.Role.FIELD_OFFICIAL, User.Role.DILG_ADMIN}
+                if obj.role in {User.Role.ADMIN, User.Role.FIELD_OFFICIAL, User.Role.BARANGAY_OPERATOR}
                 else obj.username
             )
             full_name = f"{obj.first_name} {obj.last_name}".strip() or identity
@@ -238,7 +238,7 @@ class UserSerializer(serializers.ModelSerializer):
         if isinstance(self.instance, User) and self.instance.role in {
             User.Role.ADMIN,
             User.Role.FIELD_OFFICIAL,
-            User.Role.DILG_ADMIN,
+            User.Role.BARANGAY_OPERATOR,
         }:
             if not normalized_email:
                 raise serializers.ValidationError("Official accounts must have an email sign-in identity.")
@@ -251,7 +251,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)
-        if instance.role in {User.Role.ADMIN, User.Role.FIELD_OFFICIAL, User.Role.DILG_ADMIN}:
+        if instance.role in {User.Role.ADMIN, User.Role.FIELD_OFFICIAL, User.Role.BARANGAY_OPERATOR}:
             # The model needs an internal unique username, but officials sign in by email.
             representation['username'] = instance.email
         return representation

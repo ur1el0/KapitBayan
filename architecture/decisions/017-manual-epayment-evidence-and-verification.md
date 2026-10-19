@@ -42,7 +42,7 @@ Payment receipt images are strictly treated as private, access-controlled financ
 Access to payment proof images and payment verification endpoints is restricted to:
 - The resident owner who submitted the document request (`request.user == document_request.user`).
 - Barangay officials (`ADMIN` or `FIELD_OFFICIAL`) belonging to the exact same barangay tenant (`request.user.barangay_id == document_request.barangay_id`).
-- All other authenticated actors (DILG administrators, officials from other barangays, unassigned staff, and third-party residents) or non-existent proofs receive **HTTP 404 Not Found** to prevent tenant existence probing. Unauthenticated requests receive **HTTP 401 Unauthorized**.
+- All other authenticated actors (Barangay Operators, officials from other barangays, unassigned staff, and third-party residents) or non-existent proofs receive **HTTP 404 Not Found** to prevent tenant existence probing. Unauthenticated requests receive **HTTP 401 Unauthorized**.
 
 ### 6. Decoupled O.R. Persistence & Server-Side Release Gate
 - Authorized staff (`ADMIN` or `FIELD_OFFICIAL`) can persist and update the Official Receipt (`or_number`) independently during payment review or while the request is `READY_FOR_PICKUP`, without triggering immediate document release.

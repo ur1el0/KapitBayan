@@ -16,7 +16,7 @@ from gridy_auth.models import User, RefreshSession
 EMAIL_SIGN_IN_ROLES = {
     User.Role.ADMIN,
     User.Role.FIELD_OFFICIAL,
-    User.Role.DILG_ADMIN,
+    User.Role.BARANGAY_OPERATOR,
 }
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -55,7 +55,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             User.Role.ADMIN,
             User.Role.RESIDENT,
             User.Role.FIELD_OFFICIAL,
-            User.Role.DILG_ADMIN,
+            User.Role.BARANGAY_OPERATOR,
         }:
             raise serializers.ValidationError({"detail": "This account role is no longer supported."})
         full_name = getattr(self.user.profile, 'full_name', None) if hasattr(self.user, 'profile') else None

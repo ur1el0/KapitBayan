@@ -120,7 +120,7 @@ class PublicBarangayApplicationEmailVerificationView(APIView):
         summary="Verify the official email for a pending Barangay application",
         request=BarangayApplicationEmailVerificationSerializer,
         responses={
-            200: OpenApiResponse(description="Email verified; DILG review is still required."),
+            200: OpenApiResponse(description="Email verified; Barangay Operator review is still required."),
             400: OpenApiResponse(description="The verification link is invalid, expired, or already used."),
             404: OpenApiResponse(description="Application not found."),
             429: OpenApiResponse(description="Verification request limit reached."),
@@ -160,7 +160,7 @@ class PublicBarangayApplicationEmailVerificationView(APIView):
         except BarangayApplication.DoesNotExist:
             return Response({"detail": "Application not found."}, status=status.HTTP_404_NOT_FOUND)
 
-        return Response({"detail": "Email verified. The application still requires DILG review."})
+        return Response({"detail": "Email verified. The application still requires Barangay Operator review."})
 
 
 @extend_schema(tags=["Barangay Onboarding"])
@@ -231,7 +231,7 @@ class PlatformBarangayApplicationProofView(APIView):
         summary="Download pending Barangay application authority proof",
         responses={
             200: OpenApiResponse(description="Private authority document download."),
-            403: OpenApiResponse(description="Restricted to active DILG reviewers and Django superusers."),
+            403: OpenApiResponse(description="Restricted to active Barangay Operators and Django superusers."),
             404: OpenApiResponse(description="Application or pending proof not found."),
         },
     )
@@ -280,7 +280,7 @@ class PlatformBarangayApplicationViewSet(
     mixins.RetrieveModelMixin,
     viewsets.GenericViewSet,
 ):
-    """Let DILG reviewers or controlled superusers review new Barangays."""
+    """Let Barangay Operators or controlled superusers review new Barangays."""
 
     permission_classes = [permissions.IsAuthenticated, IsBarangayOnboardingReviewer]
     throttle_classes = [SharedDatabaseScopedRateThrottle]
@@ -291,7 +291,7 @@ class PlatformBarangayApplicationViewSet(
     def get_queryset(self):
         user = getattr(self.request, "user", None)
         if not user or not user.is_authenticated or not (
-            user.is_superuser or user.role == User.Role.DILG_ADMIN
+            user.is_superuser or user.role == User.Role.BARANGAY_OPERATOR
         ):
             return BarangayApplication.objects.none()
         return BarangayApplication.objects.select_related(
@@ -320,7 +320,7 @@ class PlatformBarangayApplicationViewSet(
         responses={
             200: BarangayApplicationOperatorSerializer,
             400: OpenApiResponse(description="Verification attestation or application state is invalid."),
-            403: OpenApiResponse(description="Restricted to active DILG reviewers and Django superusers."),
+            403: OpenApiResponse(description="Restricted to active Barangay Operators and Django superusers."),
             409: OpenApiResponse(description="A matching tenant/Admin or account conflict prevents provisioning."),
         },
     )
@@ -538,7 +538,7 @@ class PlatformBarangayApplicationViewSet(
         responses={
             200: BarangayApplicationOperatorSerializer,
             400: OpenApiResponse(description="A rejection reason is required or application state is invalid."),
-            403: OpenApiResponse(description="Restricted to active DILG reviewers and Django superusers."),
+            403: OpenApiResponse(description="Restricted to active Barangay Operators and Django superusers."),
             409: OpenApiResponse(description="Only pending applications can be rejected."),
         },
     )

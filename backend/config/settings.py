@@ -311,8 +311,18 @@ AUTHENTICATION_BACKENDS = (
 CLOUDINARY_CLOUD_NAME = env('CLOUDINARY_CLOUD_NAME', default='')
 CLOUDINARY_API_KEY = env('CLOUDINARY_API_KEY', default='')
 CLOUDINARY_API_SECRET = env('CLOUDINARY_API_SECRET', default='')
+MIGRATION_ONLY_RUNTIME = env.bool('KAPITBAYAN_MIGRATION_ONLY', default=False)
 
-if not DEBUG and not IS_TESTING:
+if MIGRATION_ONLY_RUNTIME and (
+    os.environ.get('GITHUB_ACTIONS', '').casefold() != 'true'
+    or not os.environ.get('RUNNER_TEMP', '').strip()
+    or DEBUG
+):
+    raise ImproperlyConfigured(
+        'KAPITBAYAN_MIGRATION_ONLY is reserved for non-debug GitHub Actions migration jobs.'
+    )
+
+if not DEBUG and not IS_TESTING and not MIGRATION_ONLY_RUNTIME:
     missing_cloudinary_settings = [
         name
         for name, value in (
@@ -331,7 +341,21 @@ if not DEBUG and not IS_TESTING:
 
 STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
 
-if CLOUDINARY_CLOUD_NAME and CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET:
+if MIGRATION_ONLY_RUNTIME:
+    # Migration jobs never serve or inspect media. Keep model storage imports
+    # deterministic without requiring production Cloudinary credentials.
+    MEDIA_URL = '/media/'
+    MEDIA_ROOT = os.path.join(os.environ['RUNNER_TEMP'], 'gridy-migration-media')
+    STORAGES = {
+        'default': {
+            'BACKEND': 'django.core.files.storage.FileSystemStorage',
+            'OPTIONS': {'location': MEDIA_ROOT},
+        },
+        'staticfiles': {
+            'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage',
+        },
+    }
+elif CLOUDINARY_CLOUD_NAME and CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET:
     CLOUDINARY_STORAGE = { 
         'CLOUD_NAME': CLOUDINARY_CLOUD_NAME,
         'API_KEY': CLOUDINARY_API_KEY,
@@ -438,54 +462,55 @@ if not DEBUG and not IS_TESTING:
             f'Production database engine must be PostgreSQL, but resolved to {db_engine}.'
         )
 
-    from urllib.parse import urlparse
-    parsed_frontend_url = urlparse(FRONTEND_URL)
-    if (
-        not FRONTEND_URL
-        or parsed_frontend_url.scheme != 'https'
-        or not parsed_frontend_url.netloc
-    ):
-        raise ImproperlyConfigured(
-            'Production requires a valid HTTPS FRONTEND_URL '
-            '(e.g. https://gridy.onrender.com).'
-        )
+    if not MIGRATION_ONLY_RUNTIME:
+        from urllib.parse import urlparse
+        parsed_frontend_url = urlparse(FRONTEND_URL)
+        if (
+            not FRONTEND_URL
+            or parsed_frontend_url.scheme != 'https'
+            or not parsed_frontend_url.netloc
+        ):
+            raise ImproperlyConfigured(
+                'Production requires a valid HTTPS FRONTEND_URL '
+                '(e.g. https://gridy.onrender.com).'
+            )
 
-    if EMAIL_BACKEND == SMTP_EMAIL_BACKEND:
-        email_settings = (
-            ('EMAIL_HOST', EMAIL_HOST),
-            ('EMAIL_HOST_USER', EMAIL_HOST_USER),
-            ('EMAIL_HOST_PASSWORD', EMAIL_HOST_PASSWORD),
-            ('DEFAULT_FROM_EMAIL', DEFAULT_FROM_EMAIL),
-        )
-    elif EMAIL_BACKEND == RESEND_EMAIL_BACKEND:
-        email_settings = (
-            ('RESEND_API_KEY', RESEND_API_KEY),
-            ('DEFAULT_FROM_EMAIL', DEFAULT_FROM_EMAIL),
-        )
-    else:
-        raise ImproperlyConfigured(
-            'Production email backend must be Django SMTP or '
-            'config.email_backends.ResendEmailBackend.'
-        )
+        if EMAIL_BACKEND == SMTP_EMAIL_BACKEND:
+            email_settings = (
+                ('EMAIL_HOST', EMAIL_HOST),
+                ('EMAIL_HOST_USER', EMAIL_HOST_USER),
+                ('EMAIL_HOST_PASSWORD', EMAIL_HOST_PASSWORD),
+                ('DEFAULT_FROM_EMAIL', DEFAULT_FROM_EMAIL),
+            )
+        elif EMAIL_BACKEND == RESEND_EMAIL_BACKEND:
+            email_settings = (
+                ('RESEND_API_KEY', RESEND_API_KEY),
+                ('DEFAULT_FROM_EMAIL', DEFAULT_FROM_EMAIL),
+            )
+        else:
+            raise ImproperlyConfigured(
+                'Production email backend must be Django SMTP or '
+                'config.email_backends.ResendEmailBackend.'
+            )
 
-    missing_email_settings = [
-        name for name, value in email_settings if not value.strip()
-    ]
-    if missing_email_settings:
-        raise ImproperlyConfigured(
-            'Production email delivery requires: '
-            + ', '.join(missing_email_settings)
-            + '.'
-        )
+        missing_email_settings = [
+            name for name, value in email_settings if not value.strip()
+        ]
+        if missing_email_settings:
+            raise ImproperlyConfigured(
+                'Production email delivery requires: '
+                + ', '.join(missing_email_settings)
+                + '.'
+            )
 
-    if (
-        not FIREBASE_SERVICE_ACCOUNT_JSON_PATH
-        or not Path(FIREBASE_SERVICE_ACCOUNT_JSON_PATH).is_file()
-    ):
-        raise ImproperlyConfigured(
-            'Production push notifications require a valid '
-            'FIREBASE_SERVICE_ACCOUNT_JSON_PATH.'
-        )
+        if (
+            not FIREBASE_SERVICE_ACCOUNT_JSON_PATH
+            or not Path(FIREBASE_SERVICE_ACCOUNT_JSON_PATH).is_file()
+        ):
+            raise ImproperlyConfigured(
+                'Production push notifications require a valid '
+                'FIREBASE_SERVICE_ACCOUNT_JSON_PATH.'
+            )
 
     # Production Security Headers & Cookie Policies
     SESSION_COOKIE_SECURE = env.bool('SESSION_COOKIE_SECURE', default=True)

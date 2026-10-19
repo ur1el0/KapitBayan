@@ -68,6 +68,7 @@ class BarangaySeedTests(TestCase):
     def test_seed_barangays_does_not_create_platform_or_government_wide_accounts(self):
         call_command("seed_barangays", confirm_demo_only=True, stdout=StringIO())
         self.assertFalse(User.objects.filter(username="dilg_admin").exists())
+        self.assertFalse(User.objects.filter(username="barangay_operator").exists())
 
 
 class LegacyDemoCredentialMigrationTests(TestCase):
@@ -123,6 +124,7 @@ class SeedUsersCommandTests(TestCase):
         self.assertTrue(User.objects.get(username="tanod_dupay").check_password(DEFAULT_SEED_PASSWORD))
         self.assertTrue(User.objects.get(username="resident_dupay").check_password(DEFAULT_SEED_PASSWORD))
         self.assertFalse(User.objects.filter(username="dilg_admin").exists())
+        self.assertFalse(User.objects.filter(username="barangay_operator").exists())
 
         resident = Resident.objects.get(user__username="resident_dupay")
         self.assertTrue(resident.is_verified)
@@ -138,6 +140,7 @@ class SeedUsersCommandTests(TestCase):
         self.assertEqual(User.objects.count(), first_count)
         self.assertTrue(User.objects.get(username="admin_dupay").check_password(custom_password))
         self.assertFalse(User.objects.filter(username="dilg_admin").exists())
+        self.assertFalse(User.objects.filter(username="barangay_operator").exists())
 
     @override_settings(DEBUG=False)
     def test_seed_users_refuses_when_debug_is_disabled(self):

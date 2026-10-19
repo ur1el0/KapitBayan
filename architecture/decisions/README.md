@@ -23,14 +23,16 @@ This index lists the decision records present in this repository snapshot. Read 
 | [017](017-manual-epayment-evidence-and-verification.md) | Manual e-payment evidence and verification |
 | [018](018-explicit-document-fee-assessment-and-waiver-provenance.md) | Explicit fee assessment and waiver provenance |
 | [019](019-public-information-ai-navigator-boundary.md) | Retired: former Public Information AI Navigator boundary |
-| [020](020-dilg-account-support-boundary.md) | Superseded: historical bounded DILG account support and recovery |
-| [021](021-barangay-only-product-scope-and-platform-recovery.md) | Barangay tenant scope and superuser platform recovery; onboarding reviewer scope amended by ADR 023 |
+| [020](020-dilg-account-support-boundary.md) | Superseded: historical account-support boundary; active policy in ADR 025 |
+| [021](021-barangay-only-product-scope-and-platform-recovery.md) | Barangay tenant scope; onboarding reviewer scope superseded by ADR 025 |
 | [022](022-reviewed-new-barangay-onboarding.md) | Superseded: initial reviewed public application and operator-created first Admin flow |
-| [023](023-dilg-reviewed-barangay-admin-registration.md) | DILG-reviewed Barangay Admin self-registration using official email |
-| [024](024-barangay-onboarding-email-and-authority-evidence.md) | Email verification and private authority evidence for Barangay onboarding |
+| [023](023-dilg-reviewed-barangay-admin-registration.md) | Superseded reviewer identity; application safeguards retained under ADR 025 |
+| [024](024-barangay-onboarding-email-and-authority-evidence.md) | Email verification and private authority evidence retained under ADR 025 |
+| [025](025-barangay-operator-onboarding-and-account-support.md) | Barangay Operator onboarding and bounded account support; no analytics or service-record access |
 
 ## Implementation notes
 
 - ADR 008's role-separation decision remains relevant. Its proposed hidden role-switch controls are not present in the current `frontend/src/App.tsx`; see the note in that ADR before describing or implementing those controls.
+- ADRs 020, 023, and the reviewer identity in 024 are historical; the active Barangay Operator permissions and account-support boundary are in ADR 025.
 - ADR 009's polling and low-dependency direction is current; queue updates use HTTP requests. Notifications remain in-process and best-effort under ADR 013. Scoped API throttles use PostgreSQL under ADR 016; general-purpose `LocMemCache` remains process-local.
 - ADR 015 records a private Azure Container Registry image path, not an approval to deploy the application to Azure. Azure remains subject to its separate readiness/owner gate.

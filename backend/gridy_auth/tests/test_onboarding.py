@@ -258,7 +258,7 @@ class BarangayOnboardingTests(TestCase):
         self.assertEqual(self.client.get(proof_url).status_code, status.HTTP_403_FORBIDDEN)
 
         reviewer = User.objects.create_user(
-            username="dilg_reviewer", password="test-password", role=User.Role.DILG_ADMIN,
+            username="barangay-operator_reviewer", password="test-password", role=User.Role.BARANGAY_OPERATOR,
             is_active=True,
         )
         self.client.force_authenticate(user=reviewer)
@@ -274,7 +274,7 @@ class BarangayOnboardingTests(TestCase):
     def test_approval_requires_verified_email_and_reviewed_proof_then_cleans_proof(self):
         application = self.create_application()
         reviewer = User.objects.create_user(
-            username="dilg_reviewer", password="test-password", role=User.Role.DILG_ADMIN,
+            username="barangay-operator_reviewer", password="test-password", role=User.Role.BARANGAY_OPERATOR,
             is_active=True,
         )
         self.client.force_authenticate(user=reviewer)
@@ -315,7 +315,7 @@ class BarangayOnboardingTests(TestCase):
         application = self.create_application(email="reject@example.test")
         file_path = application.proof_of_authority.path
         reviewer = User.objects.create_user(
-            username="dilg_reviewer", password="test-password", role=User.Role.DILG_ADMIN,
+            username="barangay-operator_reviewer", password="test-password", role=User.Role.BARANGAY_OPERATOR,
             is_active=True,
         )
         self.client.force_authenticate(user=reviewer)

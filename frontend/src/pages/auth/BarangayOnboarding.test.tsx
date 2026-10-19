@@ -28,7 +28,7 @@ describe('Barangay onboarding verification', () => {
             detail: 'If this application is pending and needs email verification, a new link will be sent when eligible.',
         });
         vi.mocked(verifyBarangayApplicationEmail).mockResolvedValue({
-            detail: 'Email verified. The application still requires DILG review.',
+            detail: 'Email verified. The application still requires Barangay Operator review.',
         });
     });
 
@@ -53,7 +53,7 @@ describe('Barangay onboarding verification', () => {
         fireEvent.change(screen.getByLabelText('Confirm password'), { target: { value: 'SafePassword123!' } });
         fireEvent.click(screen.getByLabelText(/I am authorized to request/));
         fireEvent.click(screen.getByLabelText(/I consent to use the applicant/));
-        const submitButton = screen.getByRole('button', { name: 'Submit for DILG review' });
+        const submitButton = screen.getByRole('button', { name: 'Submit for Barangay Operator review' });
         expect(submitButton).toBeEnabled();
         fireEvent.submit(submitButton.closest('form')!);
 
@@ -78,7 +78,7 @@ describe('Barangay onboarding verification', () => {
         expect(verifyBarangayApplicationEmail).not.toHaveBeenCalled();
         fireEvent.click(screen.getByRole('button', { name: 'Verify email' }));
         await waitFor(() => expect(verifyBarangayApplicationEmail).toHaveBeenCalledWith(12, 'single-use-token'));
-        expect(await screen.findByText(/application still requires DILG review/i)).toBeInTheDocument();
+        expect(await screen.findByText(/application still requires Barangay Operator review/i)).toBeInTheDocument();
         expect(window.location.hash).toBe('');
     });
 });

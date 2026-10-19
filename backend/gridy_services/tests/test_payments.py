@@ -213,15 +213,15 @@ class DocumentPaymentWorkflowTests(APITestCase):
         )
         self.assertEqual(field_response.status_code, status.HTTP_403_FORBIDDEN)
 
-        dilg_admin = User.objects.create_user(
-            username="recipient_dilg_admin",
+        barangay_operator = User.objects.create_user(
+            username="recipient_barangay_operator",
             password="SecurePassword123!",
-            role="DILG_ADMIN",
+            role="BARANGAY_OPERATOR",
             is_staff=True,
         )
-        self.client.force_authenticate(dilg_admin)
-        dilg_response = self.client.get(reverse("payment-recipient-list"))
-        self.assertEqual(dilg_response.status_code, status.HTTP_403_FORBIDDEN)
+        self.client.force_authenticate(barangay_operator)
+        operator_response = self.client.get(reverse("payment-recipient-list"))
+        self.assertEqual(operator_response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_legacy_role_cannot_view_another_tenant_document(self):
         document = self.make_request(
@@ -231,13 +231,13 @@ class DocumentPaymentWorkflowTests(APITestCase):
             payment_recipient_identifier_snapshot="09170000000",
             payment_instructions_snapshot="Use the request number.",
         )
-        dilg_admin = User.objects.create_user(
-            username="payment_dilg_admin",
+        barangay_operator = User.objects.create_user(
+            username="payment_barangay_operator",
             password="SecurePassword123!",
-            role="DILG_ADMIN",
+            role="BARANGAY_OPERATOR",
             is_staff=True,
         )
-        self.client.force_authenticate(dilg_admin)
+        self.client.force_authenticate(barangay_operator)
 
         response = self.client.get(
             reverse("document-request-detail", args=[document.pk])

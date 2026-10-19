@@ -74,7 +74,7 @@ export function VerifyBarangayEmail() {
                 </div>
 
                 {verified ? (
-                    <p role="status" className="mt-4 rounded-lg bg-emerald-50 p-4 text-sm leading-6 text-emerald-900">{message} You will be able to sign in after DILG approves the application.</p>
+                    <p role="status" className="mt-4 rounded-lg bg-emerald-50 p-4 text-sm leading-6 text-emerald-900">{message} You will be able to sign in after a Barangay Operator approves the application.</p>
                 ) : (
                     <>
                         <p className="mt-4 text-sm leading-6 text-slate-600">Confirm that you can receive mail at the official email on the Barangay Admin application. Opening this page does not verify it; select the button below to confirm.</p>

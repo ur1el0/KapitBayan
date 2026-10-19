@@ -154,7 +154,7 @@ class User(AbstractUser):
         ADMIN = 'ADMIN', 'Admin'
         RESIDENT = 'RESIDENT', 'Resident'
         FIELD_OFFICIAL = 'FIELD_OFFICIAL', 'Field Official'
-        DILG_ADMIN = 'DILG_ADMIN', 'DILG Onboarding Reviewer'
+        BARANGAY_OPERATOR = 'BARANGAY_OPERATOR', 'Barangay Operator'
 
     role = models.CharField(
         max_length=50,

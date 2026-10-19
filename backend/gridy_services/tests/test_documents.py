@@ -185,13 +185,13 @@ class DocumentRequestAPITests(ServiceAPIBaseTestCase):
         self.assertFalse(DocumentRequest.objects.exists())
 
     def test_retired_role_cannot_create_document_request(self):
-        dilg_admin = User.objects.create_user(
-            username="dilg_document_test",
+        barangay_operator = User.objects.create_user(
+            username="barangay_operator_document_test",
             password="SecurePassword123!",
-            email="dilg-doc-test@example.com",
-            role="DILG_ADMIN",
+            email="barangay-operator-doc-test@example.com",
+            role="BARANGAY_OPERATOR",
         )
-        self.client.force_authenticate(dilg_admin)
+        self.client.force_authenticate(barangay_operator)
 
         response = self.client.post(
             reverse('document-request-list'),

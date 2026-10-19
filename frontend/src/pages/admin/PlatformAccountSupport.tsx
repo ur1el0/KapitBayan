@@ -67,7 +67,7 @@ function ReasonSelect({
 }
 
 export function PlatformAccountSupport() {
-    const { logout } = useAuth();
+    const { logout, user } = useAuth();
     const [accounts, setAccounts] = useState<PlatformAccount[]>([]);
     const [count, setCount] = useState(0);
     const [searchDraft, setSearchDraft] = useState('');
@@ -204,14 +204,14 @@ export function PlatformAccountSupport() {
                 <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary-text">Platform operations</p>
                 <h1 className="mt-1 flex items-center gap-3 text-2xl font-extrabold text-slate-900 sm:text-3xl">
                     <UserRoundCog className="h-7 w-7 text-primary-text" aria-hidden="true" />
-                    Account support
+                    Barangay Operator account support
                 </h1>
                 <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
                     Find barangay accounts, including legacy unassigned accounts, correct a verified contact address, send a private setup/reset link, or suspend access. These actions are audited.
                 </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                    <Link to="/platform/barangay-applications" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                    <Link to={user?.is_superuser ? "/platform/barangay-applications" : "/operator/barangay-applications"} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
                         <ShieldCheck className="h-4 w-4" aria-hidden="true" /> Barangay applications
                     </Link>
                     <button

@@ -57,7 +57,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                 User.Role.ADMIN,
                 User.Role.RESIDENT,
                 User.Role.FIELD_OFFICIAL,
-                User.Role.DILG_ADMIN,
+                User.Role.BARANGAY_OPERATOR,
             }:
                 RefreshSession.objects.filter(user=user, is_revoked=False).update(is_revoked=True)
                 return Response(
@@ -146,7 +146,7 @@ class CustomTokenRefreshView(TokenRefreshView):
             User.Role.ADMIN,
             User.Role.RESIDENT,
             User.Role.FIELD_OFFICIAL,
-            User.Role.DILG_ADMIN,
+            User.Role.BARANGAY_OPERATOR,
         }:
             session.is_revoked = True
             session.save(update_fields=["is_revoked"])

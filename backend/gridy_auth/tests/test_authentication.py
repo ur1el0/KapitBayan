@@ -45,12 +45,12 @@ class AuthAPITests(IsolatedAuthAPITestCase):
         self.assertEqual(cookie['samesite'], 'Strict')
         self.assertEqual(cookie['path'], '/api/v1/auth/')
 
-    def test_dilg_reviewer_can_login_but_access_is_limited_to_onboarding(self):
+    def test_barangay_operator_can_login_and_access_only_onboarding_and_account_support(self):
         reviewer = User.objects.create_user(
-            username="dilg_reviewer",
+            username="barangay-operator_reviewer",
             password=self.password,
             email="reviewer@example.test",
-            role="DILG_ADMIN",
+            role="BARANGAY_OPERATOR",
         )
         login_response = self.client.post(
             reverse("auth_login"),
@@ -64,7 +64,10 @@ class AuthAPITests(IsolatedAuthAPITestCase):
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {access}")
         profile_response = self.client.get(reverse("auth_me"))
         self.assertEqual(profile_response.status_code, status.HTTP_200_OK)
-        self.assertEqual(profile_response.data["role"], User.Role.DILG_ADMIN)
+        self.assertEqual(profile_response.data["role"], User.Role.BARANGAY_OPERATOR)
+
+        support_response = self.client.get("/api/v1/auth/platform/accounts/")
+        self.assertEqual(support_response.status_code, status.HTTP_200_OK)
 
         service_response = self.client.get("/api/v1/auth/pending-residents/")
         self.assertEqual(service_response.status_code, status.HTTP_401_UNAUTHORIZED)

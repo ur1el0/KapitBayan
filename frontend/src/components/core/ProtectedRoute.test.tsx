@@ -88,4 +88,31 @@ describe('ProtectedRoute', () => {
         expect(await screen.findByText('Platform account support')).toBeInTheDocument();
         expect(screen.queryByText('Resident portal')).not.toBeInTheDocument();
     });
+
+    it('redirects Barangay Operators from tenant administration to their limited workspace', async () => {
+        vi.mocked(useAuth).mockReturnValue({
+            user: { role: 'BARANGAY_OPERATOR' },
+            isAuthenticated: true,
+            isAuthReady: true,
+            login: vi.fn(),
+            logout: vi.fn(),
+            updateBarangayPrimaryColor: vi.fn(),
+        } as never);
+
+        render(
+            <MemoryRouter initialEntries={['/dashboard']}>
+                <Routes>
+                    <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
+                        <Route path="/dashboard" element={<p>Barangay admin dashboard</p>} />
+                    </Route>
+                    <Route element={<ProtectedRoute allowedRoles={['BARANGAY_OPERATOR']} />}>
+                        <Route path="/operator/barangay-applications" element={<p>Operator applications</p>} />
+                    </Route>
+                </Routes>
+            </MemoryRouter>,
+        );
+
+        expect(await screen.findByText('Operator applications')).toBeInTheDocument();
+        expect(screen.queryByText('Barangay admin dashboard')).not.toBeInTheDocument();
+    });
 });

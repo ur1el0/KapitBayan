@@ -40,6 +40,10 @@ jobs:
     env:
       DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
       DEBUG: "False"
+      # This fixed placeholder is only used by management commands in this
+      # gated job. It is not a deployed signing secret.
+      SECRET_KEY: migration-only-not-a-production-signing-key
+      KAPITBAYAN_MIGRATION_ONLY: "true"
 
     steps:
       - name: Check out main
@@ -66,13 +70,6 @@ jobs:
           if not os.environ.get("DATABASE_URL", "").strip():
               print("PRODUCTION_DATABASE_URL is not configured in the production environment.", file=sys.stderr)
               raise SystemExit(1)
-          PY
-
-      - name: Set an ephemeral Django settings key
-        run: |
-          python - <<'PY' >> "$GITHUB_ENV"
-          import secrets
-          print(f"SECRET_KEY={secrets.token_urlsafe(64)}")
           PY
 
       - name: Display current pending migration plan
@@ -132,6 +129,7 @@ jobs:
               "gridy_auth.0019_barangay_application_first_admin",
               "gridy_auth.0020_dilg_reviewed_admin_registration",
               "gridy_auth.0021_barangayapplication_email_verification_sent_at_and_more",
+              "gridy_auth.0022_barangay_operator_role",
           }
 
           if os.environ.get("CONFIRM_PRODUCTION", "").lower() != "true":
