@@ -173,6 +173,13 @@ def erase_user_account(user, reason, request=None, actor=None):
         # Revoke all active refresh sessions.
         RefreshSession.objects.filter(user=user).update(is_revoked=True)
 
+        profile_picture = user.profile_picture.name if user.profile_picture else None
+        if profile_picture:
+            profile_picture_storage = user.profile_picture.storage
+            transaction.on_commit(
+                lambda: profile_picture_storage.delete(profile_picture)
+            )
+
         # Store only encrypted file names, with no foreign key to the account being deleted.
         if resident:
             for field_name in RESIDENT_PRIVATE_MEDIA_FIELDS:

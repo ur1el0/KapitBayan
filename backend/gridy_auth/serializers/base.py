@@ -201,12 +201,14 @@ class UserSerializer(serializers.ModelSerializer):
     barangay = BarangaySerializer(read_only=True)
     full_name = serializers.SerializerMethodField()
     is_superuser = serializers.BooleanField(read_only=True)
+    profile_picture = serializers.ImageField(required=False, allow_null=True)
+    remove_profile_picture = serializers.BooleanField(required=False, write_only=True, default=False)
 
     class Meta:
         model = User
         fields = [
             'id', 'username', 'email', 'role', 'barangay', 'profile', 'full_name', 'is_superuser',
-            'email_alerts', 'push_alerts',
+            'email_alerts', 'push_alerts', 'profile_picture', 'remove_profile_picture',
         ]
         read_only_fields = ['role', 'barangay', 'full_name']
 
@@ -249,6 +251,11 @@ class UserSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError("This email must be unique across accounts because it is the official sign-in identity.")
         return normalized_email
 
+    def validate_profile_picture(self, value):
+        if value is not None and value.size > 5 * 1024 * 1024:
+            raise serializers.ValidationError("Profile pictures must be 5 MB or smaller.")
+        return value
+
     def to_representation(self, instance):
         representation = super().to_representation(instance)
         if instance.role in {User.Role.ADMIN, User.Role.FIELD_OFFICIAL, User.Role.BARANGAY_OPERATOR}:
@@ -259,6 +266,10 @@ class UserSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         # Extract the profile dictionary from the request
         profile_data = validated_data.pop('profile', None)
+        remove_profile_picture = validated_data.pop('remove_profile_picture', False)
+        old_profile_picture_name = instance.profile_picture.name if instance.profile_picture else None
+        if remove_profile_picture:
+            validated_data['profile_picture'] = None
         email_changed = (
             'email' in validated_data
             and validated_data['email'].strip().casefold() != instance.email.strip().casefold()
@@ -268,6 +279,9 @@ class UserSerializer(serializers.ModelSerializer):
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
+        new_profile_picture_name = instance.profile_picture.name if instance.profile_picture else None
+        if old_profile_picture_name and old_profile_picture_name != new_profile_picture_name:
+            instance.profile_picture.storage.delete(old_profile_picture_name)
         if email_changed:
             RefreshSession.objects.filter(user=instance, is_revoked=False).update(is_revoked=True)
 
