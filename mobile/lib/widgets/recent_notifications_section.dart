@@ -52,12 +52,12 @@ class RecentNotificationsSection extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
 
         // Notifications List Cards
         if (hasError)
           Container(
-            padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),
@@ -73,8 +73,8 @@ class RecentNotificationsSection extends StatelessWidget {
             child: Row(
               children: [
                 Container(
-                  width: 42,
-                  height: 42,
+                  width: 36,
+                  height: 36,
                   decoration: const BoxDecoration(
                     color: Color(0xFFFEE2E2),
                     shape: BoxShape.circle,
@@ -87,7 +87,7 @@ class RecentNotificationsSection extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(width: 14),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -118,6 +118,10 @@ class RecentNotificationsSection extends StatelessWidget {
                   IconButton(
                     onPressed: onRetry,
                     tooltip: 'Retry loading notifications',
+                    constraints: const BoxConstraints(
+                      minWidth: 48,
+                      minHeight: 48,
+                    ),
                     icon: const Icon(
                       Icons.refresh_rounded,
                       color: AppColors.primaryNavy,
@@ -128,7 +132,7 @@ class RecentNotificationsSection extends StatelessWidget {
           )
         else if (notifications.isEmpty)
           Container(
-            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),
@@ -143,9 +147,9 @@ class RecentNotificationsSection extends StatelessWidget {
           )
         else
           Column(
-            children: notifications.map((item) {
+            children: notifications.take(2).map((item) {
               return Padding(
-                padding: const EdgeInsets.only(bottom: 10.0),
+                padding: const EdgeInsets.only(bottom: 8.0),
                 child: _NotificationCard(
                   notification: item,
                   onTap: () => onNotificationTap?.call(item),
@@ -214,15 +218,15 @@ class _NotificationCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           child: Padding(
             padding: const EdgeInsets.symmetric(
-              horizontal: 16.0,
-              vertical: 14.0,
+              horizontal: 12.0,
+              vertical: 10.0,
             ),
             child: Row(
               children: [
                 // Circular Status Badge Icon
                 Container(
-                  width: 42,
-                  height: 42,
+                  width: 36,
+                  height: 36,
                   decoration: BoxDecoration(
                     color: iconBgColor,
                     shape: BoxShape.circle,
@@ -231,7 +235,7 @@ class _NotificationCard extends StatelessWidget {
                     child: Icon(iconData, color: iconColor, size: 22),
                   ),
                 ),
-                const SizedBox(width: 14),
+                const SizedBox(width: 10),
 
                 // Title and Timestamp Subtitle
                 Expanded(
@@ -241,14 +245,14 @@ class _NotificationCard extends StatelessWidget {
                       Text(
                         notification.title,
                         style: const TextStyle(
-                          fontSize: 14.5,
+                          fontSize: 14,
                           fontWeight: FontWeight.w700,
                           color: AppColors.textPrimary,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 3),
+                      const SizedBox(height: 2),
                       Text(
                         notification.formattedSubtitle,
                         style: const TextStyle(

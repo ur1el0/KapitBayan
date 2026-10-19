@@ -115,6 +115,14 @@ class ResidentRegistrationDetailsSection extends StatelessWidget {
                   style: TextStyle(color: AppColors.textMuted, fontSize: 12),
                 ),
               ),
+            if (!isLoadingBarangays && barangays.isEmpty && barangayLoadError == null)
+              const Padding(
+                padding: EdgeInsets.only(top: 8),
+                child: Text(
+                  'No registered barangays are currently available.',
+                  style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+                ),
+              ),
             if (barangayLoadError != null)
               Padding(
                 padding: const EdgeInsets.only(top: 8),

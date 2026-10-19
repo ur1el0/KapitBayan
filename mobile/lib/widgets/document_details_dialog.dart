@@ -93,12 +93,26 @@ class _DocumentDetailsDialogState extends State<DocumentDetailsDialog> {
   Future<void> _handleSubmitPaymentReference() async {
     final service = widget.documentService;
     final reference = _paymentReferenceController.text.trim();
-    if (service == null ||
-        reference.isEmpty ||
-        _selectedRecipientId == null ||
-        _selectedProofBytes == null ||
-        _selectedProofBytes!.isEmpty ||
-        _isSubmittingPayment) {
+    if (_isSubmittingPayment) {
+      return;
+    }
+    if (service == null) {
+      _showPaymentSubmissionMessage(
+        'Payment submission is unavailable. Please reopen the request and try again.',
+      );
+      return;
+    }
+    if (_selectedRecipientId == null) {
+      _showPaymentSubmissionMessage('Choose a payment recipient first.');
+      return;
+    }
+    if (reference.isEmpty) {
+      _showPaymentSubmissionMessage('Enter the transfer reference first.');
+      return;
+    }
+    final proofBytes = _selectedProofBytes;
+    if (proofBytes == null || proofBytes.isEmpty) {
+      _showPaymentSubmissionMessage('Add a receipt screenshot first.');
       return;
     }
 
@@ -109,7 +123,7 @@ class _DocumentDetailsDialogState extends State<DocumentDetailsDialog> {
         paymentRecipientId: _selectedRecipientId!,
         paymentReference: reference,
         transactedAt: _selectedTransactedAt,
-        proofImageBytes: _selectedProofBytes!,
+        proofImageBytes: proofBytes,
         proofImageFilename: _selectedProofFilename ?? 'receipt.jpg',
       );
       if (!mounted) return;
@@ -135,6 +149,12 @@ class _DocumentDetailsDialogState extends State<DocumentDetailsDialog> {
     } finally {
       if (mounted) setState(() => _isSubmittingPayment = false);
     }
+  }
+
+  void _showPaymentSubmissionMessage(String message) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   void _handleViewProof() {

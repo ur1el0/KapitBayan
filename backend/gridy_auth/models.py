@@ -53,6 +53,58 @@ class Barangay(models.Model):
             return f"{self.name} ({self.municipality}, {self.province})"
         return self.name
 
+    def is_approved_and_active(self) -> bool:
+        """Check whether this Barangay has been approved through onboarding and is active."""
+        User = self._meta.apps.get_model("gridy_auth", "User")
+        BarangayApplication = self._meta.apps.get_model("gridy_auth", "BarangayApplication")
+
+        approved_app = self.onboarding_application.filter(
+            status=BarangayApplication.Status.APPROVED
+        ).first()
+        if not approved_app:
+            return False
+
+        if approved_app.created_admin and not approved_app.created_admin.is_active:
+            return False
+
+        admin_users = self.users.filter(role=User.Role.ADMIN)
+        if admin_users.exists() and not admin_users.filter(is_active=True).exists():
+            return False
+
+        if getattr(self, "is_active", True) is False:
+            return False
+
+        return True
+
+    @classmethod
+    def get_eligible_for_registration(cls):
+        """Return QuerySet of barangays that are registered, approved, and active."""
+        User = cls._meta.apps.get_model("gridy_auth", "User")
+        BarangayApplication = cls._meta.apps.get_model("gridy_auth", "BarangayApplication")
+
+        qs = cls.objects.filter(
+            onboarding_application__status=BarangayApplication.Status.APPROVED
+        ).distinct()
+
+        # Exclude if created_admin is explicitly inactive
+        qs = qs.exclude(onboarding_application__created_admin__is_active=False)
+
+        # Exclude if barangay has admin users, but none are active
+        inactive_admin_barangay_ids = User.objects.filter(
+            role=User.Role.ADMIN,
+            barangay__isnull=False,
+        ).values("barangay_id").annotate(
+            active_count=models.Count("pk", filter=models.Q(is_active=True)),
+            total_count=models.Count("pk"),
+        ).filter(active_count=0, total_count__gt=0).values_list("barangay_id", flat=True)
+
+        qs = qs.exclude(id__in=inactive_admin_barangay_ids)
+
+        if any(f.name == "is_active" for f in cls._meta.get_fields()):
+            qs = qs.filter(is_active=True)
+
+        return qs.order_by("province", "municipality", "name")
+
 
 class BarangayApplication(models.Model):
     class Status(models.TextChoices):

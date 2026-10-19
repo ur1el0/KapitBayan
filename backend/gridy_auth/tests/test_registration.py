@@ -11,7 +11,7 @@ from django.urls import reverse
 from PIL import Image
 from rest_framework import status
 
-from gridy_auth.models import Barangay, Resident, User
+from gridy_auth.models import Barangay, BarangayApplication, Resident, User
 from .base import IsolatedAuthAPITestCase
 
 
@@ -24,6 +24,16 @@ def create_test_image_upload(name="registration-proof.png"):
 class AuthRegistrationAPITests(IsolatedAuthAPITestCase):
     def setUp(self):
         self.barangay = Barangay.objects.create(name="Auth Fixture Barangay")
+        BarangayApplication.objects.create(
+            name=self.barangay.name,
+            applicant_name="Fixture Official",
+            applicant_position="Secretary",
+            applicant_email="fixture.admin@example.test",
+            applicant_phone="09123456789",
+            status=BarangayApplication.Status.APPROVED,
+            created_barangay=self.barangay,
+            review_verified=True,
+        )
         self.username = "resident_test"
         self.password = "SecurePassword123!"
         self.user = User.objects.create_user(
@@ -270,3 +280,98 @@ class AuthRegistrationAPITests(IsolatedAuthAPITestCase):
         response = self.client.post(url, payload, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("password", response.data)
+
+    def test_registration_rejected_for_unapproved_pending_rejected_and_inactive_barangay(self):
+        url = reverse('auth_register')
+        def make_payload(username, barangay_id):
+            return {
+                "username": username,
+                "email": f"{username}@example.test",
+                "password": "ValidPassword123!",
+                "full_name": "Test Resident",
+                "birth_date": "2000-01-01",
+                "barangay_id": barangay_id,
+                "privacy_consent": True,
+                "privacy_consent_version": settings.PRIVACY_CONSENT_VERSION,
+                "philsys_id_photo": create_test_image_upload(f"{username}.png"),
+            }
+
+        # 1. Unregistered barangay (no application at all)
+        b_unregistered = Barangay.objects.create(name="Barangay Unregistered")
+        res1 = self.client.post(
+            url,
+            make_payload("res_unreg", b_unregistered.id),
+            format="multipart",
+        )
+        self.assertEqual(res1.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("barangay_id", res1.data)
+        self.assertFalse(User.objects.filter(username="res_unreg").exists())
+
+        # 2. Pending barangay
+        b_pending = Barangay.objects.create(name="Barangay Pending")
+        BarangayApplication.objects.create(
+            name=b_pending.name,
+            applicant_name="Pending Official",
+            applicant_position="Official",
+            applicant_email="pending@example.test",
+            applicant_phone="09123456782",
+            status=BarangayApplication.Status.PENDING,
+            created_barangay=b_pending,
+        )
+        res2 = self.client.post(
+            url,
+            make_payload("res_pending", b_pending.id),
+            format="multipart",
+        )
+        self.assertEqual(res2.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("barangay_id", res2.data)
+        self.assertFalse(User.objects.filter(username="res_pending").exists())
+
+        # 3. Rejected barangay
+        b_rejected = Barangay.objects.create(name="Barangay Rejected")
+        BarangayApplication.objects.create(
+            name=b_rejected.name,
+            applicant_name="Rejected Official",
+            applicant_position="Official",
+            applicant_email="rejected@example.test",
+            applicant_phone="09123456783",
+            status=BarangayApplication.Status.REJECTED,
+            created_barangay=b_rejected,
+            review_note="Rejected proof",
+        )
+        res3 = self.client.post(
+            url,
+            make_payload("res_rejected", b_rejected.id),
+            format="multipart",
+        )
+        self.assertEqual(res3.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("barangay_id", res3.data)
+        self.assertFalse(User.objects.filter(username="res_rejected").exists())
+
+        # 4. Inactive barangay (approved but admin deactivated)
+        b_inactive = Barangay.objects.create(name="Barangay Inactive")
+        admin_inactive = User.objects.create_user(
+            username="admin_inactive_user",
+            role=User.Role.ADMIN,
+            is_active=False,
+            barangay=b_inactive,
+        )
+        BarangayApplication.objects.create(
+            name=b_inactive.name,
+            applicant_name="Inactive Official",
+            applicant_position="Official",
+            applicant_email="inactive@example.test",
+            applicant_phone="09123456784",
+            status=BarangayApplication.Status.APPROVED,
+            created_barangay=b_inactive,
+            created_admin=admin_inactive,
+            review_verified=True,
+        )
+        res4 = self.client.post(
+            url,
+            make_payload("res_inactive", b_inactive.id),
+            format="multipart",
+        )
+        self.assertEqual(res4.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("barangay_id", res4.data)
+        self.assertFalse(User.objects.filter(username="res_inactive").exists())

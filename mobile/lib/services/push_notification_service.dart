@@ -30,6 +30,7 @@ class PushNotificationService {
   StreamSubscription<String>? _tokenRefreshSubscription;
   StreamSubscription<RemoteMessage>? _foregroundSubscription;
   StreamSubscription<RemoteMessage>? _openedSubscription;
+  Timer? _foregroundBannerTimer;
   bool _initialized = false;
   bool _pushEnabled = false;
   ValueChanged<RemoteMessage>? _onNotificationOpened;
@@ -140,33 +141,93 @@ class PushNotificationService {
   void _showForegroundMessage(RemoteMessage message) {
     if (!_pushEnabled) return;
 
-    final title = message.notification?.title?.trim();
-    final body = message.notification?.body?.trim();
-    final content = [
-      if (title != null && title.isNotEmpty) title,
-      if (body != null && body.isNotEmpty) body,
-    ].join('\n');
-    if (content.isEmpty) return;
+    final title = message.notification?.title?.trim() ?? '';
+    final body = message.notification?.body?.trim() ?? '';
+    final hasTitle = title.isNotEmpty;
+    final hasBody = body.isNotEmpty;
+    if (!hasTitle && !hasBody) return;
 
-    appScaffoldMessengerKey.currentState
-      ?..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(content),
-          duration: const Duration(seconds: 6),
-          behavior: SnackBarBehavior.floating,
-          action: _onNotificationOpened == null
-              ? null
-              : SnackBarAction(
-                  label: 'OPEN',
-                  onPressed: () => _onNotificationOpened?.call(message),
+    final messenger = appScaffoldMessengerKey.currentState;
+    if (messenger == null) return;
+
+    _foregroundBannerTimer?.cancel();
+    messenger
+      ..hideCurrentSnackBar()
+      ..hideCurrentMaterialBanner()
+      ..showMaterialBanner(
+        MaterialBanner(
+          leading: const Icon(
+            Icons.notifications_active_rounded,
+            color: Colors.white,
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (hasTitle)
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
+              if (hasTitle && hasBody) const SizedBox(height: 4),
+              if (hasBody)
+                Text(
+                  body,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    height: 1.4,
+                  ),
+                ),
+            ],
+          ),
+          backgroundColor: const Color(0xFF2B2F31),
+          elevation: 6,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          actions: [
+            if (_onNotificationOpened != null)
+              TextButton(
+                onPressed: () {
+                  _foregroundBannerTimer?.cancel();
+                  messenger.hideCurrentMaterialBanner();
+                  _onNotificationOpened?.call(message);
+                },
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.lightBlueAccent,
+                ),
+                child: const Text('OPEN'),
+              )
+            else
+              TextButton(
+                onPressed: () {
+                  _foregroundBannerTimer?.cancel();
+                  messenger.hideCurrentMaterialBanner();
+                },
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.lightBlueAccent,
+                ),
+                child: const Text('DISMISS'),
+              ),
+          ],
         ),
       );
+
+    _foregroundBannerTimer = Timer(const Duration(seconds: 6), () {
+      if (messenger.mounted) {
+        messenger.hideCurrentMaterialBanner();
+      }
+    });
   }
 
   Future<void> dispose() async {
     _pushEnabled = false;
+    _foregroundBannerTimer?.cancel();
+    _foregroundBannerTimer = null;
+    appScaffoldMessengerKey.currentState?.hideCurrentMaterialBanner();
     await _cancelSubscriptions();
     _onNotificationOpened = null;
     _initialized = false;

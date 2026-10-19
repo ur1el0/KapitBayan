@@ -747,6 +747,7 @@ class DocumentRequestViewSet(viewsets.ModelViewSet):
             'recipient_name': recipient_name,
             'purok_name': purok_name,
             'barangay': barangay,
+            'office_contact': self._pdf_office_contact(barangay.office_contact),
             'age': age,
             'date_issued': timezone.now()
         }
@@ -766,3 +767,10 @@ class DocumentRequestViewSet(viewsets.ModelViewSet):
             return Response({"error": "Failed to generate PDF"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             
         return response
+
+    @staticmethod
+    def _pdf_office_contact(value):
+        contact = (value or "").strip()
+        if not contact or ("{{" in contact and "}}" in contact):
+            return "Office of the Punong Barangay"
+        return contact
