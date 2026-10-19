@@ -24,8 +24,9 @@ This index lists the decision records present in this repository snapshot. Read 
 | [018](018-explicit-document-fee-assessment-and-waiver-provenance.md) | Explicit fee assessment and waiver provenance |
 | [019](019-public-information-ai-navigator-boundary.md) | Retired: former Public Information AI Navigator boundary |
 | [020](020-dilg-account-support-boundary.md) | Superseded: historical bounded DILG account support and recovery |
-| [021](021-barangay-only-product-scope-and-platform-recovery.md) | Barangay-only product scope and superuser platform recovery; onboarding clause amended by ADR 022 |
-| [022](022-reviewed-new-barangay-onboarding.md) | Reviewed public applications for new Barangays and operator-created first Admins |
+| [021](021-barangay-only-product-scope-and-platform-recovery.md) | Barangay tenant scope and superuser platform recovery; onboarding reviewer scope amended by ADR 023 |
+| [022](022-reviewed-new-barangay-onboarding.md) | Superseded: initial reviewed public application and operator-created first Admin flow |
+| [023](023-dilg-reviewed-barangay-admin-registration.md) | DILG-reviewed Barangay Admin self-registration using official email |
 
 ## Implementation notes
 

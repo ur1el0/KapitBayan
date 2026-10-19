@@ -1,8 +1,10 @@
 # ADR 022: Reviewed New Barangay Onboarding
 
-- **Status:** Accepted
+- **Status:** Superseded by [ADR 023](023-dilg-reviewed-barangay-admin-registration.md)
 - **Date:** 2026-10-19
 - **Supersedes:** ADR 021 decision 2 and its consequence that public Barangay applications are retired; restores only the pending-application and verified-provisioning workflow first recorded in ADR 011.
+
+> This record documents the initial operator-provisioned flow. ADR 023 is the active policy for applicant credentials and DILG review.
 
 ## Context
 

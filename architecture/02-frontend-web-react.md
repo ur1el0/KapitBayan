@@ -10,9 +10,10 @@ The browser application is a React and TypeScript single-page application built 
 | `/public/queue/:barangayId`, `/public/announcements/:barangayId` | Public | Read-only public displays |
 | `/dashboard`, `/documents`, `/queue`, `/communications`, `/residents`, `/reports`, and related staff routes | `ADMIN`, with additional route-level restrictions where configured | Barangay staff workspace |
 | `/platform/accounts` | Active Django superuser | Bounded account recovery and status support |
+| `/dilg/barangay-applications` | Active `DILG_ADMIN` | Barangay application review only |
 | `/portal/documents`, `/portal/queue`, `/portal/bulletin`, `/portal/aid` | `RESIDENT` | Resident self-service |
 
-`/aid-requests` has an additional `ADMIN` route guard. `/register/barangay` creates only a pending request. `/platform/barangay-applications` is restricted to an active Django superuser, who must independently verify an applicant before creating the tenant and its Admin. Barangay Admins cannot create or list other Admin accounts; they can manage Field Officials through staff settings. `FIELD_OFFICIAL` has no web staff workspace in the current router and uses the Flutter client; browser login for that role is rejected. These are UI route guards; the API remains the authorization boundary. The Field Official API token is not cryptographically bound to a native device.
+`/aid-requests` has an additional `ADMIN` route guard. `/register/barangay` creates a pending application and an inactive applicant account using the official email and password, with no applicant-chosen username. `/dilg/barangay-applications` is the limited review workspace; active Django superusers can also reach review under `/platform/barangay-applications`. Approval activates the same account after independent verification. Barangay Admins cannot create or list other Admin accounts; they can manage Field Officials through staff settings, creating them with an official email only. Officials sign in with email; only Residents choose usernames. `FIELD_OFFICIAL` has no web staff workspace in the current router and uses the Flutter client; browser login for that role is rejected. These are UI route guards; the API remains the authorization boundary. The Field Official API token is not cryptographically bound to a native device.
 
 ## API and authentication
 
@@ -26,6 +27,6 @@ See [ADR 002](decisions/002-httponly-jwt-cookie-auth.md), [ADR 003](decisions/00
 - API access should go through the existing API modules and client instances.
 - Keep resident and staff workflows visually distinct. Do not add a role-switch shortcut unless a separately reviewed decision changes the current route contract.
 - Announcement sharing generates an in-app share kit. Staff publish externally themselves; KapitBayan does not automatically post to Facebook or manage Facebook comments.
-- Barangay `ADMIN` users can provision, list, edit the allowed profile fields of, and activate/deactivate Field Official accounts from `/settings`; operations are scoped to the administrator's barangay. Account setup uses an expiring email link rather than an administrator-set password.
+- Barangay `ADMIN` users can provision, list, edit the allowed profile fields of, and activate/deactivate Field Official accounts from `/settings`; operations are scoped to the administrator's barangay. Account setup uses an expiring email link rather than an administrator-set password, and Field Officials use that email to sign in.
 
 For supported screens and workflows, see [Feature Guides](../docs/README.md#feature-guides).

@@ -14,7 +14,7 @@ The exact models, serializers, permissions, and URL configuration in each app ar
 
 ## Tenant and authorization boundary
 
-Authenticated user identity and the user's assigned `barangay_id` determine tenant scope. Views and querysets must enforce both role and barangay rules. A web/mobile route or hidden UI control does not grant server access. Platform account recovery is a separately permissioned, throttled Django-superuser operation and does not grant access to barangay service records.
+Authenticated user identity and the user's assigned `barangay_id` determine tenant scope. Views and querysets must enforce both role and barangay rules. A web/mobile route or hidden UI control does not grant server access. DILG credentials are restricted to the onboarding review API and own session endpoints; they cannot access barangay service records. Platform account recovery is a separately permissioned, throttled Django-superuser operation and does not grant access to barangay service records.
 
 ## Storage boundary
 

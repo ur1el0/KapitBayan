@@ -15,7 +15,8 @@ const EMPTY_FORM = {
     applicant_position: '',
     applicant_email: '',
     applicant_phone: '',
-    admin_username: '',
+    password: '',
+    password_confirm: '',
 };
 
 function fieldError(error: unknown) {
@@ -61,7 +62,8 @@ export function BarangayOnboarding() {
                 applicant_position: form.applicant_position.trim(),
                 applicant_email: form.applicant_email.trim().toLowerCase(),
                 applicant_phone: form.applicant_phone.trim(),
-                admin_username: form.admin_username.trim(),
+                password: form.password,
+                password_confirm: form.password_confirm,
                 applicant_authorized: true,
                 contact_consent: true,
             };
@@ -70,6 +72,7 @@ export function BarangayOnboarding() {
                 return;
             }
             const result = await submitBarangayApplication(payload);
+            setForm((current) => ({ ...current, password: '', password_confirm: '' }));
             setApplicationId(result.id);
         } catch (requestError) {
             setError(fieldError(requestError) || getSafeApiErrorMessage(
@@ -101,7 +104,7 @@ export function BarangayOnboarding() {
                                     <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary-text">New Barangay onboarding</p>
                                     <h1 className="mt-1 text-2xl font-extrabold text-slate-900 sm:text-3xl">Request your Barangay’s first Admin account</h1>
                                     <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
-                                        Submit your Barangay locality and the official who will manage KapitBayan. A platform operator verifies the request before creating the Barangay account. This form does not create a login or password. Existing Barangays should contact their Admin about Field Official accounts.
+                                        Apply using the official’s work email and set the password for that account. A DILG reviewer verifies the Barangay and applicant before the account is activated. Existing Barangays should contact their Admin about Field Official accounts.
                                     </p>
                                 </div>
                             </div>
@@ -136,16 +139,20 @@ export function BarangayOnboarding() {
                                         <input id="application-position" className={inputClass} value={form.applicant_position} onChange={(event) => update('applicant_position', event.target.value)} maxLength={120} placeholder="For example, Barangay Captain" required />
                                     </div>
                                     <div>
-                                        <label htmlFor="application-username" className="block text-sm font-semibold text-slate-700">Requested username</label>
-                                        <input id="application-username" className={inputClass} value={form.admin_username} onChange={(event) => update('admin_username', event.target.value)} autoComplete="username" minLength={3} maxLength={150} required />
-                                    </div>
-                                    <div>
                                         <label htmlFor="application-email" className="block text-sm font-semibold text-slate-700">Official email</label>
                                         <input id="application-email" type="email" className={inputClass} value={form.applicant_email} onChange={(event) => update('applicant_email', event.target.value)} autoComplete="email" maxLength={254} required />
                                     </div>
                                     <div>
                                         <label htmlFor="application-phone" className="block text-sm font-semibold text-slate-700">Official contact number</label>
                                         <input id="application-phone" type="tel" className={inputClass} value={form.applicant_phone} onChange={(event) => update('applicant_phone', event.target.value)} autoComplete="tel" maxLength={30} required />
+                                    </div>
+                                    <div>
+                                        <label htmlFor="application-password" className="block text-sm font-semibold text-slate-700">Set password</label>
+                                        <input id="application-password" type="password" className={inputClass} value={form.password} onChange={(event) => update('password', event.target.value)} autoComplete="new-password" minLength={8} required />
+                                    </div>
+                                    <div>
+                                        <label htmlFor="application-password-confirm" className="block text-sm font-semibold text-slate-700">Confirm password</label>
+                                        <input id="application-password-confirm" type="password" className={inputClass} value={form.password_confirm} onChange={(event) => update('password_confirm', event.target.value)} autoComplete="new-password" minLength={8} required />
                                     </div>
                                 </fieldset>
 
@@ -158,12 +165,12 @@ export function BarangayOnboarding() {
                                         <input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} className="mt-0.5 h-4 w-4 rounded border-slate-300 text-primary focus-visible:ring-2 focus-visible:ring-primary" required />
                                         <span>I consent to use the applicant contact details only to review this onboarding request and contact the listed official.</span>
                                     </label>
-                                    <p className="text-xs leading-5 text-slate-500">Do not enter passwords, one-time codes, or resident identity documents in this form.</p>
+                                    <p className="text-xs leading-5 text-slate-500">Your official email will be your sign-in identity. The password is hashed before it is stored, and the account stays locked until approval. Do not share your password or enter one-time codes here.</p>
                                 </div>
 
                                 <button type="submit" disabled={submitting || !authorized || !consent} className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-lg bg-primary px-5 py-3 text-sm font-bold text-primary-foreground hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 sm:w-auto">
                                     <ClipboardCheck className="h-4 w-4" aria-hidden="true" />
-                                    {submitting ? 'Submitting request…' : 'Submit onboarding request'}
+                                    {submitting ? 'Submitting request…' : 'Submit for DILG review'}
                                 </button>
                             </form>
                         </>
@@ -172,7 +179,7 @@ export function BarangayOnboarding() {
                             <CheckCircle2 className="mx-auto h-12 w-12 text-emerald-600" aria-hidden="true" />
                             <h1 className="mt-4 text-2xl font-extrabold text-slate-900">Application submitted</h1>
                             <p role="status" className="mx-auto mt-3 max-w-xl text-sm leading-6 text-slate-600">
-                                Your request reference is <strong>KB-{applicationId}</strong>. It is pending platform review. No account or Barangay tenant is created until the listed official and locality are verified.
+                                Your request reference is <strong>KB-{applicationId}</strong>. The Barangay and listed official are pending DILG verification. Your account stays inactive until approval; after approval, sign in with the official email and password you set here.
                             </p>
                             <Link to="/official-login" className="mt-6 inline-flex min-h-11 items-center justify-center rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary-hover">Return to official sign in</Link>
                         </div>

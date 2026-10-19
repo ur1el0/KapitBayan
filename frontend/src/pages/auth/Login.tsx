@@ -31,7 +31,7 @@ export const Login: React.FC = () => {
             const isAllowedForWeb = userData?.is_superuser === true
                 ? isAdminMode
                 : isAdminMode
-                    ? userData?.role === 'ADMIN'
+                    ? userData?.role === 'ADMIN' || userData?.role === 'DILG_ADMIN'
                     : userData?.role === 'RESIDENT';
 
             if (!isAllowedForWeb) {
@@ -58,6 +58,8 @@ export const Login: React.FC = () => {
                 login(access, userData);
                 if (userData?.is_superuser === true) {
                     navigate('/platform/accounts');
+                } else if (userData?.role === 'DILG_ADMIN') {
+                    navigate('/dilg/barangay-applications');
                 } else if (userData?.role === 'RESIDENT') {
                     navigate('/portal/documents');
                 } else {
@@ -121,7 +123,7 @@ export const Login: React.FC = () => {
                     </h1>
                     <p className="text-blue-100/80 text-sm lg:text-base font-normal max-w-sm mb-10 leading-relaxed">
                         {isAdminMode
-                            ? 'Executive administration desk for barangay officials, review staff, and inspectors.'
+                            ? 'Sign in to Barangay operations or review new Barangay onboarding requests.'
                             : 'Request official clearances, join the live lobby queue, and access community services.'}
                     </p>
 
@@ -134,7 +136,7 @@ export const Login: React.FC = () => {
                                         <Shield className="w-5 h-5 text-amber-300" />
                                     </div>
                                     <span className="text-[11px] lg:text-xs font-semibold tracking-wider text-blue-100/90 uppercase">
-                                        CREDENTIALS VERIFICATION
+                                        OFFICIAL EMAIL ACCESS
                                     </span>
                                 </div>
                                 <div className="flex items-center gap-3.5">
@@ -142,7 +144,7 @@ export const Login: React.FC = () => {
                                         <KeyRound className="w-5 h-5 text-amber-300" />
                                     </div>
                                     <span className="text-[11px] lg:text-xs font-semibold tracking-wider text-blue-100/90 uppercase">
-                                        EXECUTIVE APPROVAL DESK
+                                        BARANGAY ONBOARDING REVIEW
                                     </span>
                                 </div>
                             </>
@@ -215,7 +217,7 @@ export const Login: React.FC = () => {
                         {/* Username Field */}
                         <div>
                             <label className="block text-[11px] font-bold tracking-wider text-slate-500 uppercase mb-2">
-                                USERNAME OR EMAIL
+                                {isAdminMode ? 'OFFICIAL EMAIL' : 'USERNAME OR EMAIL'}
                             </label>
                             <div className="relative flex items-center">
                                 <div className="absolute left-3.5 text-slate-400 pointer-events-none">
@@ -224,12 +226,12 @@ export const Login: React.FC = () => {
                                     </svg>
                                 </div>
                                 <input
-                                    type="text"
+                                    type={isAdminMode ? 'email' : 'text'}
                                     required
                                     value={username}
                                     onChange={(e) => setUsername(e.target.value)}
                                     className="w-full pl-11 pr-4 py-3.5 bg-[#EEF2F6] focus:bg-white border border-transparent focus:border-[#0284C7] focus:ring-1 focus:ring-[#0284C7] rounded-xl text-sm font-medium text-slate-900 placeholder-slate-400 outline-none transition-all"
-                                    placeholder="Enter your username or email"
+                                    placeholder={isAdminMode ? 'Enter your official email' : 'Enter your username or email'}
                                 />
                             </div>
                         </div>
@@ -276,7 +278,7 @@ export const Login: React.FC = () => {
                                     {loading
                                         ? 'Signing in...'
                                         : isAdminMode
-                                        ? 'Login as Barangay Official'
+                                        ? 'Sign in to Official Portal'
                                         : 'Login to Resident Portal'}
                                 </span>
                                 {!loading && (

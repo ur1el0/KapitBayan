@@ -14,7 +14,7 @@ from rest_framework.views import APIView
 from gridy_audit.models import AuditLog
 from gridy_audit.services import log_action
 from gridy_auth.models import Barangay, BarangayApplication, User
-from gridy_auth.permissions import IsDjangoSuperuser
+from gridy_auth.permissions import IsBarangayOnboardingReviewer
 from gridy_auth.serializers.onboarding import (
     BarangayApplicationApproveSerializer,
     BarangayApplicationCreateSerializer,
@@ -41,7 +41,7 @@ class PublicBarangayDirectoryView(APIView):
 
 @extend_schema(tags=["Barangay Onboarding"])
 class PublicBarangayApplicationCreateView(APIView):
-    """Accept an application only; provisioning waits for platform review."""
+    """Accept a request and inactive applicant account; activation waits for review."""
 
     permission_classes = [permissions.AllowAny]
     throttle_classes = [SharedDatabaseScopedRateThrottle]
@@ -74,15 +74,15 @@ class PublicBarangayApplicationCreateView(APIView):
         )
 
 
-@extend_schema(tags=["Platform Barangay Onboarding"])
+@extend_schema(tags=["Barangay Onboarding Review"])
 class PlatformBarangayApplicationViewSet(
     mixins.ListModelMixin,
     mixins.RetrieveModelMixin,
     viewsets.GenericViewSet,
 ):
-    """Let platform operators review requests and provision first Admins."""
+    """Let DILG reviewers or controlled superusers review new Barangays."""
 
-    permission_classes = [permissions.IsAuthenticated, IsDjangoSuperuser]
+    permission_classes = [permissions.IsAuthenticated, IsBarangayOnboardingReviewer]
     throttle_classes = [SharedDatabaseScopedRateThrottle]
     throttle_scope = "platform_account_support"
     serializer_class = BarangayApplicationOperatorSerializer
@@ -90,10 +90,12 @@ class PlatformBarangayApplicationViewSet(
 
     def get_queryset(self):
         user = getattr(self.request, "user", None)
-        if not user or not user.is_authenticated or not user.is_superuser:
+        if not user or not user.is_authenticated or not (
+            user.is_superuser or user.role == User.Role.DILG_ADMIN
+        ):
             return BarangayApplication.objects.none()
         return BarangayApplication.objects.select_related(
-            "reviewed_by", "created_barangay", "created_admin"
+            "reviewed_by", "created_barangay", "created_admin", "applicant_user"
         ).order_by("-created_at", "-pk")
 
     def list(self, request, *args, **kwargs):
@@ -113,12 +115,12 @@ class PlatformBarangayApplicationViewSet(
         return Response(BarangayApplicationOperatorSerializer(queryset, many=True).data)
 
     @extend_schema(
-        summary="Approve a verified Barangay application and provision its first Admin",
+        summary="Approve a verified Barangay application and activate its applicant Admin",
         request=BarangayApplicationApproveSerializer,
         responses={
             200: BarangayApplicationOperatorSerializer,
             400: OpenApiResponse(description="Verification attestation or application state is invalid."),
-            403: OpenApiResponse(description="Restricted to active Django superusers."),
+            403: OpenApiResponse(description="Restricted to active DILG reviewers and Django superusers."),
             409: OpenApiResponse(description="A matching tenant/Admin or account conflict prevents provisioning."),
         },
     )
@@ -136,23 +138,53 @@ class PlatformBarangayApplicationViewSet(
                         status=status.HTTP_409_CONFLICT,
                     )
 
-                username = application.admin_username.strip().lower()
                 email = application.applicant_email.strip().lower()
-                if not username:
-                    return Response(
-                        {"detail": "This older application has no proposed Admin username. Ask the official to submit a new application with a username."},
-                        status=status.HTTP_409_CONFLICT,
-                    )
-                if User.objects.filter(username__iexact=username).exists():
-                    return Response(
-                        {"admin_username": "This username is already in use. Reject the application with a note asking the official to submit another username."},
-                        status=status.HTTP_409_CONFLICT,
-                    )
-                if User.objects.filter(email__iexact=email).exists():
-                    return Response(
-                        {"applicant_email": "This email address is already tied to an account. Ask the official to submit a different verified email, or resolve the existing account through Platform Account Support."},
-                        status=status.HTTP_409_CONFLICT,
-                    )
+                admin = None
+                applicant = application.applicant_user
+                if applicant is not None:
+                    applicant = User.objects.select_for_update().get(pk=applicant.pk)
+                    if (
+                        applicant.is_active
+                        or applicant.role != User.Role.ADMIN
+                        or applicant.barangay_id is not None
+                        or applicant.is_staff
+                        or applicant.is_superuser
+                        or not applicant.has_usable_password()
+                        or applicant.email.strip().casefold() != email.casefold()
+                    ):
+                        return Response(
+                            {"detail": "The linked applicant account is no longer in the expected pending state. Resolve it manually before approval."},
+                            status=status.HTTP_409_CONFLICT,
+                        )
+                    account_conflict = User.objects.filter(
+                        Q(email__iexact=email) | Q(username__iexact=email)
+                    ).exclude(pk=applicant.pk).exists()
+                    if account_conflict:
+                        return Response(
+                            {"applicant_email": "This email address is now tied to another account. Resolve the account conflict before approval."},
+                            status=status.HTTP_409_CONFLICT,
+                        )
+                    admin = applicant
+                else:
+                    # Preserve the former setup-link approval flow for historical applications.
+                    username = application.admin_username.strip().lower()
+                    if not username:
+                        return Response(
+                            {"detail": "This historical application has no linked applicant account or Admin username. Ask the official to submit a new application."},
+                            status=status.HTTP_409_CONFLICT,
+                        )
+                    if User.objects.filter(username__iexact=username).exists():
+                        return Response(
+                            {"admin_username": "This historical Admin username is already in use. Resolve the account conflict before approval."},
+                            status=status.HTTP_409_CONFLICT,
+                        )
+                    if User.objects.filter(
+                        Q(email__iexact=email) | Q(username__iexact=email)
+                    ).exists():
+                        return Response(
+                            {"applicant_email": "This email address is already tied to an account. Resolve the account conflict before approval."},
+                            status=status.HTTP_409_CONFLICT,
+                        )
 
                 locality_matches = list(
                     Barangay.objects.select_for_update()
@@ -197,18 +229,29 @@ class PlatformBarangayApplicationViewSet(
                     if changed_fields:
                         barangay.save(update_fields=changed_fields)
 
-                admin = User(
-                    username=username,
-                    email=email,
-                    first_name=application.applicant_name.strip(),
-                    role=User.Role.ADMIN,
-                    barangay=barangay,
-                    is_staff=True,
-                    is_superuser=False,
-                    is_active=True,
-                )
-                admin.set_unusable_password()
-                admin.save()
+                if applicant is not None:
+                    admin.barangay = barangay
+                    admin.is_staff = True
+                    admin.is_superuser = False
+                    admin.is_active = True
+                    admin.first_name = application.applicant_name.strip()
+                    admin.save(update_fields=[
+                        "barangay", "is_staff", "is_superuser", "is_active", "first_name",
+                    ])
+                else:
+                    admin = User.objects.create_user(
+                        username=username,
+                        email=email,
+                        first_name=application.applicant_name.strip(),
+                        password=None,
+                        role=User.Role.ADMIN,
+                        barangay=barangay,
+                        is_staff=True,
+                        is_superuser=False,
+                        is_active=True,
+                    )
+                    admin.set_unusable_password()
+                    admin.save(update_fields=["password"])
 
                 application.status = BarangayApplication.Status.APPROVED
                 application.review_note = serializer.validated_data.get("review_note", "").strip()
@@ -226,25 +269,26 @@ class PlatformBarangayApplicationViewSet(
                     user=request.user,
                     action_type=AuditLog.ActionType.USER_ACTION,
                     description=(
-                        f"Platform operator approved Barangay application #{application.pk}, "
-                        f"provisioning Barangay #{barangay.pk} and first Admin account #{admin.pk}."
+                        f"{request.user.role} reviewer approved Barangay application #{application.pk}, "
+                        f"activating first Admin account #{admin.pk} for Barangay #{barangay.pk}."
                     ),
                     request=request,
                 )
 
-                uid = urlsafe_base64_encode(force_bytes(admin.pk))
-                token = default_token_generator.make_token(admin)
-                setup_link = (
-                    f"{settings.FRONTEND_URL.rstrip('/')}/set-password"
-                    f"?uidb64={uid}&token={token}"
-                )
-                transaction.on_commit(
-                    lambda email=admin.email, name=application.applicant_name,
-                    barangay_name=barangay.name, link=setup_link:
-                        send_barangay_admin_setup_email.delay(
-                            email, name, barangay_name, link
-                        )
-                )
+                if applicant is None:
+                    uid = urlsafe_base64_encode(force_bytes(admin.pk))
+                    token = default_token_generator.make_token(admin)
+                    setup_link = (
+                        f"{settings.FRONTEND_URL.rstrip('/')}/set-password"
+                        f"?uidb64={uid}&token={token}"
+                    )
+                    transaction.on_commit(
+                        lambda email=admin.email, name=application.applicant_name,
+                        barangay_name=barangay.name, link=setup_link:
+                            send_barangay_admin_setup_email.delay(
+                                email, name, barangay_name, link
+                            )
+                    )
         except BarangayApplication.DoesNotExist:
             return Response({"detail": "Application not found."}, status=status.HTTP_404_NOT_FOUND)
         except IntegrityError:
@@ -262,7 +306,7 @@ class PlatformBarangayApplicationViewSet(
         responses={
             200: BarangayApplicationOperatorSerializer,
             400: OpenApiResponse(description="A rejection reason is required or application state is invalid."),
-            403: OpenApiResponse(description="Restricted to active Django superusers."),
+            403: OpenApiResponse(description="Restricted to active DILG reviewers and Django superusers."),
             409: OpenApiResponse(description="Only pending applications can be rejected."),
         },
     )
@@ -279,6 +323,22 @@ class PlatformBarangayApplicationViewSet(
                         status=status.HTTP_409_CONFLICT,
                     )
 
+                applicant = application.applicant_user
+                if applicant is not None:
+                    applicant = User.objects.select_for_update().get(pk=applicant.pk)
+                    if (
+                        applicant.is_active
+                        or applicant.role != User.Role.ADMIN
+                        or applicant.barangay_id is not None
+                        or applicant.is_staff
+                        or applicant.is_superuser
+                    ):
+                        return Response(
+                            {"detail": "The linked applicant account is no longer in the expected pending state. Resolve it manually before rejection."},
+                            status=status.HTTP_409_CONFLICT,
+                        )
+                    application.applicant_user = None
+
                 application.status = BarangayApplication.Status.REJECTED
                 application.review_note = serializer.validated_data["reason"].strip()
                 application.reviewed_by = request.user
@@ -286,13 +346,16 @@ class PlatformBarangayApplicationViewSet(
                 application.review_verified = False
                 application.save(update_fields=[
                     "status", "review_note", "reviewed_by", "reviewed_at",
-                    "review_verified", "updated_at",
+                    "review_verified", "applicant_user", "updated_at",
                 ])
+
+                if applicant is not None:
+                    applicant.delete()
 
                 log_action(
                     user=request.user,
                     action_type=AuditLog.ActionType.USER_ACTION,
-                    description=f"Platform operator rejected Barangay application #{application.pk} with a recorded reason.",
+                    description=f"{request.user.role} reviewer rejected Barangay application #{application.pk} with a recorded reason.",
                     request=request,
                 )
         except BarangayApplication.DoesNotExist:

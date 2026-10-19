@@ -29,6 +29,9 @@ export const ProtectedRoute = ({ allowedRoles, requireSuperuser = false }: Prote
 
     // If specific roles are required, verify user's role
     if (allowedRoles && (!user?.role || !allowedRoles.includes(user.role))) {
+        if (user?.role === 'DILG_ADMIN') {
+            return <Navigate to="/dilg/barangay-applications" replace />;
+        }
         if (user?.role === 'FIELD_OFFICIAL') {
             return <Navigate to="/field-official-mobile" replace />;
         }

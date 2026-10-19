@@ -19,7 +19,9 @@ Application endpoints are mounted below `/api/v1/`:
 
 Exact URL actions and HTTP methods are defined by `backend/config/urls.py` and the Django app URL configurations. Use `/api/schema/` to inspect the current resolved schema.
 
-New Barangay onboarding uses `POST /api/v1/auth/public/barangay-applications/` to create a pending-only request. Active Django superusers review requests through `GET /api/v1/auth/platform/barangay-applications/?status=PENDING`, then call the per-application `/approve/` or `/reject/` action. Approval creates the tenant and first Admin only after an explicit verification attestation. Exact field contracts are in generated OpenAPI.
+New Barangay onboarding uses `POST /api/v1/auth/public/barangay-applications/` with official contact details, an official email, a password, and a confirmation. The applicant does not provide a username. Submission creates a pending application and an inactive, unassigned Admin account. Active DILG reviewers and controlled Django superusers review requests through `GET /api/v1/auth/platform/barangay-applications/?status=PENDING`, then call the per-application `/approve/` or `/reject/` action. Approval requires an explicit verification attestation and activates the applicant's same account; DILG credentials are limited to the review API and own session endpoints. Exact field contracts are in generated OpenAPI.
+
+Barangay Admins create Field Official accounts through `POST /api/v1/auth/staff/` using the official's email and name; the request does not accept a username or password. The server generates an internal username, sends a private password setup link, and returns the email as the sign-in identity. Only Resident accounts use user-chosen usernames.
 
 ## Client integration rules
 

@@ -1,7 +1,8 @@
-import re
+import uuid
 from collections.abc import Mapping
+from django.db.models import Q
 from rest_framework import serializers
-from gridy_auth.models import User
+from gridy_auth.models import RefreshSession, User
 
 
 class StaffUserListSerializer(serializers.ModelSerializer):
@@ -14,7 +15,6 @@ class StaffUserListSerializer(serializers.ModelSerializer):
         model = User
         fields = [
             "id",
-            "username",
             "email",
             "first_name",
             "last_name",
@@ -28,20 +28,14 @@ class StaffUserListSerializer(serializers.ModelSerializer):
 
     def get_full_name(self, obj) -> str:
         name = f"{obj.first_name} {obj.last_name}".strip()
-        return name or obj.username
-
+        return name or obj.email
 
 class StaffUserCreateSerializer(serializers.Serializer):
     """
     Validates payload for onboarding a new Field Official.
-    Enforces strict field boundaries and case-insensitive uniqueness. New
-    field officials set their own password through the private setup flow.
+    Enforces strict field boundaries and case-insensitive email uniqueness. New
+    field officials use email sign-in and set a password through the private setup flow.
     """
-    username = serializers.CharField(
-        min_length=3,
-        max_length=150,
-        trim_whitespace=True,
-    )
     email = serializers.EmailField(
         max_length=254,
     )
@@ -59,30 +53,20 @@ class StaffUserCreateSerializer(serializers.Serializer):
     def validate(self, attrs):
         # Strict rejection of disallowed extra fields (e.g. role, barangay, is_staff, is_superuser)
         if isinstance(self.initial_data, Mapping):
-            allowed_fields = {"username", "email", "first_name", "last_name"}
+            allowed_fields = {"email", "first_name", "last_name"}
             disallowed = set(self.initial_data.keys()) - allowed_fields
             if disallowed:
                 raise serializers.ValidationError(
                     f"Disallowed fields in request payload: {', '.join(sorted(disallowed))}."
                 )
 
-        username = attrs.get("username", "").strip()
-        if not re.match(r"^[\w.@+-]+$", username):
-            raise serializers.ValidationError(
-                {"username": "Enter a valid username containing letters, numbers, and @/./+/-/_ characters."}
-            )
-
-        if User.objects.filter(username__iexact=username).exists():
-            raise serializers.ValidationError(
-                {"username": "A user with that username already exists."}
-            )
-
         email = attrs.get("email", "").strip().lower()
-        if User.objects.filter(email__iexact=email).exists():
+        if User.objects.filter(Q(email__iexact=email) | Q(username__iexact=email)).exists():
             raise serializers.ValidationError(
-                {"email": "A user with that email address already exists."}
+                {"email": "That email address is already associated with an account."}
             )
 
+        attrs["email"] = email
         return attrs
 
 
@@ -111,9 +95,15 @@ class StaffUserUpdateSerializer(serializers.Serializer):
     email = serializers.EmailField(required=False, max_length=254)
 
     def update(self, instance, validated_data):
+        email_changed = (
+            "email" in validated_data
+            and validated_data["email"].strip().casefold() != instance.email.strip().casefold()
+        )
         for field, value in validated_data.items():
             setattr(instance, field, value)
         instance.save(update_fields=list(validated_data.keys()))
+        if email_changed:
+            RefreshSession.objects.filter(user=instance, is_revoked=False).update(is_revoked=True)
         return instance
 
     def validate(self, attrs):
@@ -133,9 +123,11 @@ class StaffUserUpdateSerializer(serializers.Serializer):
         email = attrs.get("email")
         if email is not None:
             email = email.strip().lower()
-            if User.objects.filter(email__iexact=email).exclude(pk=self.instance.pk).exists():
+            if User.objects.filter(
+                Q(email__iexact=email) | Q(username__iexact=email)
+            ).exclude(pk=self.instance.pk).exists():
                 raise serializers.ValidationError(
-                    {"email": "A user with that email address already exists."}
+                    {"email": "That email address is already associated with an account."}
                 )
             attrs["email"] = email
 

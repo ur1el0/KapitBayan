@@ -53,7 +53,12 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                     )
 
             # Reject legacy or unknown roles even if an old database row still exists.
-            if user.role not in {User.Role.ADMIN, User.Role.RESIDENT, User.Role.FIELD_OFFICIAL}:
+            if user.role not in {
+                User.Role.ADMIN,
+                User.Role.RESIDENT,
+                User.Role.FIELD_OFFICIAL,
+                User.Role.DILG_ADMIN,
+            }:
                 RefreshSession.objects.filter(user=user, is_revoked=False).update(is_revoked=True)
                 return Response(
                     {"detail": "This account role is no longer supported. Contact your Barangay administrator."},
@@ -137,7 +142,12 @@ class CustomTokenRefreshView(TokenRefreshView):
                 status=status.HTTP_401_UNAUTHORIZED,
             )
 
-        if session.user.role not in {User.Role.ADMIN, User.Role.RESIDENT, User.Role.FIELD_OFFICIAL}:
+        if session.user.role not in {
+            User.Role.ADMIN,
+            User.Role.RESIDENT,
+            User.Role.FIELD_OFFICIAL,
+            User.Role.DILG_ADMIN,
+        }:
             session.is_revoked = True
             session.save(update_fields=["is_revoked"])
             return Response(

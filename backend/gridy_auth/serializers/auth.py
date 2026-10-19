@@ -11,41 +11,60 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_decode
 from django.utils.encoding import force_str
-from django.db.models import Q
 from gridy_auth.models import User, RefreshSession
+
+EMAIL_SIGN_IN_ROLES = {
+    User.Role.ADMIN,
+    User.Role.FIELD_OFFICIAL,
+    User.Role.DILG_ADMIN,
+}
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
     def get_token(cls, user):
         token = super().get_token(user)
-        token['username'] = user.username
+        token['username'] = user.email if user.role in EMAIL_SIGN_IN_ROLES else user.username
         full_name = getattr(user.profile, 'full_name', None) if hasattr(user, 'profile') else None
         if not full_name:
-            full_name = f"{user.first_name} {user.last_name}".strip() or user.username
+            identity = user.email if user.role in EMAIL_SIGN_IN_ROLES else user.username
+            full_name = f"{user.first_name} {user.last_name}".strip() or identity
         token['full_name'] = full_name
         token['role'] = user.role
         token['barangay_id'] = user.barangay.id if user.barangay else None
         return token
 
     def validate(self, attrs):
-        # Support dual-identifier authentication: resolve either username or email
+        # Prefer email matches so official accounts use their formal sign-in identity.
         identifier = attrs.get(self.username_field, '').strip()
         if identifier:
-            matched_user = User.objects.filter(
-                Q(username__iexact=identifier) | Q(email__iexact=identifier)
-            ).first()
+            matched_user = User.objects.filter(email__iexact=identifier).order_by('pk').first()
+            if matched_user is None:
+                matched_user = User.objects.filter(username__iexact=identifier).order_by('pk').first()
             if matched_user:
+                if (
+                    matched_user.role in EMAIL_SIGN_IN_ROLES
+                    and identifier.casefold() != matched_user.email.strip().casefold()
+                ):
+                    raise serializers.ValidationError({
+                        'detail': 'Official accounts must sign in with their email address.'
+                    })
                 attrs[self.username_field] = matched_user.username
 
         data = super().validate(attrs)
-        if self.user.role not in {User.Role.ADMIN, User.Role.RESIDENT, User.Role.FIELD_OFFICIAL}:
+        if self.user.role not in {
+            User.Role.ADMIN,
+            User.Role.RESIDENT,
+            User.Role.FIELD_OFFICIAL,
+            User.Role.DILG_ADMIN,
+        }:
             raise serializers.ValidationError({"detail": "This account role is no longer supported."})
         full_name = getattr(self.user.profile, 'full_name', None) if hasattr(self.user, 'profile') else None
         if not full_name:
-            full_name = f"{self.user.first_name} {self.user.last_name}".strip() or self.user.username
+            identity = self.user.email if self.user.role in EMAIL_SIGN_IN_ROLES else self.user.username
+            full_name = f"{self.user.first_name} {self.user.last_name}".strip() or identity
         data['user'] = {
             'id': self.user.id,
-            'username': self.user.username,
+            'username': self.user.email if self.user.role in EMAIL_SIGN_IN_ROLES else self.user.username,
             'email': self.user.email,
             'role': self.user.role,
             'barangay_id': self.user.barangay.id if self.user.barangay else None,

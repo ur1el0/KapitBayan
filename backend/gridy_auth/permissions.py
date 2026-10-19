@@ -66,3 +66,16 @@ class IsDjangoSuperuser(BasePermission):
             and request.user.is_active
             and request.user.is_superuser
         )
+
+
+class IsBarangayOnboardingReviewer(BasePermission):
+    """Allow only active DILG reviewers or controlled Django superusers."""
+
+    def has_permission(self, request, view):
+        user = request.user
+        return bool(
+            user
+            and user.is_authenticated
+            and user.is_active
+            and (user.is_superuser or user.role == User.Role.DILG_ADMIN)
+        )

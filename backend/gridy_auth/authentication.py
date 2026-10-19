@@ -41,33 +41,90 @@ def is_production_test_account(user):
 
 
 def production_user_authentication_rule(user):
-    """Reject inactive, test, and retired-role users at token issuance."""
+    """Reject inactive, test, and unsupported-role users at token issuance."""
     return (
         default_user_authentication_rule(user)
         and not is_production_test_account(user)
-        and getattr(user, "role", None) in {"ADMIN", "RESIDENT", "FIELD_OFFICIAL"}
+        and getattr(user, "role", None) in {"ADMIN", "RESIDENT", "FIELD_OFFICIAL", "DILG_ADMIN"}
     )
 
 
 class ProductionSafeModelBackend(ModelBackend):
-    """Apply the same production test-account rule to Django session logins."""
+    """Guard official accounts and keep non-superusers on the API token flow."""
+
+    def authenticate(self, request=None, **credentials):
+        user = super().authenticate(request, **credentials)
+        if (
+            user
+            and not user.is_superuser
+            and user.role in {"ADMIN", "FIELD_OFFICIAL", "DILG_ADMIN"}
+        ):
+            path = getattr(request, "path_info", "").rstrip("/")
+            if path != "/api/v1/auth/login":
+                return None
+        return user
 
     def user_can_authenticate(self, user):
         return (
             super().user_can_authenticate(user)
             and not is_production_test_account(user)
-            and getattr(user, "role", None) in {"ADMIN", "RESIDENT", "FIELD_OFFICIAL"}
+            and getattr(user, "role", None) in {"ADMIN", "RESIDENT", "FIELD_OFFICIAL", "DILG_ADMIN"}
         )
+
+    def get_user(self, user_id):
+        # Official accounts use the email-aware API flow, never Django sessions.
+        user = super().get_user(user_id)
+        if (
+            user
+            and not user.is_superuser
+            and user.role in {"ADMIN", "FIELD_OFFICIAL", "DILG_ADMIN"}
+        ):
+            return None
+        return user
 
 
 class ProductionSafeJWTAuthentication(JWTAuthentication):
-    """Reject previously issued access tokens for production test accounts."""
+    """Reject test accounts and confine DILG tokens to onboarding review."""
+
+    _DILG_READ_PATHS = {
+        "/api/v1/auth/me",
+        "/api/v1/auth/sessions",
+        "/api/v1/auth/platform/barangay-applications",
+    }
+    _DILG_POST_PATHS = {
+        "/api/v1/auth/logout",
+        "/api/v1/auth/platform/barangay-applications",
+    }
+
+    def authenticate(self, request):
+        result = super().authenticate(request)
+        if result is None:
+            return None
+
+        user, _token = result
+        if user.role == "DILG_ADMIN":
+            path = request.path_info.rstrip("/") or "/"
+            method = request.method.upper()
+            is_application_route = path.startswith(
+                "/api/v1/auth/platform/barangay-applications/"
+            )
+            allowed = (
+                (path in self._DILG_READ_PATHS and method in {"GET", "HEAD", "OPTIONS"})
+                or (path in self._DILG_POST_PATHS and method == "POST")
+                or (is_application_route and method in {"GET", "HEAD", "OPTIONS", "POST"})
+            )
+            if not allowed:
+                raise AuthenticationFailed(
+                    "DILG accounts are limited to Barangay onboarding review.",
+                    code="dilg_scope_limited",
+                )
+        return result
 
     def get_user(self, validated_token):
         user = super().get_user(validated_token)
         if (
             is_production_test_account(user)
-            or user.role not in {"ADMIN", "RESIDENT", "FIELD_OFFICIAL"}
+            or user.role not in {"ADMIN", "RESIDENT", "FIELD_OFFICIAL", "DILG_ADMIN"}
         ):
             raise AuthenticationFailed(
                 "User is inactive or deleted.",

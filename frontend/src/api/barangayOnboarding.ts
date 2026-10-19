@@ -21,6 +21,9 @@ export interface BarangayApplication {
     reviewed_at: string | null;
     created_barangay_id: number | null;
     created_admin_username: string | null;
+    created_admin_email: string | null;
+    has_applicant_account: boolean;
+    admin_can_sign_in: boolean;
     created_at: string;
     updated_at: string;
 }
@@ -40,7 +43,8 @@ export interface BarangayApplicationInput {
     applicant_position: string;
     applicant_email: string;
     applicant_phone: string;
-    admin_username: string;
+    password: string;
+    password_confirm: string;
     applicant_authorized: true;
     contact_consent: true;
 }

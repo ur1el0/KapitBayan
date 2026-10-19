@@ -15,7 +15,7 @@ mobile/lib/
 
 Authentication and role checks select the appropriate experience for residents, barangay administrators, and field officials. Client-side role branching improves navigation; backend permissions and tenant scoping remain authoritative.
 
-Field Officials use the Flutter client for their supported staff workflow. Barangay administrators provision and manage these accounts in the web settings page. The API token is not cryptographically bound to a mobile device, so “mobile-only” describes the supported product workflow and browser-role restriction, not device attestation.
+Field Officials use the Flutter client for their supported staff workflow and sign in with their official email. Barangay administrators provision and manage these accounts in the web settings page without assigning usernames. Residents retain username-based registration and sign-in. The API token is not cryptographically bound to a mobile device, so “mobile-only” describes the supported product workflow and browser-role restriction, not device attestation.
 
 ## Network and privacy boundaries
 

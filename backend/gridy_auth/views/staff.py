@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.contrib.auth.tokens import default_token_generator
 from django.db import transaction
+import uuid
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 from drf_spectacular.utils import OpenApiResponse, extend_schema
@@ -98,7 +99,7 @@ class StaffManagementViewSet(
 
         with transaction.atomic():
             user = User(
-                username=data["username"],
+                username=f"field-official-{uuid.uuid4().hex}",
                 email=data["email"].strip().lower(),
                 first_name=data["first_name"],
                 last_name=data["last_name"],
@@ -113,7 +114,7 @@ class StaffManagementViewSet(
             log_action(
                 user=request.user,
                 action_type=AuditLog.ActionType.USER_ACTION,
-                description=f"Admin {request.user.username} created field official account '{user.username}' for Barangay {request.user.barangay.name}.",
+                description=f"Admin {request.user.email} created a Field Official account for Barangay {request.user.barangay.name}.",
                 request=request,
             )
 
@@ -142,7 +143,7 @@ class StaffManagementViewSet(
         description=(
             "Updates a Field Official's first name, last name, and/or email. "
             "The target must belong to the authenticated Admin's Barangay. "
-            "Username, role, Barangay, password, and privilege fields cannot be changed here."
+            "Sign-in email, role, Barangay, password, and privilege fields cannot be changed here."
         ),
         request=StaffUserUpdateSerializer,
         responses={
@@ -161,7 +162,7 @@ class StaffManagementViewSet(
         description=(
             "Updates a Field Official's first name, last name, and/or email. "
             "The target must belong to the authenticated Admin's Barangay. "
-            "Username, role, Barangay, password, and privilege fields cannot be changed here."
+            "Sign-in email, role, Barangay, password, and privilege fields cannot be changed here."
         ),
         request=StaffUserUpdateSerializer,
         responses={
@@ -182,8 +183,8 @@ class StaffManagementViewSet(
                 user=self.request.user,
                 action_type=AuditLog.ActionType.USER_ACTION,
                 description=(
-                    f"Admin {self.request.user.username} updated profile fields "
-                    f"{', '.join(changed_fields)} for field official '{target.username}'."
+                    f"Admin {self.request.user.email} updated profile fields "
+                    f"{', '.join(changed_fields)} for Field Official {target.email}."
                 ),
                 request=self.request,
             )
@@ -211,7 +212,7 @@ class StaffManagementViewSet(
             log_action(
                 user=request.user,
                 action_type=AuditLog.ActionType.USER_ACTION,
-                description=f"Admin {request.user.username} {action_word} field official account '{user.username}'.",
+                description=f"Admin {request.user.email} {action_word} Field Official account {user.email}.",
                 request=request,
             )
 

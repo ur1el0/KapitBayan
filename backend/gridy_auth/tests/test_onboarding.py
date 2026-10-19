@@ -1,3 +1,5 @@
+import secrets
+
 from django.contrib import admin
 from django.test import RequestFactory, TestCase
 from rest_framework.test import APIClient
@@ -6,7 +8,7 @@ from gridy_auth.admin import BarangayApplicationAdmin
 from gridy_auth.models import Barangay, BarangayApplication, User
 
 
-class BarangayOnboardingRetirementTests(TestCase):
+class BarangayOnboardingTests(TestCase):
     def setUp(self):
         self.client = APIClient()
         self.barangay = Barangay.objects.create(
@@ -21,10 +23,10 @@ class BarangayOnboardingRetirementTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data[0]["id"], self.barangay.pk)
 
-    def test_application_create_list_and_review_routes_are_retired(self):
-        collection = self.client.get("/api/v1/auth/barangay-applications/")
+    def test_public_application_creates_only_a_pending_inactive_applicant_account(self):
+        password = f"{secrets.token_urlsafe(24)}Aa1!"
         creation = self.client.post(
-            "/api/v1/auth/barangay-applications/",
+            "/api/v1/auth/public/barangay-applications/",
             {
                 "name": "Barangay New",
                 "municipality": "Tayabas City",
@@ -33,13 +35,32 @@ class BarangayOnboardingRetirementTests(TestCase):
                 "applicant_position": "Official",
                 "applicant_email": "applicant@example.test",
                 "applicant_phone": "09123456789",
+                "password": password,
+                "password_confirm": password,
+                "applicant_authorized": True,
+                "contact_consent": True,
             },
             format="json",
         )
 
-        self.assertEqual(collection.status_code, 404)
-        self.assertEqual(creation.status_code, 404)
-        self.assertFalse(BarangayApplication.objects.exists())
+        self.assertEqual(creation.status_code, 201)
+        application = BarangayApplication.objects.get(pk=creation.data["id"])
+        applicant = application.applicant_user
+        self.assertEqual(application.status, BarangayApplication.Status.PENDING)
+        self.assertEqual(application.admin_username, "")
+        self.assertEqual(applicant.role, User.Role.ADMIN)
+        self.assertFalse(applicant.is_active)
+        self.assertIsNone(applicant.barangay_id)
+        self.assertNotEqual(applicant.password, password)
+        self.assertTrue(applicant.check_password(password))
+        self.assertEqual(Barangay.objects.count(), 1)
+
+        login = self.client.post(
+            "/api/v1/auth/login/",
+            {"username": "applicant@example.test", "password": password},
+            format="json",
+        )
+        self.assertEqual(login.status_code, 401)
 
     def test_legacy_application_rows_are_preserved_and_read_only_to_superusers(self):
         application = BarangayApplication.objects.create(
