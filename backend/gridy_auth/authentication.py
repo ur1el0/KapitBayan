@@ -50,19 +50,7 @@ def production_user_authentication_rule(user):
 
 
 class ProductionSafeModelBackend(ModelBackend):
-    """Guard official accounts and keep non-superusers on the API token flow."""
-
-    def authenticate(self, request=None, **credentials):
-        user = super().authenticate(request, **credentials)
-        if (
-            user
-            and not user.is_superuser
-            and user.role in {"ADMIN", "FIELD_OFFICIAL", "DILG_ADMIN"}
-        ):
-            path = getattr(request, "path_info", "").rstrip("/")
-            if path != "/api/v1/auth/login":
-                return None
-        return user
+    """Apply production demo-account and supported-role checks to Django auth."""
 
     def user_can_authenticate(self, user):
         return (
@@ -70,18 +58,6 @@ class ProductionSafeModelBackend(ModelBackend):
             and not is_production_test_account(user)
             and getattr(user, "role", None) in {"ADMIN", "RESIDENT", "FIELD_OFFICIAL", "DILG_ADMIN"}
         )
-
-    def get_user(self, user_id):
-        # Official accounts use the email-aware API flow, never Django sessions.
-        user = super().get_user(user_id)
-        if (
-            user
-            and not user.is_superuser
-            and user.role in {"ADMIN", "FIELD_OFFICIAL", "DILG_ADMIN"}
-        ):
-            return None
-        return user
-
 
 class ProductionSafeJWTAuthentication(JWTAuthentication):
     """Reject test accounts and confine DILG tokens to onboarding review."""
