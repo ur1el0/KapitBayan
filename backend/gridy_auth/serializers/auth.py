@@ -7,6 +7,7 @@ from rest_framework_simplejwt.token_blacklist.models import (
     OutstandingToken,
 )
 from rest_framework import serializers
+from rest_framework.exceptions import AuthenticationFailed
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_decode
@@ -37,8 +38,26 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         # Prefer email matches so official accounts use their formal sign-in identity.
         identifier = attrs.get(self.username_field, '').strip()
         if identifier:
-            matched_user = User.objects.filter(email__iexact=identifier).order_by('pk').first()
-            if matched_user is None:
+            email_matches = list(
+                User.objects.filter(email__iexact=identifier).order_by('pk')[:2]
+            )
+            if len(email_matches) > 1:
+                # Resident households may intentionally share an email address.
+                # Never pick an arbitrary account when that address is used to log in.
+                username_matches = list(
+                    User.objects.filter(username__iexact=identifier).order_by('pk')[:2]
+                )
+                if (
+                    len(username_matches) != 1
+                    or username_matches[0].role in EMAIL_SIGN_IN_ROLES
+                ):
+                    raise AuthenticationFailed(
+                        'No active account found with the given credentials.'
+                    )
+                matched_user = username_matches[0]
+            elif email_matches:
+                matched_user = email_matches[0]
+            else:
                 matched_user = User.objects.filter(username__iexact=identifier).order_by('pk').first()
             if matched_user:
                 if (

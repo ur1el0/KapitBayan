@@ -6,6 +6,7 @@ from gridy_auth.models import User, Resident, Barangay
 from datetime import date
 from django.conf import settings
 from django.utils import timezone
+from django.db.models import Q
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
@@ -52,6 +53,26 @@ class RegisterSerializer(serializers.ModelSerializer):
         except DjangoValidationError as e:
             raise serializers.ValidationError(list(e.messages))
         return value
+
+    def validate_email(self, value):
+        normalized_email = value.strip().lower()
+        if not normalized_email:
+            return normalized_email
+
+        official_roles = (
+            User.Role.ADMIN,
+            User.Role.FIELD_OFFICIAL,
+            User.Role.BARANGAY_OPERATOR,
+        )
+        conflicts_with_staff_identity = User.objects.filter(
+            Q(username__iexact=normalized_email)
+            | Q(email__iexact=normalized_email, role__in=official_roles)
+        ).exists()
+        if conflicts_with_staff_identity:
+            raise serializers.ValidationError(
+                "This email conflicts with an existing account sign-in identity."
+            )
+        return normalized_email
 
     # 2. This validates the ENTIRE payload (attrs)
     def validate(self, attrs):
