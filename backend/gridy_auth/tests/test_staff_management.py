@@ -406,7 +406,7 @@ class TestStaffManagementEndpoints:
             action_by=admin_a,
             action_type=AuditLog.ActionType.USER_ACTION,
         ).latest("timestamp")
-        assert field_official_a.email in audit.description
+        assert f"Field Official account ID {field_official_a.pk}" in audit.description
         assert "first_name" in audit.description
         assert "last_name" in audit.description
         assert "email" in audit.description

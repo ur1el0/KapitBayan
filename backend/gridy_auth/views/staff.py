@@ -184,7 +184,7 @@ class StaffManagementViewSet(
                 action_type=AuditLog.ActionType.USER_ACTION,
                 description=(
                     f"Admin {self.request.user.email} updated profile fields "
-                    f"{', '.join(changed_fields)} for Field Official {target.email}."
+                    f"{', '.join(changed_fields)} for Field Official account ID {target.pk}."
                 ),
                 request=self.request,
             )
