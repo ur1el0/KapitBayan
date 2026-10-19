@@ -40,13 +40,13 @@ from gridy_auth.throttling import SharedDatabaseScopedRateThrottle
 
 @extend_schema(tags=["Barangay Directory"])
 class PublicBarangayDirectoryView(APIView):
-    """List existing Barangays so residents can select their jurisdiction."""
+    """List approved Barangays so residents can select their jurisdiction."""
 
     permission_classes = [permissions.AllowAny]
 
     @extend_schema(responses=PublicBarangaySerializer(many=True))
     def get(self, request):
-        barangays = Barangay.objects.all().order_by("province", "municipality", "name")
+        barangays = Barangay.get_eligible_for_registration()
         return Response(PublicBarangaySerializer(barangays, many=True).data)
 
 

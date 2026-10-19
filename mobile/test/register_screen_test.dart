@@ -273,7 +273,54 @@ void main() {
     expect(find.byIcon(Icons.visibility_off_outlined, skipOffstage: false), findsOneWidget);
     expect(find.byIcon(Icons.visibility_outlined, skipOffstage: false), findsOneWidget);
   });
+
+  testWidgets('handles empty approved barangays list gracefully without crashing and disables dropdown', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 2.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+    SharedPreferences.setMockInitialValues({});
+    final preferences = await SharedPreferences.getInstance();
+    final apiClient = EmptyBarangaysApiClient();
+    final authService = AuthService(
+      apiClient: apiClient,
+      storageService: StorageService(preferences),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.lightTheme,
+        home: RegisterScreen(authService: authService),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Verify empty state messages are rendered
+    expect(find.text('No registered barangays are currently available.'), findsAtLeastNWidgets(1));
+
+    // Tap the disabled dropdown - should not open bottom sheet
+    await tester.tap(find.text('No registered barangays are currently available.').first);
+    await tester.pumpAndSettle();
+    expect(find.text('Search barangay, municipality, or province'), findsNothing);
+  });
 }
+
+class EmptyBarangaysApiClient extends ApiClient {
+  EmptyBarangaysApiClient() : super(baseUrl: 'https://kapitbayan.test');
+
+  @override
+  Future<http.Response> get(
+    String endpoint, {
+    Map<String, String>? queryParams,
+    Map<String, String>? headers,
+    bool requiresAuth = true,
+  }) async {
+    return http.Response('[]', 200, headers: {'content-type': 'application/json'});
+  }
+}
+
 
 class RegistrationGuardApiClient extends ApiClient {
   int registrationRequestCount = 0;

@@ -2,7 +2,7 @@ from datetime import date, timedelta
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 from gridy_auth.management.commands.demo_seed_safety import require_local_demo_database
-from gridy_auth.models import User, Barangay, Resident
+from gridy_auth.models import User, Barangay, Resident, BarangayApplication
 from gridy_communications.models import Announcement, ActivitySchedule
 from gridy_services.models import DocumentRequest, QueueTicket
 
@@ -227,6 +227,30 @@ class Command(BaseCommand):
             },
         )
         self.stdout.write(self.style.SUCCESS("Provisioned administrative and resident users."))
+
+        # Ensure approved onboarding application records exist for partner barangays
+        for b_inst, admin_inst, official_name, email, phone in [
+            (dupay, admin_dupay, "Demo Official Dupay", "admin.dupay@example.invalid", "09170000001"),
+            (daungan, admin_daungan, "Demo Official Daungan", "admin.daungan@example.invalid", "09170000002"),
+            (cotta, admin_cotta, "Cotta Seed Admin", "captain.cotta@gridy.local", "09170000003"),
+        ]:
+            BarangayApplication.objects.get_or_create(
+                created_barangay=b_inst,
+                defaults={
+                    "name": b_inst.name,
+                    "municipality": b_inst.municipality or "Lucena City",
+                    "province": b_inst.province or "Quezon",
+                    "applicant_name": official_name,
+                    "applicant_position": "Punong Barangay",
+                    "applicant_email": email,
+                    "applicant_phone": phone,
+                    "status": BarangayApplication.Status.APPROVED,
+                    "created_admin": admin_inst,
+                    "review_verified": True,
+                    "proof_reviewed": True,
+                    "reviewed_at": timezone.now(),
+                },
+            )
 
         # ---------------------------------------------------------------------
         # 3. Community Announcements

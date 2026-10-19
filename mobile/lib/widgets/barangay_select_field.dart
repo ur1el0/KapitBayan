@@ -69,7 +69,9 @@ class BarangaySelectField extends StatelessWidget {
           ),
           child: Text(
             selected.isEmpty
-                ? 'Select your Barangay'
+                ? (barangays.isEmpty
+                    ? 'No registered barangays are currently available.'
+                    : 'Select your Barangay')
                 : selected.first.displayName,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(

@@ -35,10 +35,96 @@ class BarangayOnboardingTests(TestCase):
         )
 
     def test_public_directory_remains_available_for_resident_registration(self):
+        BarangayApplication.objects.create(
+            name=self.barangay.name,
+            municipality=self.barangay.municipality,
+            province=self.barangay.province,
+            applicant_name="Official Example",
+            applicant_position="Barangay Official",
+            applicant_email="approved.official@example.test",
+            applicant_phone="09123456789",
+            status=BarangayApplication.Status.APPROVED,
+            created_barangay=self.barangay,
+            review_verified=True,
+        )
         response = self.client.get("/api/v1/auth/public/barangays/")
 
         self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data), 1)
         self.assertEqual(response.data[0]["id"], self.barangay.pk)
+
+    def test_public_directory_filters_out_pending_rejected_inactive_and_unregistered(self):
+        # 1. Approved & Active Barangay (visible)
+        b_approved = Barangay.objects.create(name="Barangay Approved")
+        BarangayApplication.objects.create(
+            name=b_approved.name,
+            applicant_name="Official A",
+            applicant_position="Official",
+            applicant_email="approved_a@example.test",
+            applicant_phone="09123456781",
+            status=BarangayApplication.Status.APPROVED,
+            created_barangay=b_approved,
+            review_verified=True,
+        )
+
+        # 2. Pending Barangay (should not appear)
+        b_pending = Barangay.objects.create(name="Barangay Pending")
+        BarangayApplication.objects.create(
+            name=b_pending.name,
+            applicant_name="Official B",
+            applicant_position="Official",
+            applicant_email="pending_b@example.test",
+            applicant_phone="09123456782",
+            status=BarangayApplication.Status.PENDING,
+            created_barangay=b_pending,
+        )
+
+        # 3. Rejected Barangay (should not appear)
+        b_rejected = Barangay.objects.create(name="Barangay Rejected")
+        BarangayApplication.objects.create(
+            name=b_rejected.name,
+            applicant_name="Official C",
+            applicant_position="Official",
+            applicant_email="rejected_c@example.test",
+            applicant_phone="09123456783",
+            status=BarangayApplication.Status.REJECTED,
+            created_barangay=b_rejected,
+            review_note="Rejected authority proof",
+        )
+
+        # 4. Inactive Barangay (approved application but created_admin / all admins are inactive)
+        b_inactive = Barangay.objects.create(name="Barangay Inactive")
+        admin_inactive = User.objects.create_user(
+            username="admin_inactive_b",
+            role=User.Role.ADMIN,
+            is_active=False,
+            barangay=b_inactive,
+        )
+        BarangayApplication.objects.create(
+            name=b_inactive.name,
+            applicant_name="Official E",
+            applicant_position="Official",
+            applicant_email="inactive_e@example.test",
+            applicant_phone="09123456785",
+            status=BarangayApplication.Status.APPROVED,
+            created_barangay=b_inactive,
+            created_admin=admin_inactive,
+            review_verified=True,
+        )
+
+        # 5. Unregistered Barangay (exists in Barangay model but no application)
+        Barangay.objects.create(name="Barangay Unregistered")
+
+        # self.barangay has no application in this test, so it is also unregistered
+        response = self.client.get("/api/v1/auth/public/barangays/")
+        self.assertEqual(response.status_code, 200)
+        returned_ids = [item["id"] for item in response.data]
+
+        self.assertIn(b_approved.pk, returned_ids)
+        self.assertNotIn(b_pending.pk, returned_ids)
+        self.assertNotIn(b_rejected.pk, returned_ids)
+        self.assertNotIn(b_inactive.pk, returned_ids)
+        self.assertNotIn(self.barangay.pk, returned_ids)
 
     def test_public_application_creates_only_a_pending_inactive_applicant_account(self):
         password = f"{secrets.token_urlsafe(24)}Aa1!"
