@@ -4,6 +4,7 @@ import logging
 import uuid
 from datetime import datetime
 from django.db import transaction
+from django.db.transaction import atomic as import_atomic
 from django.shortcuts import get_object_or_404
 from rest_framework import status, permissions, viewsets
 from rest_framework.views import APIView
@@ -115,7 +116,7 @@ class ResidentImportView(APIView):
         batch_id = str(uuid.uuid4())
 
         try:
-            with transaction.atomic():
+            with import_atomic():
                 for row_idx, row in enumerate(rows, start=1):
                     # Sanitize inputs by stripping whitespace
                     username = (row.get('username') or '').strip()
