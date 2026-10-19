@@ -60,7 +60,9 @@ class NotificationCenterSheet extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  hasError ? 'Error' : '${notifications.length} Active',
+                  hasError
+                      ? (notifications.isEmpty ? 'Error' : 'Partial')
+                      : '${notifications.length} Active',
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
@@ -74,7 +76,7 @@ class NotificationCenterSheet extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Expanded(
-            child: hasError
+            child: hasError && notifications.isEmpty
                 ? Center(
                     child: Padding(
                       padding: const EdgeInsets.all(20.0),
@@ -133,71 +135,110 @@ class NotificationCenterSheet extends StatelessWidget {
                       style: TextStyle(color: AppColors.textMuted),
                     ),
                   )
-                : ListView.separated(
-                    controller: scrollController,
-                    itemCount: notifications.length,
-                    separatorBuilder: (_, _) => const Divider(height: 20),
-                    itemBuilder: (context, index) {
-                      final item = notifications[index];
-                      final approved = item.type == NotificationType.approved;
-                      final queueAlert = item.type == NotificationType.queue;
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 4),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: approved
-                                    ? const Color(0xFFDCFCE7)
-                                    : queueAlert
-                                    ? const Color(0xFFE0E7FF)
-                                    : const Color(0xFFFEF3C7),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(
-                                approved
-                                    ? Icons.check_circle_rounded
-                                    : queueAlert
-                                    ? Icons.confirmation_number_outlined
-                                    : Icons.info_rounded,
-                                color: approved
-                                    ? const Color(0xFF15803D)
-                                    : queueAlert
-                                    ? AppColors.primaryNavy
-                                    : const Color(0xFFB45309),
+                : Column(
+                    children: [
+                      if (hasError)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.cloud_off_rounded,
+                                color: Color(0xFFDC2626),
                                 size: 20,
                               ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  errorMessage ??
+                                      'Some notification updates could not load.',
+                                  style: const TextStyle(
+                                    color: Color(0xFFB91C1C),
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                              if (onRetry != null)
+                                IconButton(
+                                  tooltip: 'Try again',
+                                  onPressed: onRetry,
+                                  icon: const Icon(Icons.refresh_rounded),
+                                ),
+                            ],
+                          ),
+                        ),
+                      Expanded(
+                        child: ListView.separated(
+                          controller: scrollController,
+                          itemCount: notifications.length,
+                          separatorBuilder: (_, _) => const Divider(height: 20),
+                          itemBuilder: (context, index) {
+                            final item = notifications[index];
+                            final approved =
+                                item.type == NotificationType.approved;
+                            final queueAlert =
+                                item.type == NotificationType.queue;
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 4),
+                              child: Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    item.title,
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
-                                      color: AppColors.textPrimary,
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: approved
+                                          ? const Color(0xFFDCFCE7)
+                                          : queueAlert
+                                          ? const Color(0xFFE0E7FF)
+                                          : const Color(0xFFFEF3C7),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(
+                                      approved
+                                          ? Icons.check_circle_rounded
+                                          : queueAlert
+                                          ? Icons.confirmation_number_outlined
+                                          : Icons.info_rounded,
+                                      color: approved
+                                          ? const Color(0xFF15803D)
+                                          : queueAlert
+                                          ? AppColors.primaryNavy
+                                          : const Color(0xFFB45309),
+                                      size: 20,
                                     ),
                                   ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    item.category,
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      color: AppColors.textMuted,
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          item.title,
+                                          style: const TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.bold,
+                                            color: AppColors.textPrimary,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          item.category,
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            color: AppColors.textMuted,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ],
                               ),
-                            ),
-                          ],
+                            );
+                          },
                         ),
-                      );
-                    },
+                      ),
+                    ],
                   ),
           ),
         ],

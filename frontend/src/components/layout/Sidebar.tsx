@@ -47,8 +47,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ compact = false, onNavigate })
         >
             <div>
                 <div className={`${compact ? 'h-14 px-4' : 'h-20 px-6'} flex items-center gap-3`}>
-                    <div className="w-9 h-9 rounded-xl bg-[#091b35] flex items-center justify-center p-1.5 shadow-sm shrink-0">
-                        <img src={kapitBayanSymbol} alt="KapitBayan" className="w-full h-full object-contain" />
+                    <div className="w-9 h-9 overflow-hidden rounded-xl bg-[#092B66] flex items-center justify-center shadow-sm shrink-0">
+                        <img src={kapitBayanSymbol} alt="KapitBayan" className="h-full w-full scale-[1.65] object-contain" />
                     </div>
                     <div className="flex flex-col justify-center">
                         <span className="text-[9px] font-bold tracking-[0.14em] text-[#64748b] uppercase leading-tight mt-0.5">

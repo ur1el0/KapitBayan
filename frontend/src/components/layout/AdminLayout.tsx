@@ -8,6 +8,8 @@ import {
     X,
 } from 'lucide-react';
 import { Sidebar } from './Sidebar';
+import { axiosPrivate } from '../../api/axios';
+import { getMediaUrl } from '../../utils/media-url';
 
 export const AdminLayout: React.FC = () => {
     const { user } = useAuth();
@@ -19,6 +21,7 @@ export const AdminLayout: React.FC = () => {
         : (user?.username?.charAt(0).toUpperCase() || 'J');
         
     const userName = user?.full_name || user?.username || 'Admin Juan';
+    const profilePictureUrl = getMediaUrl(user?.profile_picture, axiosPrivate.defaults.baseURL);
 
     return (
         <div className="min-h-screen min-h-[100dvh] flex flex-col md:h-screen md:flex-row bg-[#F0F4FA] text-slate-900 font-sans antialiased md:overflow-hidden">
@@ -57,8 +60,10 @@ export const AdminLayout: React.FC = () => {
 
                         <button type="button" onClick={() => navigate('/profile')} aria-label={`Open profile for ${userName}`} className="flex items-center gap-2 rounded-xl pl-1 sm:gap-3 sm:pl-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-admin/40">
                             <span className="hidden max-w-40 truncate text-sm font-bold text-slate-800 sm:block">{userName}</span>
-                            <div className="w-9 h-9 rounded-xl bg-slate-300 text-slate-700 font-bold flex items-center justify-center text-sm shadow-xs border border-slate-200">
-                                {userInitial}
+                            <div className="w-9 h-9 overflow-hidden rounded-xl bg-slate-300 text-slate-700 font-bold flex items-center justify-center text-sm shadow-xs border border-slate-200">
+                                {profilePictureUrl ? (
+                                    <img src={profilePictureUrl} alt={`${userName} profile picture`} className="h-full w-full object-cover" />
+                                ) : userInitial}
                             </div>
                         </button>
                     </div>

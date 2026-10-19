@@ -214,6 +214,13 @@ class User(AbstractUser):
         default=Role.RESIDENT,
     )
 
+    profile_picture = models.ImageField(
+        upload_to="profile_pictures/",
+        blank=True,
+        null=True,
+        help_text="Optional profile photo for this account.",
+    )
+
     barangay = models.ForeignKey(
         Barangay,
         on_delete=models.CASCADE,

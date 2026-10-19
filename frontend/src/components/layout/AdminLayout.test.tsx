@@ -5,12 +5,25 @@ import { AdminLayout } from './AdminLayout';
 
 vi.mock('../../context/auth-context', () => ({
     useAuth: () => ({
-        user: { role: 'ADMIN', username: 'staff', full_name: 'Barangay Staff' },
+        user: { role: 'ADMIN', username: 'staff', full_name: 'Barangay Staff', profile_picture: '/media/staff.png' },
         logout: vi.fn(),
     }),
 }));
 
 describe('AdminLayout', () => {
+    it('shows the saved profile picture in the top navigation', () => {
+        render(
+            <BrowserRouter>
+                <AdminLayout />
+            </BrowserRouter>,
+        );
+
+        expect(screen.getByRole('img', { name: 'Barangay Staff profile picture' })).toHaveAttribute(
+            'src',
+            'http://localhost:8000/media/staff.png',
+        );
+    });
+
     it('opens the mobile navigation and closes it after a route is chosen', () => {
         render(
             <BrowserRouter>
