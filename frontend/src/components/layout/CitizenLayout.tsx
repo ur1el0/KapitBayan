@@ -40,8 +40,8 @@ export const CitizenLayout: React.FC = () => {
                     <div className="flex items-center justify-between h-20">
                         {/* Left: Brand & Barangay Badge */}
                         <div className="flex items-center gap-4 min-w-0">
-                            <div className="w-10 h-10 rounded-xl bg-white/10 border border-white/15 flex items-center justify-center p-2 shadow-inner shrink-0">
-                                <img src={kapitBayanSymbol} alt="" className="w-full h-full object-contain" />
+                            <div className="w-10 h-10 overflow-hidden rounded-xl bg-[#092B66] border border-white/15 flex items-center justify-center shadow-inner shrink-0">
+                                <img src={kapitBayanSymbol} alt="" className="h-full w-full scale-[1.65] object-contain" />
                             </div>
                             <div className="min-w-0">
                                 <div className="flex items-center gap-2">
