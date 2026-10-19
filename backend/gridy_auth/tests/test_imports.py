@@ -62,7 +62,7 @@ class ResidentImportAPITests(IsolatedAuthAPITestCase):
         self.assertTrue(any(record.exc_info for record in captured_logs.records))
 
     @patch(
-        "gridy_auth.views.residents.transaction.atomic",
+        "gridy_auth.views.residents.import_atomic",
         side_effect=RuntimeError("PRIVATE_DATABASE_DIAGNOSTIC"),
     )
     def test_import_database_error_is_sanitized(self, _atomic):
