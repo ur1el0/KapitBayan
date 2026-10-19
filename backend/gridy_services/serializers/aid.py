@@ -25,6 +25,9 @@ class AidRequestSerializer(serializers.ModelSerializer):
         ]
 
     def get_requester_name(self, obj) -> str:
+        if obj.requester is None:
+            return "Former resident"
+
         profile = getattr(obj.requester, "profile", None)
         return (
             profile.full_name
