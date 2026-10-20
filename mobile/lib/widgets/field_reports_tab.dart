@@ -92,6 +92,51 @@ class _FieldReportCard extends StatelessWidget {
     required this.onUpdateUrgency,
   });
 
+  void _showPhoto(BuildContext context, String imageUrl) {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => Dialog(
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'Report photo',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Close photo',
+                    onPressed: () => Navigator.of(dialogContext).pop(),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+              SizedBox(
+                height: MediaQuery.sizeOf(dialogContext).height * 0.6,
+                width: double.infinity,
+                child: InteractiveViewer(
+                  child: Image.network(
+                    imageUrl,
+                    fit: BoxFit.contain,
+                    semanticLabel: 'Photo for report ${report.title}',
+                    errorBuilder: (_, _, _) => const Center(
+                      child: Text('Report photo could not be loaded.'),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isResolved = report.status.toUpperCase() == 'RESOLVED';
@@ -178,6 +223,34 @@ class _FieldReportCard extends StatelessWidget {
             report.description,
             style: const TextStyle(fontSize: 13, color: Color(0xFF475569)),
           ),
+          if (report.imageUrl?.trim().isNotEmpty ?? false) ...[
+            const SizedBox(height: 12),
+            Semantics(
+              button: true,
+              label: 'View photo for report ${report.title}',
+              child: InkWell(
+                onTap: () => _showPhoto(context, report.imageUrl!),
+                borderRadius: BorderRadius.circular(12),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.network(
+                    report.imageUrl!,
+                    height: 160,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    semanticLabel: 'Photo for report ${report.title}',
+                    errorBuilder: (_, _, _) => Container(
+                      height: 160,
+                      width: double.infinity,
+                      color: const Color(0xFFF1F5F9),
+                      alignment: Alignment.center,
+                      child: const Text('Report photo could not be loaded.'),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
           const SizedBox(height: 10),
           Row(
             children: [
