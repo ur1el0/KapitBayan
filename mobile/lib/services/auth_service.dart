@@ -100,8 +100,10 @@ class AuthService {
     required String birthDate,
     required bool voterStatus,
     required bool privacyConsent,
+    required String purok,
     int? barangayId,
     String? contactNumber,
+    String? addressDetails,
     String? guardianId,
     String? philsysIdNumber,
     XFile? philsysPhoto,
@@ -119,7 +121,10 @@ class AuthService {
       'voter_status': voterStatus.toString(),
       'privacy_consent': privacyConsent.toString(),
       'privacy_consent_version': 'resident-v1',
+      'purok': purok.trim(),
       if (barangayId != null) 'barangay_id': barangayId.toString(),
+      if (addressDetails != null && addressDetails.trim().isNotEmpty)
+        'address_details': addressDetails.trim(),
       if (contactNumber != null && contactNumber.isNotEmpty)
         'contact_number': contactNumber.trim(),
       if (guardianId != null && guardianId.isNotEmpty)

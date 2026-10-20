@@ -172,6 +172,9 @@ describe('Resident Register Component', () => {
         fireEvent.change(screen.getByPlaceholderText('juan@example.com'), {
             target: { value: 'juan@example.com' },
         });
+        fireEvent.change(screen.getByPlaceholderText('e.g. Purok 3 or Zone 2'), {
+            target: { value: 'Purok 3' },
+        });
         await screen.findByRole('option', { name: /Barangay Ibabang Dupay/ });
         fireEvent.change(screen.getByRole('combobox'), {
             target: { value: '2' },
@@ -218,6 +221,7 @@ describe('Resident Register Component', () => {
         expect(formData.get('privacy_consent')).toBe('true');
         expect(formData.get('privacy_consent_version')).toBe('resident-v1');
         expect(formData.get('barangay_id')).toBe('2');
+        expect(formData.get('purok')).toBe('Purok 3');
         expect(formData.get('philsys_id_photo')).toBe(idPhoto);
     });
 
@@ -236,6 +240,9 @@ describe('Resident Register Component', () => {
             screen.getAllByPlaceholderText('••••••••');
         fireEvent.change(passwordInput, { target: { value: 'Password123!' } });
         fireEvent.change(confirmPasswordInput, { target: { value: 'Password123!' } });
+        fireEvent.change(screen.getByPlaceholderText('e.g. Purok 3 or Zone 2'), {
+            target: { value: 'Purok 3' },
+        });
         await screen.findByRole('option', { name: /Barangay Ibabang Dupay/ });
         fireEvent.click(screen.getByRole('checkbox'));
 

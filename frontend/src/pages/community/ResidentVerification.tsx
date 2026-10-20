@@ -4,6 +4,7 @@ import { axiosPrivate } from "../../api/axios";
 import { Clock, Search, Filter } from "lucide-react";
 import { InlineErrorState } from "../../components/ui/InlineErrorState";
 import {
+    formatPurok,
     type Resident,
     VerificationTable,
     VerificationDossierModal,
@@ -182,7 +183,7 @@ export default function ResidentVerification() {
                     >
                         {availablePuroks.map(purok => (
                             <option key={purok} value={purok}>
-                                {purok === "All" ? "All Puroks" : `Purok ${purok}`}
+                                {purok === "All" ? "All Puroks" : formatPurok(purok)}
                             </option>
                         ))}
                     </select>

@@ -7,6 +7,7 @@ export interface Resident {
     voter_status: boolean;
     contact_number: string;
     purok?: string | number | null;
+    address_details?: string | null;
     is_verified?: boolean;
     guardian?: number | null;
     philsys_id_number?: string | null;
@@ -21,4 +22,14 @@ export interface ImportSummary {
     imported: number;
     skipped_due_to_duplicate: number;
     errors: string[];
+}
+
+export function formatPurok(purok?: string | number | null): string {
+    if (purok === null || purok === undefined) return 'Unassigned';
+    const str = String(purok).trim();
+    if (!str) return 'Unassigned';
+    if (/^\d+$/.test(str)) {
+        return `Purok ${str}`;
+    }
+    return str;
 }

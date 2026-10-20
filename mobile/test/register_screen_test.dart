@@ -141,10 +141,11 @@ void main() {
 
     final textFields = find.byType(TextFormField);
     await tester.enterText(textFields.at(0), 'Test Resident');
-    await tester.enterText(textFields.at(1), 'test_resident');
-    await tester.enterText(textFields.at(2), 'test@example.com');
-    await tester.enterText(textFields.at(3), 'Password123!');
-    await tester.enterText(textFields.at(4), 'Password123!');
+    await tester.enterText(textFields.at(1), 'Purok 1');
+    await tester.enterText(textFields.at(3), 'test_resident');
+    await tester.enterText(textFields.at(4), 'test@example.com');
+    await tester.enterText(textFields.at(5), 'Password123!');
+    await tester.enterText(textFields.at(6), 'Password123!');
 
     final barangayDropdown = find.text('Select your Barangay');
     await tester.ensureVisible(barangayDropdown);
@@ -195,13 +196,14 @@ void main() {
     await tester.pumpWidget(createRegisterTestWidget());
     await tester.pumpAndSettle();
 
-    // Enter full name, username, invalid email, and valid passwords
+    // Enter full name, purok, username, invalid email, and valid passwords
     final textFields = find.byType(TextFormField);
     await tester.enterText(textFields.at(0), 'Johnathan Doe');
-    await tester.enterText(textFields.at(1), 'CID-99201');
-    await tester.enterText(textFields.at(2), 'invalid-email');
-    await tester.enterText(textFields.at(3), 'password123');
-    await tester.enterText(textFields.at(4), 'password123');
+    await tester.enterText(textFields.at(1), 'Purok 1');
+    await tester.enterText(textFields.at(3), 'CID-99201');
+    await tester.enterText(textFields.at(4), 'invalid-email');
+    await tester.enterText(textFields.at(5), 'password123');
+    await tester.enterText(textFields.at(6), 'password123');
 
     final registerButton = find.text('Register Account');
     await tester.ensureVisible(registerButton);
@@ -224,12 +226,13 @@ void main() {
 
     final textFields = find.byType(TextFormField);
     await tester.enterText(textFields.at(0), 'Johnathan Doe');
-    await tester.enterText(textFields.at(1), 'CID-99201');
-    await tester.enterText(textFields.at(2), 'john@civic.gov');
+    await tester.enterText(textFields.at(1), 'Purok 1');
+    await tester.enterText(textFields.at(3), 'CID-99201');
+    await tester.enterText(textFields.at(4), 'john@civic.gov');
 
     // Test short password
-    await tester.enterText(textFields.at(3), 'short');
-    await tester.enterText(textFields.at(4), 'short');
+    await tester.enterText(textFields.at(5), 'short');
+    await tester.enterText(textFields.at(6), 'short');
     final registerButton = find.text('Register Account');
     await tester.ensureVisible(registerButton);
     await tester.tap(registerButton);
@@ -238,10 +241,10 @@ void main() {
     expect(find.text('Password must be at least 8 characters', skipOffstage: false), findsOneWidget);
 
     // Test password mismatch
-    await tester.ensureVisible(textFields.at(3));
-    await tester.enterText(textFields.at(3), 'validpassword123');
-    await tester.ensureVisible(textFields.at(4));
-    await tester.enterText(textFields.at(4), 'differentpassword456');
+    await tester.ensureVisible(textFields.at(5));
+    await tester.enterText(textFields.at(5), 'validpassword123');
+    await tester.ensureVisible(textFields.at(6));
+    await tester.enterText(textFields.at(6), 'differentpassword456');
     await tester.ensureVisible(registerButton);
     await tester.tap(registerButton);
     await tester.pumpAndSettle();

@@ -24,6 +24,7 @@ class UserProfileView(APIView):
         'voter_status',
         'contact_number',
         'purok',
+        'address_details',
         'philsys_id_number',
         'philsys_id_photo',
         'remove_philsys_id_photo',
