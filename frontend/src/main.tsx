@@ -2,7 +2,18 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { Toaster } from 'react-hot-toast'
 import { App } from './App'
+import { canRetryChunkLoad } from './utils/chunkLoadRecovery'
 import './index.css'
+
+window.addEventListener('vite:preloadError', (event) => {
+    event.preventDefault()
+
+    // A phone can keep an older app shell open across a deployment. If its
+    // dashboard chunk was removed, reload once so Vite can fetch the current
+    // app shell and matching chunks. The session guard avoids reload loops
+    // when a chunk remains unavailable.
+    if (canRetryChunkLoad(window.sessionStorage, Date.now())) window.location.reload()
+})
 
 createRoot(document.getElementById('root')!).render(
     <StrictMode>
