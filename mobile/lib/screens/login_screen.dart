@@ -438,45 +438,20 @@ class _LoginScreenState extends State<LoginScreen> {
                         const Spacer(),
                         const SizedBox(height: 24),
 
-                        // Footer Links: Privacy Policy • Support
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            GestureDetector(
-                              onTap: () => _showPrivacyPolicyModal(context),
-                              child: const Text(
-                                'PRIVACY POLICY',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.textMuted,
-                                  letterSpacing: 0.8,
-                                ),
+                        // Footer Link: Privacy Policy
+                        Center(
+                          child: GestureDetector(
+                            onTap: () => _showPrivacyPolicyModal(context),
+                            child: const Text(
+                              'PRIVACY POLICY',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.textMuted,
+                                letterSpacing: 0.8,
                               ),
                             ),
-                            const Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 10.0),
-                              child: Text(
-                                '•',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: AppColors.textMuted,
-                                ),
-                              ),
-                            ),
-                            GestureDetector(
-                              onTap: () => _showSupportModal(context),
-                              child: const Text(
-                                'SUPPORT',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.textMuted,
-                                  letterSpacing: 0.8,
-                                ),
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
 
                         const SizedBox(height: 20),
@@ -494,9 +469,5 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _showPrivacyPolicyModal(BuildContext context) {
     showPrivacyPolicySheet(context);
-  }
-
-  void _showSupportModal(BuildContext context) {
-    showSupportSheet(context);
   }
 }
