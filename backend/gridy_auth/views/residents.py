@@ -235,7 +235,14 @@ class PendingResidentsView(ListAPIView):
 
     def get_queryset(self):
         user = self.request.user
-        return Resident.objects.filter(is_verified=False, user__barangay=user.barangay)
+        return (
+            Resident.objects.filter(
+                is_verified=False,
+                user__barangay_id=user.barangay_id,
+            )
+            .select_related("user")
+            .order_by("-user__date_joined", "-pk")
+        )
 
 
 class VerifyResidentView(APIView):

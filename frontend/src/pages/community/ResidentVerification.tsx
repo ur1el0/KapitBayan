@@ -1,5 +1,5 @@
 import toast from 'react-hot-toast';
-import { useCallback, useState, useEffect, useMemo } from "react";
+import { useCallback, useState, useEffect, useMemo, useRef } from "react";
 import { axiosPrivate } from "../../api/axios";
 import { Clock, Search, Filter } from "lucide-react";
 import { InlineErrorState } from "../../components/ui/InlineErrorState";
@@ -15,6 +15,7 @@ export default function ResidentVerification() {
     const [loading, setLoading] = useState(true);
     const [loadError, setLoadError] = useState(false);
     const [retrying, setRetrying] = useState(false);
+    const pendingRequestRef = useRef(false);
     
     // Search and Filter State
     const [searchQuery, setSearchQuery] = useState("");
@@ -43,6 +44,9 @@ export default function ResidentVerification() {
     }, [pendingResidents, searchQuery, filterPurok]);
 
     const fetchPendingResidents = useCallback(async (isRetry = false) => {
+        if (pendingRequestRef.current) return;
+        pendingRequestRef.current = true;
+
         if (isRetry) setRetrying(true);
         try {
             const response = await axiosPrivate.get('auth/pending-residents/');
@@ -52,6 +56,7 @@ export default function ResidentVerification() {
             console.error("Failed to fetch residents", error);
             setLoadError(true);
         } finally {
+            pendingRequestRef.current = false;
             setLoading(false);
             setRetrying(false);
         }
@@ -59,6 +64,21 @@ export default function ResidentVerification() {
 
     useEffect(() => {
         void fetchPendingResidents();
+    }, [fetchPendingResidents]);
+
+    useEffect(() => {
+        const refreshWhenVisible = () => {
+            if (document.visibilityState === 'visible') {
+                void fetchPendingResidents(true);
+            }
+        };
+
+        window.addEventListener('focus', refreshWhenVisible);
+        document.addEventListener('visibilitychange', refreshWhenVisible);
+        return () => {
+            window.removeEventListener('focus', refreshWhenVisible);
+            document.removeEventListener('visibilitychange', refreshWhenVisible);
+        };
     }, [fetchPendingResidents]);
 
     const handleApprove = async (id: number) => {
@@ -122,9 +142,20 @@ export default function ResidentVerification() {
                     <p className="text-sm text-slate-500 mt-1">Review PhilSys national identity credentials and utility residency proofs.</p>
                 </div>
                 {!loadError && (
-                    <div className="bg-amber-100 text-amber-800 px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-2">
-                        <Clock className="w-4 h-4" />
-                        {filteredResidents.length} Pending Verification
+                    <div className="flex items-center gap-2">
+                        <button
+                            type="button"
+                            aria-label="Refresh pending resident verifications"
+                            onClick={() => { void fetchPendingResidents(true); }}
+                            disabled={retrying}
+                            className="inline-flex min-h-[44px] items-center justify-center rounded-lg border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:cursor-wait disabled:opacity-60"
+                        >
+                            {retrying ? 'Refreshing…' : 'Refresh'}
+                        </button>
+                        <div className="bg-amber-100 text-amber-800 px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-2">
+                            <Clock className="w-4 h-4" />
+                            {filteredResidents.length} Pending Verification
+                        </div>
                     </div>
                 )}
             </div>
