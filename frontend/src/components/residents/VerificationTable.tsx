@@ -64,7 +64,7 @@ export const VerificationTable: React.FC<VerificationTableProps> = ({
                                 </td>
                                 <td className="px-6 py-4">
                                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-800">
-                                        {resident.purok ? `Purok ${resident.purok}` : 'Unassigned'}
+                                        {resident.purok || 'Unassigned'}
                                     </span>
                                 </td>
                                 <td className="px-6 py-4">

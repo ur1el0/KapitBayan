@@ -7,6 +7,7 @@ export interface Resident {
     voter_status: boolean;
     contact_number: string;
     purok?: string | number | null;
+    address_details?: string | null;
     is_verified?: boolean;
     guardian?: number | null;
     philsys_id_number?: string | null;

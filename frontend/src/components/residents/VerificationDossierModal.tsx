@@ -64,7 +64,7 @@ export const VerificationDossierModal: React.FC<VerificationDossierModalProps> =
                         </div>
                         <div>
                             <span className="text-slate-400 font-medium block">Purok</span>
-                            <span className="font-semibold text-slate-700 mt-0.5 block">{resident.purok ? `Purok ${resident.purok}` : 'Unassigned'}</span>
+                            <span className="font-semibold text-slate-700 mt-0.5 block">{resident.purok || 'Unassigned'}</span>
                         </div>
                         <div>
                             <span className="text-slate-400 font-medium block">Contact Number</span>
@@ -73,6 +73,10 @@ export const VerificationDossierModal: React.FC<VerificationDossierModalProps> =
                         <div>
                             <span className="text-slate-400 font-medium block">PhilSys ID Number</span>
                             <span className="font-mono font-semibold text-slate-700 mt-0.5 block">{resident.philsys_id_number || 'N/A'}</span>
+                        </div>
+                        <div className="col-span-2 sm:col-span-4">
+                            <span className="text-slate-400 font-medium block">House / Street / Landmark</span>
+                            <span className="font-semibold text-slate-700 mt-0.5 block break-words">{resident.address_details || 'Not provided'}</span>
                         </div>
                     </div>
 

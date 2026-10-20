@@ -23,6 +23,8 @@ export const Register: React.FC = () => {
     const [username, setUsername] = useState('');
     const [birthDate, setBirthDate] = useState('');
     const [contactNumber, setContactNumber] = useState('');
+    const [purok, setPurok] = useState('');
+    const [addressDetails, setAddressDetails] = useState('');
     const [guardianId, setGuardianId] = useState('');
 
     // Verification proofs state
@@ -102,6 +104,11 @@ export const Register: React.FC = () => {
             return;
         }
 
+        if (!purok.trim()) {
+            setError('Please enter your Purok or Zone.');
+            return;
+        }
+
         if (
             !philsysPhoto &&
             !utilityBillingPhoto &&
@@ -122,6 +129,10 @@ export const Register: React.FC = () => {
             formData.append('email', email.trim().toLowerCase());
             formData.append('password', password);
             formData.append('birth_date', birthDate);
+            formData.append('purok', purok.trim());
+            if (addressDetails.trim()) {
+                formData.append('address_details', addressDetails.trim());
+            }
             formData.append('voter_status', 'false');
             formData.append(
                 'privacy_consent',
@@ -350,6 +361,24 @@ export const Register: React.FC = () => {
                                 barangayDirectoryError={barangayDirectoryError}
                                 onRetry={fetchBarangays}
                                 isAdminMode={false}
+                            />
+
+                            <TextField
+                                label="PUROK / ZONE"
+                                type="text"
+                                required
+                                maxLength={100}
+                                value={purok}
+                                onChange={(e) => setPurok(e.target.value)}
+                                placeholder="e.g. Purok 3 or Zone 2"
+                            />
+                            <TextField
+                                label="HOUSE / STREET / LANDMARK (OPTIONAL)"
+                                type="text"
+                                maxLength={255}
+                                value={addressDetails}
+                                onChange={(e) => setAddressDetails(e.target.value)}
+                                placeholder="e.g. House 12, Mabini Street, near chapel"
                             />
 
                             {/* Passwords */}

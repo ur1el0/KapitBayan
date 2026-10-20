@@ -90,6 +90,10 @@ export const ResidentDetailModal: React.FC<ResidentDetailModalProps> = ({
                                     <span className="text-slate-500">Purok / Zone:</span>
                                     <span className="font-semibold text-slate-800">{resident.purok || 'Not Specified'}</span>
                                 </div>
+                                <div>
+                                    <span className="text-slate-500">House / Street / Landmark:</span>
+                                    <span className="font-semibold text-slate-800 block break-words">{resident.address_details || 'Not provided'}</span>
+                                </div>
                                 <div className="flex justify-between">
                                     <span className="text-slate-500">Voter Status:</span>
                                     <span className={`font-semibold ${resident.voter_status ? 'text-emerald-600' : 'text-slate-500'}`}>
