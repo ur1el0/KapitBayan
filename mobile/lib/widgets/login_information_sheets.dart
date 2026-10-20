@@ -45,52 +45,6 @@ void showPrivacyPolicySheet(BuildContext context) {
   );
 }
 
-void showSupportSheet(BuildContext context) {
-  showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-    ),
-    builder: (context) => Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const _SheetHandle(),
-          const SizedBox(height: 20),
-          const Text(
-            'Barangay Resident Support',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 16),
-          const _SupportDetail(
-            icon: Icons.phone_rounded,
-            text: '(02) 8920-0000 / Hotline 161',
-          ),
-          const SizedBox(height: 12),
-          const _SupportDetail(
-            icon: Icons.email_rounded,
-            text: 'support@gridy.gov.ph',
-          ),
-          const SizedBox(height: 12),
-          const _SupportDetail(
-            icon: Icons.access_time_filled_rounded,
-            text: 'Mon - Fri: 8:00 AM - 5:00 PM',
-          ),
-          const SizedBox(height: 24),
-          _CloseButton(onPressed: () => Navigator.pop(context)),
-        ],
-      ),
-    ),
-  );
-}
-
 class _SheetHandle extends StatelessWidget {
   const _SheetHandle();
 
@@ -128,29 +82,6 @@ class _CloseButton extends StatelessWidget {
         ),
         child: const Text('Close', style: TextStyle(color: Colors.white)),
       ),
-    );
-  }
-}
-
-class _SupportDetail extends StatelessWidget {
-  final IconData icon;
-  final String text;
-
-  const _SupportDetail({required this.icon, required this.text});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(icon, color: AppColors.primaryNavy, size: 20),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Text(
-            text,
-            style: const TextStyle(fontWeight: FontWeight.w600),
-          ),
-        ),
-      ],
     );
   }
 }
