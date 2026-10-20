@@ -2,7 +2,7 @@ import React from 'react';
 import {
     X, ShieldCheck, IdCard, Receipt, FileText, ExternalLink
 } from 'lucide-react';
-import type { Resident } from './types';
+import { formatPurok, type Resident } from './types';
 import { usePrivateMediaUrl } from '../../hooks/usePrivateMediaUrl';
 import { useModalFocus } from '../../hooks/useModalFocus';
 
@@ -64,7 +64,7 @@ export const VerificationDossierModal: React.FC<VerificationDossierModalProps> =
                         </div>
                         <div>
                             <span className="text-slate-400 font-medium block">Purok</span>
-                            <span className="font-semibold text-slate-700 mt-0.5 block">{resident.purok || 'Unassigned'}</span>
+                            <span className="font-semibold text-slate-700 mt-0.5 block">{formatPurok(resident.purok)}</span>
                         </div>
                         <div>
                             <span className="text-slate-400 font-medium block">Contact Number</span>

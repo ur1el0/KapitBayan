@@ -23,3 +23,13 @@ export interface ImportSummary {
     skipped_due_to_duplicate: number;
     errors: string[];
 }
+
+export function formatPurok(purok?: string | number | null): string {
+    if (purok === null || purok === undefined) return 'Unassigned';
+    const str = String(purok).trim();
+    if (!str) return 'Unassigned';
+    if (/^\d+$/.test(str)) {
+        return `Purok ${str}`;
+    }
+    return str;
+}

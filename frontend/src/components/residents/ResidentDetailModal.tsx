@@ -3,7 +3,7 @@ import {
     X, CheckCircle2, User, Phone, ShieldCheck,
     ExternalLink, FileText, Home
 } from 'lucide-react';
-import type { Resident } from './types';
+import { formatPurok, type Resident } from './types';
 import { usePrivateMediaUrl } from '../../hooks/usePrivateMediaUrl';
 import { useModalFocus } from '../../hooks/useModalFocus';
 
@@ -88,7 +88,7 @@ export const ResidentDetailModal: React.FC<ResidentDetailModalProps> = ({
                                 </div>
                                 <div className="flex justify-between">
                                     <span className="text-slate-500">Purok / Zone:</span>
-                                    <span className="font-semibold text-slate-800">{resident.purok || 'Not Specified'}</span>
+                                    <span className="font-semibold text-slate-800">{formatPurok(resident.purok)}</span>
                                 </div>
                                 <div>
                                     <span className="text-slate-500">House / Street / Landmark:</span>
