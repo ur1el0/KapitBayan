@@ -63,6 +63,7 @@ void main() {
         birthDate: '1990-01-01',
         voterStatus: false,
         privacyConsent: true,
+        purok: 'Purok 1',
       );
 
       expect(apiClient.capturedFields?['privacy_consent'], 'true');
@@ -104,6 +105,7 @@ void main() {
           birthDate: '1990-01-01',
           voterStatus: false,
           privacyConsent: true,
+          purok: 'Purok 1',
           barangayId: 999,
         ),
         throwsA(

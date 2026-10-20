@@ -33,6 +33,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
       TextEditingController();
   final TextEditingController _contactNumberController =
       TextEditingController();
+  final TextEditingController _purokController = TextEditingController();
+  final TextEditingController _addressDetailsController =
+      TextEditingController();
   final TextEditingController _philsysIdController = TextEditingController();
   DateTime? _birthDate;
   int? _selectedBarangayId;
@@ -117,6 +120,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     _contactNumberController.dispose();
+    _purokController.dispose();
+    _addressDetailsController.dispose();
     _guardianController.dispose();
     _philsysIdController.dispose();
     super.dispose();
@@ -254,6 +259,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
         privacyConsent: _dataPrivacyConsent,
         barangayId: _selectedBarangayId,
         contactNumber: _contactNumberController.text,
+        purok: _purokController.text.trim(),
+        addressDetails: _addressDetailsController.text.trim(),
         guardianId: _requiresGuardian ? _guardianController.text.trim() : null,
         philsysIdNumber: _philsysIdController.text.trim().isNotEmpty
             ? _philsysIdController.text.trim()
@@ -464,6 +471,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   passwordController: _passwordController,
                   confirmPasswordController: _confirmPasswordController,
                   contactNumberController: _contactNumberController,
+                  purokController: _purokController,
+                  addressDetailsController: _addressDetailsController,
                   guardianController: _guardianController,
                   barangays: _barangays,
                   selectedBarangayId: _selectedBarangayId,

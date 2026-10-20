@@ -12,6 +12,8 @@ class ResidentRegistrationDetailsSection extends StatelessWidget {
   final TextEditingController passwordController;
   final TextEditingController confirmPasswordController;
   final TextEditingController contactNumberController;
+  final TextEditingController purokController;
+  final TextEditingController addressDetailsController;
   final TextEditingController guardianController;
   final List<BarangayModel> barangays;
   final int? selectedBarangayId;
@@ -38,6 +40,8 @@ class ResidentRegistrationDetailsSection extends StatelessWidget {
     required this.passwordController,
     required this.confirmPasswordController,
     required this.contactNumberController,
+    required this.purokController,
+    required this.addressDetailsController,
     required this.guardianController,
     required this.barangays,
     required this.selectedBarangayId,
@@ -115,7 +119,9 @@ class ResidentRegistrationDetailsSection extends StatelessWidget {
                   style: TextStyle(color: AppColors.textMuted, fontSize: 12),
                 ),
               ),
-            if (!isLoadingBarangays && barangays.isEmpty && barangayLoadError == null)
+            if (!isLoadingBarangays &&
+                barangays.isEmpty &&
+                barangayLoadError == null)
               const Padding(
                 padding: EdgeInsets.only(top: 8),
                 child: Text(
@@ -132,6 +138,38 @@ class ResidentRegistrationDetailsSection extends StatelessWidget {
                 ),
               ),
           ],
+        ),
+
+        const SizedBox(height: 18),
+        CustomTextField(
+          label: 'PUROK / ZONE',
+          controller: purokController,
+          hintText: 'e.g. Purok 3 or Zone 2',
+          prefixIcon: Icons.place_outlined,
+          textInputAction: TextInputAction.next,
+          enabled: !isLoading,
+          validator: (value) {
+            if (value == null || value.trim().isEmpty) {
+              return 'Please enter your Purok or Zone';
+            }
+            if (value.trim().length > 100) {
+              return 'Purok or Zone must be 100 characters or fewer';
+            }
+            return null;
+          },
+        ),
+
+        const SizedBox(height: 18),
+        CustomTextField(
+          label: 'HOUSE / STREET / LANDMARK (OPTIONAL)',
+          controller: addressDetailsController,
+          hintText: 'e.g. House 12, Mabini Street, near chapel',
+          prefixIcon: Icons.home_outlined,
+          textInputAction: TextInputAction.next,
+          enabled: !isLoading,
+          validator: (value) => value != null && value.trim().length > 255
+              ? 'Address details must be 255 characters or fewer'
+              : null,
         ),
 
         // Barangay ID / Username Input
