@@ -244,6 +244,7 @@ class Resident(models.Model):
     voter_status = models.BooleanField(default=False)
     contact_number = models.CharField(max_length=20, null=True, blank=True)
     purok = models.CharField(max_length=100, null=True, blank=True)
+    address_details = models.CharField(max_length=255, blank=True, default='')
     is_verified = models.BooleanField(default=False)
     guardian = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='dependents')
     privacy_consent_version = models.CharField(

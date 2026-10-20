@@ -54,7 +54,7 @@ class ResidentSerializer(serializers.ModelSerializer):
         model = Resident
         fields = [
             'id', 'username', 'email', 'full_name', 'birth_date', 'voter_status', 
-            'contact_number', 'purok', 'is_verified', 'guardian', 
+            'contact_number', 'purok', 'address_details', 'is_verified', 'guardian',
             'philsys_id_number', 'philsys_id_photo', 'remove_philsys_id_photo',
             'secondary_id_type', 'secondary_id_photo', 'remove_secondary_id_photo',
             'utility_billing_type', 'utility_billing_photo', 'remove_utility_billing_photo',

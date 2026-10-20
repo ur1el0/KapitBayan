@@ -23,6 +23,10 @@ class RegisterSerializer(serializers.ModelSerializer):
         required=True,
     )
     contact_number = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    purok = serializers.CharField(write_only=True, max_length=100)
+    address_details = serializers.CharField(
+        write_only=True, required=False, allow_blank=True, max_length=255
+    )
     barangay_id = serializers.IntegerField(
         write_only=True,
         required=True,
@@ -40,7 +44,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         model = User
         fields = [
             'username', 'email', 'password', 'full_name', 'birth_date', 'voter_status', 
-            'contact_number', 'barangay_id', 'guardian_id',
+            'contact_number', 'purok', 'address_details', 'barangay_id', 'guardian_id',
             'philsys_id_number', 'philsys_id_photo', 'secondary_id_type', 
             'secondary_id_photo', 'utility_billing_type', 'utility_billing_photo',
             'privacy_consent', 'privacy_consent_version',
@@ -149,7 +153,8 @@ class RegisterSerializer(serializers.ModelSerializer):
             'birth_date': validated_data.pop('birth_date'),
             'voter_status': validated_data.pop('voter_status', False),
             'contact_number': validated_data.pop('contact_number', ''),
-            'purok': validated_data.pop('purok', None),
+            'purok': validated_data.pop('purok'),
+            'address_details': validated_data.pop('address_details', ''),
             'philsys_id_number': validated_data.pop('philsys_id_number', None),
             'philsys_id_photo': validated_data.pop('philsys_id_photo', None),
             'secondary_id_type': validated_data.pop('secondary_id_type', None),

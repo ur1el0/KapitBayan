@@ -73,6 +73,7 @@ class AuthRegistrationAPITests(IsolatedAuthAPITestCase):
             "birth_date": "1995-05-15",
             "barangay_id": self.barangay.id,
             "role": User.Role.ADMIN,
+            "purok": "Purok 1",
             "privacy_consent": True,
             "privacy_consent_version": settings.PRIVACY_CONSENT_VERSION,
             "philsys_id_photo": create_test_image_upload(),
@@ -93,6 +94,7 @@ class AuthRegistrationAPITests(IsolatedAuthAPITestCase):
             "birth_date": "2000-01-01",
             "barangay_id": self.barangay.id,
             "privacy_consent": True,
+            "purok": "Purok 1",
             "privacy_consent_version": settings.PRIVACY_CONSENT_VERSION,
             "philsys_id_photo": create_test_image_upload(),
         }
@@ -126,6 +128,7 @@ class AuthRegistrationAPITests(IsolatedAuthAPITestCase):
                 "birth_date": "2000-01-01",
                 "barangay_id": self.barangay.id,
                 "philsys_id_number": "1234567890123456",
+                "purok": "Purok 1",
                 "privacy_consent": True,
                 "privacy_consent_version": settings.PRIVACY_CONSENT_VERSION,
             },
@@ -147,6 +150,7 @@ class AuthRegistrationAPITests(IsolatedAuthAPITestCase):
             "birth_date": "2000-01-01",
             "barangay_id": self.barangay.id,
             "privacy_consent": True,
+            "purok": "Purok 1",
             "privacy_consent_version": settings.PRIVACY_CONSENT_VERSION,
             "utility_billing_photo": create_test_image_upload("utility-proof.png"),
         }
@@ -175,6 +179,7 @@ class AuthRegistrationAPITests(IsolatedAuthAPITestCase):
             "birth_date": "2000-01-01",
             "barangay_id": self.barangay.id,
             "privacy_consent": True,
+            "purok": "Purok 1",
             "privacy_consent_version": settings.PRIVACY_CONSENT_VERSION,
             "secondary_id_type": "Passport",
             "secondary_id_photo": create_test_image_upload("passport.png"),
@@ -205,6 +210,7 @@ class AuthRegistrationAPITests(IsolatedAuthAPITestCase):
                 "full_name": "Resident Without Tenant",
                 "birth_date": "2000-01-01",
                 "privacy_consent": True,
+                "purok": "Purok 1",
                 "privacy_consent_version": settings.PRIVACY_CONSENT_VERSION,
             },
             format="json",
@@ -248,6 +254,7 @@ class AuthRegistrationAPITests(IsolatedAuthAPITestCase):
                     "full_name": "Consent Test Resident",
                     "birth_date": "2000-01-01",
                     "barangay_id": self.barangay.id,
+                    "purok": "Purok 1",
                     **consent_fields,
                 }
                 response = self.client.post(
@@ -275,6 +282,7 @@ class AuthRegistrationAPITests(IsolatedAuthAPITestCase):
             "birth_date": "2000-01-01",
             "barangay_id": self.barangay.id,
             "privacy_consent": True,
+            "purok": "Purok 1",
             "privacy_consent_version": settings.PRIVACY_CONSENT_VERSION,
         }
         response = self.client.post(url, payload, format='json')
@@ -292,6 +300,7 @@ class AuthRegistrationAPITests(IsolatedAuthAPITestCase):
                 "birth_date": "2000-01-01",
                 "barangay_id": barangay_id,
                 "privacy_consent": True,
+                "purok": "Purok 1",
                 "privacy_consent_version": settings.PRIVACY_CONSENT_VERSION,
                 "philsys_id_photo": create_test_image_upload(f"{username}.png"),
             }
