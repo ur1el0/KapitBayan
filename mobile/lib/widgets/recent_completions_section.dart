@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/localization/app_language.dart';
 import '../core/theme/app_colors.dart';
 import '../models/queue_ticket_model.dart';
 
@@ -23,8 +24,8 @@ class RecentCompletionsSection extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            const Text(
-              'Recent Completions',
+            Text(
+              context.tr('Recent Completions'),
               style: TextStyle(
                 color: Color(0xFF0F172A),
                 fontSize: 18,
@@ -35,8 +36,8 @@ class RecentCompletionsSection extends StatelessWidget {
             GestureDetector(
               onTap: onViewAll,
               behavior: HitTestBehavior.opaque,
-              child: const Text(
-                'VIEW ALL',
+              child: Text(
+                context.tr('VIEW ALL'),
                 style: TextStyle(
                   color: AppColors.primaryNavy,
                   fontSize: 12,
@@ -59,9 +60,9 @@ class RecentCompletionsSection extends StatelessWidget {
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),
             ),
-            child: const Center(
+            child: Center(
               child: Text(
-                'No completed queue tickets yet today',
+                context.tr('No completed queue tickets yet today'),
                 style: TextStyle(
                   color: Color(0xFF64748B),
                   fontSize: 13.5,

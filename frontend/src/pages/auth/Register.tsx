@@ -3,6 +3,8 @@ import { useNavigate, Link } from 'react-router-dom';
 import { axiosPublic } from '../../api/axios';
 import { getSafeApiErrorMessage } from '../../api/error-message';
 import { Shield } from 'lucide-react';
+import { useLanguage } from '../../context/language-context';
+import { LanguageSwitcher } from '../../components/language/LanguageSwitcher';
 import { TextField } from '../../components/ui/TextField';
 import { Button } from '../../components/ui/Button';
 import {
@@ -13,6 +15,7 @@ import {
 } from '../../components/auth/register';
 
 export const Register: React.FC = () => {
+    const { t } = useLanguage();
     // Common fields
     const [fullName, setFullName] = useState('');
     const [email, setEmail] = useState('');
@@ -66,13 +69,13 @@ export const Register: React.FC = () => {
         } catch {
             if (requestId !== barangayRequestId.current) return;
             setBarangays([]);
-            setBarangayDirectoryError('Approved barangays could not be loaded. Please try again.');
+            setBarangayDirectoryError(t('Approved barangays could not be loaded. Please try again.'));
         } finally {
             if (requestId === barangayRequestId.current) {
                 setLoadingBarangays(false);
             }
         }
-    }, []);
+    }, [t]);
 
     React.useEffect(() => {
         void fetchBarangays();
@@ -100,12 +103,12 @@ export const Register: React.FC = () => {
         setSuccess('');
 
         if (password !== confirmPassword) {
-            setError('Passwords do not match.');
+            setError(t('Passwords do not match.'));
             return;
         }
 
         if (!purok.trim()) {
-            setError('Please enter your Purok or Zone.');
+            setError(t('Please enter your Purok or Zone.'));
             return;
         }
 
@@ -114,7 +117,7 @@ export const Register: React.FC = () => {
             !utilityBillingPhoto &&
             !secondaryIdPhoto
         ) {
-            setError('Upload at least one ID or proof of residency photo to register.');
+            setError(t('Upload at least one ID or proof of residency photo to register.'));
             setIsVerificationExpanded(true);
             return;
         }
@@ -216,7 +219,7 @@ export const Register: React.FC = () => {
                     setError(Array.isArray(data[firstKey]) ? data[firstKey][0] : String(data[firstKey]));
                 }
             } else {
-                setError('Registration failed. Please verify submitted details and try again.');
+                setError(t('Registration failed. Please verify submitted details and try again.'));
             }
         } finally {
             setLoading(false);
@@ -232,6 +235,9 @@ export const Register: React.FC = () => {
             {/* Right Registration Form */}
             <div className="w-full md:w-7/12 lg:w-[60%] flex flex-col justify-center items-center px-6 py-8 sm:p-12 lg:p-16 overflow-y-auto">
                 <div className="w-full max-w-md">
+                    <div className="mb-5 flex justify-end">
+                        <LanguageSwitcher />
+                    </div>
                     {/* Header */}
                     <div className="mb-6">
                         <div className="flex items-center gap-2 mb-2">
@@ -240,10 +246,10 @@ export const Register: React.FC = () => {
                             </span>
                         </div>
                         <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">
-                            Resident Registration
+                            {t('Resident Registration')}
                         </h2>
                         <p className="text-slate-500 text-sm mt-1">
-                            Complete your registration details to access barangay services.
+                            {t('Complete your registration details to access barangay services.')}
                         </p>
                     </div>
 
@@ -268,7 +274,7 @@ export const Register: React.FC = () => {
 
                     <form className="space-y-4" onSubmit={handleRegister}>
                             <TextField
-                                label="FULL NAME (AS IN ID)"
+                                label={t('FULL NAME (AS IN ID)')}
                                 type="text"
                                 required
                                 value={fullName}
@@ -277,7 +283,7 @@ export const Register: React.FC = () => {
                             />
 
                             <TextField
-                                label="USERNAME"
+                                label={t('USERNAME')}
                                 type="text"
                                 required
                                 value={username}
@@ -286,7 +292,7 @@ export const Register: React.FC = () => {
                             />
 
                             <TextField
-                                label="EMAIL ADDRESS"
+                                label={t('EMAIL ADDRESS')}
                                 type="email"
                                 required
                                 value={email}
@@ -296,14 +302,14 @@ export const Register: React.FC = () => {
 
                             {/* Resident Mode: Contact Number & Date of Birth */}
                             <TextField
-                                label="CONTACT NUMBER"
+                                label={t('CONTACT NUMBER')}
                                 type="tel"
                                 value={contactNumber}
                                 onChange={(e) => setContactNumber(e.target.value)}
                                 placeholder="0917 123 4567"
                             />
                             <TextField
-                                label="DATE OF BIRTH"
+                                label={t('DATE OF BIRTH')}
                                 type="date"
                                 required
                                 value={birthDate}
@@ -336,13 +342,13 @@ export const Register: React.FC = () => {
                                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-2 animate-fadeIn">
                                     <div className="flex items-center gap-2 text-amber-900 text-xs font-bold uppercase tracking-wider">
                                         <Shield className="w-4 h-4 text-amber-600 shrink-0" />
-                                        <span>Parent / Legal Guardian Verification Required</span>
+                                        <span>{t('Parent / Legal Guardian Verification Required')}</span>
                                     </div>
                                     <p className="text-[11px] text-amber-800 leading-relaxed">
-                                        Applicants under 18 must link their registration to an already registered parent or legal guardian's account.
+                                        {t("Applicants under 18 must link their registration to an already registered parent or legal guardian's account.")}
                                     </p>
                                     <TextField
-                                        label="GUARDIAN'S REGISTERED USERNAME *"
+                                        label={t("GUARDIAN'S REGISTERED USERNAME *")}
                                         type="text"
                                         required
                                         value={guardianId}
@@ -364,7 +370,7 @@ export const Register: React.FC = () => {
                             />
 
                             <TextField
-                                label="PUROK / ZONE"
+                                label={t('PUROK / ZONE')}
                                 type="text"
                                 required
                                 maxLength={100}
@@ -373,7 +379,7 @@ export const Register: React.FC = () => {
                                 placeholder="e.g. Purok 3 or Zone 2"
                             />
                             <TextField
-                                label="HOUSE / STREET / LANDMARK (OPTIONAL)"
+                                label={t('HOUSE / STREET / LANDMARK (OPTIONAL)')}
                                 type="text"
                                 maxLength={255}
                                 value={addressDetails}
@@ -392,7 +398,7 @@ export const Register: React.FC = () => {
                                     placeholder="••••••••"
                                 />
                                 <TextField
-                                    label="CONFIRM PASSWORD"
+                                    label={t('CONFIRM PASSWORD')}
                                     type="password"
                                     required
                                     value={confirmPassword}
@@ -412,7 +418,7 @@ export const Register: React.FC = () => {
                                         className="mt-0.5 w-4 h-4 text-[#0284C7] rounded focus:ring-0 border-slate-300 cursor-pointer shrink-0"
                                     />
                                     <span className="text-xs text-slate-600 leading-relaxed">
-                                        I consent to provide my personal data as a resident for barangay verification, in accordance with the <strong>RA 10173 Data Privacy Act</strong>.
+                                        {t('I consent to provide my personal data as a resident for barangay verification, in accordance with the')} <strong>RA 10173 Data Privacy Act</strong>.
                                     </span>
                                 </label>
                             </div>
@@ -422,25 +428,25 @@ export const Register: React.FC = () => {
                                 <Button
                                     type="submit"
                                     loading={loading}
-                                    loadingText="Creating Resident Account..."
+                                    loadingText={t('Creating Resident Account...')}
                                     disabled={
                                         loadingBarangays || barangays.length === 0 || !dataPrivacyConsent
                                     }
                                 >
-                                    Create Resident Account
+                                    {t('Create Resident Account')}
                                 </Button>
                             </div>
 
                             <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-center text-xs leading-5 text-slate-600">
-                                Field Official accounts are created by their Barangay Admin. Barangay Admin accounts are provisioned by the system operator after review.
+                                {t('Field Official accounts are created by their Barangay Admin. Barangay Admin accounts are provisioned by the system operator after review.')}
                             </p>
 
                             {/* Back to Login */}
                             <div className="text-center pt-1">
                                 <p className="text-xs text-slate-500 font-medium">
-                                    Already have an account?{' '}
+                                    {t('Already have an account?')}{' '}
                                     <Link to="/login" className="font-bold text-slate-900 hover:text-[#0284C7] hover:underline transition-colors">
-                                        Log in here
+                                        {t('Log in here')}
                                     </Link>
                                 </p>
                             </div>

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/localization/app_language.dart';
 import '../core/theme/app_colors.dart';
 import '../models/activity_schedule_model.dart';
 
@@ -40,7 +41,7 @@ class ScheduleEventCard extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    activity.title,
+                    context.tr(activity.title),
                     style: const TextStyle(
                       fontSize: 17,
                       fontWeight: FontWeight.w900,
@@ -117,7 +118,7 @@ class ScheduleEventCard extends StatelessWidget {
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
-                    activity.location,
+                context.tr(activity.location),
                     style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
@@ -149,7 +150,7 @@ class ScheduleEventCard extends StatelessWidget {
                   ),
                   padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
-                child: const Row(
+                child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(
@@ -159,7 +160,7 @@ class ScheduleEventCard extends StatelessWidget {
                     ),
                     SizedBox(width: 8),
                     Text(
-                      'Add to Calendar',
+                      context.tr('Add to Calendar'),
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w800,

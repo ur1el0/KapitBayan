@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/localization/app_language.dart';
 
 typedef QueueTicketSubmit =
     Future<void> Function({
@@ -64,8 +65,8 @@ class _RequestQueueTicketSheetState extends State<RequestQueueTicketSheet> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Request Queue Ticket',
+              Text(
+                context.tr('Request Queue Ticket'),
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
@@ -73,15 +74,15 @@ class _RequestQueueTicketSheetState extends State<RequestQueueTicketSheet> {
                 ),
               ),
               IconButton(
-                tooltip: 'Close',
+                tooltip: context.tr('Close'),
                 icon: const Icon(Icons.close),
                 onPressed: () => Navigator.pop(context),
               ),
             ],
           ),
           const SizedBox(height: 16),
-          const Text(
-            'Select Service',
+          Text(
+            context.tr('Select Service'),
             style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
           ),
           const SizedBox(height: 8),
@@ -96,8 +97,10 @@ class _RequestQueueTicketSheetState extends State<RequestQueueTicketSheet> {
             ),
             items: _services
                 .map(
-                  (service) =>
-                      DropdownMenuItem(value: service, child: Text(service)),
+                  (service) => DropdownMenuItem(
+                    value: service,
+                    child: Text(context.tr(service)),
+                  ),
                 )
                 .toList(),
             onChanged: widget.isSubmitting
@@ -107,8 +110,8 @@ class _RequestQueueTicketSheetState extends State<RequestQueueTicketSheet> {
                   },
           ),
           const SizedBox(height: 16),
-          const Text(
-            'Barangay staff verify priority lane eligibility. If you qualify, ask the service desk to review your waiting ticket.',
+          Text(
+            context.tr('Barangay staff verify priority lane eligibility. If you qualify, ask the service desk to review your waiting ticket.'),
             style: TextStyle(
               color: Color(0xFF475569),
               fontSize: 13,
@@ -119,9 +122,9 @@ class _RequestQueueTicketSheetState extends State<RequestQueueTicketSheet> {
           TextField(
             controller: _notesController,
             enabled: !widget.isSubmitting,
-            decoration: const InputDecoration(
-              labelText: 'Additional Notes (Optional)',
-              hintText: 'e.g. Requesting 2 copies',
+            decoration: InputDecoration(
+              labelText: context.tr('Additional Notes (Optional)'),
+              hintText: context.tr('e.g. Requesting 2 copies'),
               border: OutlineInputBorder(),
             ),
           ),
@@ -138,8 +141,8 @@ class _RequestQueueTicketSheetState extends State<RequestQueueTicketSheet> {
                 ),
               ),
               onPressed: widget.isSubmitting ? null : _submit,
-              child: const Text(
-                'Get Ticket',
+              child: Text(
+                context.tr('Get Ticket'),
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
             ),

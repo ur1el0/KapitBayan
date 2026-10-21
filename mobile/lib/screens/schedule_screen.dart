@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/localization/app_language.dart';
 import '../core/network/api_client.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_tokens.dart';
@@ -132,8 +133,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       SnackBar(
         content: Text(
           calendarOpened
-              ? 'Calendar opened. Review and save the event there.'
-              : 'Could not open your device calendar.',
+              ? context.tr('Calendar opened. Review and save the event there.')
+              : context.tr('Could not open your device calendar.'),
         ),
         backgroundColor: AppColors.primaryNavy,
         behavior: SnackBarBehavior.floating,
@@ -173,8 +174,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
               size: 56,
             ),
             const SizedBox(height: 16),
-            const Text(
-              'Unable to load schedule data',
+            Text(
+              context.tr('Unable to load schedule data'),
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 18,
@@ -184,7 +185,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              _errorMessage ?? 'Please check your internet connection and try again.',
+              context.tr(_errorMessage ?? 'Please check your internet connection and try again.'),
               textAlign: TextAlign.center,
               style: const TextStyle(
                 fontSize: 13.5,
@@ -201,7 +202,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                       child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                     )
                   : const Icon(Icons.refresh_rounded, size: 18),
-              label: Text(_isRetrying ? 'Retrying...' : 'Try again'),
+              label: Text(_isRetrying ? context.tr('Retrying...') : context.tr('Try again')),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primaryNavy,
                 foregroundColor: Colors.white,
@@ -326,9 +327,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const AppPageHeading(
-                          eyebrow: 'COMMUNITY CALENDAR',
-                          title: 'Schedule',
+                        AppPageHeading(
+                          eyebrow: context.tr('COMMUNITY CALENDAR'),
+                          title: context.tr('Schedule'),
                         ),
                         const SizedBox(height: 20),
 
@@ -347,8 +348,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                         const SizedBox(height: 24),
 
                         // 2. "MY APPOINTMENTS" Section
-                        const Text(
-                          'MY APPOINTMENTS',
+                        Text(
+                          context.tr('MY APPOINTMENTS'),
                           style: TextStyle(
                             fontSize: 11.5,
                             fontWeight: FontWeight.w800,
@@ -376,9 +377,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                                   size: 20,
                                 ),
                                 const SizedBox(width: 10),
-                                const Expanded(
+                                Expanded(
                                   child: Text(
-                                    'Unable to update appointments.',
+                                    context.tr('Unable to update appointments.'),
                                     style: TextStyle(
                                       fontSize: 13,
                                       color: AppColors.textPrimary,
@@ -387,7 +388,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                                 ),
                                 TextButton(
                                   onPressed: _loadScheduleData,
-                                  child: const Text('Retry'),
+                                  child: Text(context.tr('Retry')),
                                 ),
                               ],
                             ),
@@ -417,8 +418,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                                   ).withValues(alpha: 0.8),
                                 ),
                                 const SizedBox(height: 8),
-                                const Text(
-                                  'No appointments scheduled for this date',
+                                Text(
+                                  context.tr('No appointments scheduled for this date'),
                                   style: TextStyle(
                                     fontSize: 13.5,
                                     fontWeight: FontWeight.w600,
@@ -453,8 +454,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text(
-                                'ACTIVE ONGOING REQUESTS',
+                              Text(
+                                context.tr('ACTIVE ONGOING REQUESTS'),
                                 style: TextStyle(
                                   fontSize: 11.5,
                                   fontWeight: FontWeight.w800,
@@ -463,7 +464,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                                 ),
                               ),
                               Text(
-                                '${activeAppointments.length} Active',
+                                '${activeAppointments.length} ${context.tr('Active')}',
                                 style: const TextStyle(
                                   fontSize: 11.5,
                                   fontWeight: FontWeight.w700,
@@ -496,8 +497,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text(
-                              'Upcoming Events',
+                            Text(
+                              context.tr('Upcoming Events'),
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w900,
@@ -512,7 +513,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                                 });
                               },
                               child: Text(
-                                _showAllEvents ? 'Show Date' : 'View All',
+                                context.tr(_showAllEvents ? 'Show Date' : 'View All'),
                                 style: const TextStyle(
                                   fontSize: 13.5,
                                   fontWeight: FontWeight.w800,
@@ -543,9 +544,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                                   size: 20,
                                 ),
                                 const SizedBox(width: 10),
-                                const Expanded(
+                                Expanded(
                                   child: Text(
-                                    'Unable to update community events.',
+                                    context.tr('Unable to update community events.'),
                                     style: TextStyle(
                                       fontSize: 13,
                                       color: AppColors.textPrimary,
@@ -554,7 +555,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                                 ),
                                 TextButton(
                                   onPressed: _loadScheduleData,
-                                  child: const Text('Retry'),
+                                  child: Text(context.tr('Retry')),
                                 ),
                               ],
                             ),
@@ -582,8 +583,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                                   color: Color(0xFF94A3B8),
                                 ),
                                 const SizedBox(height: 8),
-                                const Text(
-                                  'No community events scheduled',
+                                Text(
+                                  context.tr('No community events scheduled'),
                                   style: TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w600,
@@ -597,7 +598,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                                       _showAllEvents = true;
                                     });
                                   },
-                                  child: const Text('View All Activities'),
+                                  child: Text(context.tr('View All Activities')),
                                 ),
                               ],
                             ),

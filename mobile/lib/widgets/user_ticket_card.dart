@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/localization/app_language.dart';
 import '../core/theme/app_colors.dart';
 import '../models/queue_ticket_model.dart';
 
@@ -44,8 +45,8 @@ class UserTicketCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'YOUR TICKET',
+                  Text(
+                    context.tr('YOUR TICKET'),
                     style: TextStyle(
                       color: Color(0xFF64748B),
                       fontSize: 11,
@@ -54,8 +55,8 @@ class UserTicketCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  const Text(
-                    'Unable to Load Ticket',
+                  Text(
+                    context.tr('Unable to Load Ticket'),
                     style: TextStyle(
                       color: Color(0xFFB91C1C),
                       fontSize: 16,
@@ -65,7 +66,7 @@ class UserTicketCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    errorMessage ?? 'Tap retry to check ticket status',
+                    errorMessage ?? context.tr('Tap retry to check ticket status'),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
@@ -80,7 +81,7 @@ class UserTicketCard extends StatelessWidget {
             if (onRetry != null)
               IconButton(
                 onPressed: onRetry,
-                tooltip: 'Retry loading ticket',
+                tooltip: context.tr('Retry loading ticket'),
                 icon: const Icon(
                   Icons.refresh_rounded,
                   color: AppColors.primaryNavy,
@@ -114,8 +115,8 @@ class UserTicketCard extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'YOUR TICKET',
+              Text(
+                context.tr('YOUR TICKET'),
                 style: TextStyle(
                   color: Color(0xFF64748B),
                   fontSize: 11,
@@ -125,7 +126,7 @@ class UserTicketCard extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                hasTicket ? ticket!.ticketNumber : 'No Active Ticket',
+                hasTicket ? ticket!.ticketNumber : context.tr('No Active Ticket'),
                 style: TextStyle(
                   color: hasTicket ? AppColors.primaryNavy : const Color(0xFF94A3B8),
                   fontSize: hasTicket ? 28 : 20,

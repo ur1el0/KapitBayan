@@ -14,6 +14,7 @@ import {
     Volume2,
     LogOut,
 } from 'lucide-react';
+import { useLanguage } from '../../context/language-context';
 
 interface LiveStatus {
     current_ticket: string | null;
@@ -39,6 +40,7 @@ const SERVICE_TYPES = [
 ];
 
 export const CitizenQueue: React.FC = () => {
+    const { t } = useLanguage();
     const [liveStatus, setLiveStatus] = useState<LiveStatus>({
         current_ticket: null,
         total_waiting: 0,
@@ -91,13 +93,13 @@ export const CitizenQueue: React.FC = () => {
             const res = await axiosPrivate.post('/tickets/', {
                 service_type: serviceType,
             });
-            toast.success(`Ticket ${res.data.ticket_number} generated!`);
+            toast.success(`${t('Ticket generated!')} ${res.data.ticket_number}`);
             setIsModalOpen(false);
             fetchQueueData();
         } catch (err) {
             toast.error(getSafeApiErrorMessage(
                 err,
-                "We couldn't create your queue ticket. Check your connection and try again.",
+                t("We couldn't create your queue ticket. Check your connection and try again."),
             ));
         } finally {
             setSubmitting(false);
@@ -106,11 +108,11 @@ export const CitizenQueue: React.FC = () => {
 
     const handleCancelTicket = async (id: number) => {
         if (!Number.isSafeInteger(id) || id < 1) {
-            toast.error("We couldn't identify your queue ticket. Refresh and try again.");
+            toast.error(t("We couldn't identify your queue ticket. Refresh and try again."));
             return;
         }
 
-        if (!window.confirm('Are you sure you want to cancel your queue ticket and leave the line?')) {
+        if (!window.confirm(t('Are you sure you want to cancel your queue ticket and leave the line?'))) {
             return;
         }
 
@@ -118,12 +120,12 @@ export const CitizenQueue: React.FC = () => {
             setCancelling(true);
             await axiosPrivate.post(`/tickets/${id}/cancel/`);
             setActiveTicket(null);
-            toast.success('You have left the queue.');
+            toast.success(t('You have left the queue.'));
             fetchQueueData();
         } catch (err) {
             toast.error(getSafeApiErrorMessage(
                 err,
-                "We couldn't cancel your queue ticket. Check your connection and try again.",
+                t("We couldn't cancel your queue ticket. Check your connection and try again."),
             ));
         } finally {
             setCancelling(false);
@@ -136,10 +138,10 @@ export const CitizenQueue: React.FC = () => {
             <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
-                        Live Service Queue
+                        {t('Live Service Queue')}
                     </h1>
                     <p className="text-sm text-slate-500 mt-1">
-                        Real-time lobby ticker and digital queuing for barangay hall physical counters.
+                        {t('Real-time lobby ticker and digital queuing for barangay hall physical counters.')}
                     </p>
                 </div>
                 {!loading && !loadError && !activeTicket && (
@@ -148,7 +150,7 @@ export const CitizenQueue: React.FC = () => {
                         className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-primary-foreground text-sm font-semibold shadow-xs transition-all cursor-pointer shrink-0"
                     >
                         <Plus className="w-4 h-4" />
-                        <span>Get Queue Ticket</span>
+                        <span>{t('Get Queue Ticket')}</span>
                     </button>
                 )}
             </div>
@@ -159,11 +161,11 @@ export const CitizenQueue: React.FC = () => {
                 <div className="bg-gradient-to-br from-primary to-primary-hover rounded-2xl p-6 text-primary-foreground shadow-md relative overflow-hidden">
                     <div className="flex items-center justify-between">
                         <span className="text-xs font-bold text-primary-foreground uppercase tracking-wider">
-                            Now Serving
+                            {t('Now Serving')}
                         </span>
                         <span className="flex items-center gap-1 text-[11px] text-primary-foreground font-bold bg-emerald-400/10 px-2 py-0.5 rounded-full border border-emerald-400/20">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                            Live Counter
+                            {t('Live Counter')}
                         </span>
                     </div>
                     <div className="mt-4 text-4xl sm:text-5xl font-black tracking-tight text-primary-foreground font-mono">
@@ -171,7 +173,7 @@ export const CitizenQueue: React.FC = () => {
                     </div>
                     <p className="text-xs text-primary-foreground opacity-80 mt-2 flex items-center gap-1.5">
                         <Volume2 className="w-3.5 h-3.5 text-primary-foreground" />
-                        Counter 1 - Public Assistance Desk
+                        {t('Counter 1 - Public Assistance Desk')}
                     </p>
                 </div>
 
@@ -179,7 +181,7 @@ export const CitizenQueue: React.FC = () => {
                 <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs flex flex-col justify-between">
                     <div className="flex items-center justify-between">
                         <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                            Residents Waiting
+                            {t('Residents Waiting')}
                         </span>
                         <div className="w-8 h-8 rounded-xl bg-sky-50 text-primary-text flex items-center justify-center">
                             <Users className="w-4 h-4" />
@@ -189,7 +191,7 @@ export const CitizenQueue: React.FC = () => {
                         {loadError ? '—' : liveStatus.total_waiting}
                     </div>
                     <p className="text-xs text-slate-500 mt-2">
-                        In active queue line
+                        {t('In active queue line')}
                     </p>
                 </div>
 
@@ -197,17 +199,17 @@ export const CitizenQueue: React.FC = () => {
                 <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs flex flex-col justify-between">
                     <div className="flex items-center justify-between">
                         <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                            Estimated Wait
+                            {t('Estimated Wait')}
                         </span>
                         <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
                             <Clock className="w-4 h-4" />
                         </div>
                     </div>
                     <div className="mt-4 text-3xl font-extrabold text-slate-900">
-                        {loadError ? '—' : <>~{liveStatus.avg_wait_mins} <span className="text-base font-normal text-slate-500">mins</span></>}
+                        {loadError ? '—' : <>~{liveStatus.avg_wait_mins} <span className="text-base font-normal text-slate-500">{t('mins')}</span></>}
                     </div>
                     <p className="text-xs text-slate-500 mt-2">
-                        Based on current service pace
+                        {t('Based on current service pace')}
                     </p>
                 </div>
             </div>
@@ -216,11 +218,11 @@ export const CitizenQueue: React.FC = () => {
             {loading ? (
                 <div className="bg-white rounded-2xl p-8 border border-slate-200 text-center flex items-center justify-center text-slate-400">
                     <Loader2 className="w-6 h-6 animate-spin text-primary-text mr-2" />
-                    <span>Synchronizing your queue ticket...</span>
+                    <span>{t('Synchronizing your queue ticket...')}</span>
                 </div>
             ) : loadError ? (
                 <InlineErrorState
-                    message="We couldn't load your queue details."
+                    message={t("We couldn't load your queue details.")}
                     onRetry={() => void fetchQueueData(true)}
                     retrying={loading}
                 />
@@ -242,19 +244,19 @@ export const CitizenQueue: React.FC = () => {
                             <div>
                                 <div className="flex items-center gap-2">
                                     <h3 className="text-lg font-bold text-slate-900">
-                                        Your Active Queue Ticket
+                                        {t('Your Active Queue Ticket')}
                                     </h3>
                                     {activeTicket.is_priority && (
                                         <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-amber-100 text-amber-800 border border-amber-200">
-                                            Priority Lane
+                                            {t('Priority Lane')}
                                         </span>
                                     )}
                                 </div>
                                 <p className="text-xs text-slate-500 mt-1">
-                                    Service: <span className="font-semibold text-slate-700 break-words">{activeTicket.service_type}</span>
+                                    {t('Service')}: <span className="font-semibold text-slate-700 break-words">{t(activeTicket.service_type)}</span>
                                 </p>
                                 <p className="text-[11px] text-slate-400 mt-0.5">
-                                    Issued: {new Date(activeTicket.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    {t('Issued')}: {new Date(activeTicket.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                 </p>
                             </div>
                         </div>
@@ -263,26 +265,26 @@ export const CitizenQueue: React.FC = () => {
                             {activeTicket.status.toUpperCase() === 'SERVING' ? (
                                 <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 text-white font-bold text-xs shadow-sm">
                                     <CheckCircle2 className="w-4 h-4" />
-                                    <span>Now Being Served! Proceed to Counter</span>
+                                    <span>{t('Now Being Served! Proceed to Counter')}</span>
                                 </div>
                                                         ) : (
                                 <div className="flex items-center gap-2">
                                     <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-50 text-amber-700 border border-amber-200 text-xs font-semibold">
                                         <Clock className="w-4 h-4" />
-                                        <span>Waiting for your turn</span>
+                                        <span>{t('Waiting for your turn')}</span>
                                     </div>
                                     <button
                                         onClick={() => handleCancelTicket(activeTicket.id)}
                                         disabled={cancelling}
                                         className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 text-xs font-bold transition-all cursor-pointer"
-                                        aria-label="Leave queue and cancel ticket"
+                                        aria-label={t('Leave queue and cancel ticket')}
                                     >
                                         {cancelling ? (
                                             <Loader2 className="w-3.5 h-3.5 animate-spin" />
                                         ) : (
                                             <LogOut className="w-3.5 h-3.5" />
                                         )}
-                                        <span>Leave Queue</span>
+                                        <span>{t('Leave Queue')}</span>
                                     </button>
                                 </div>
                             )}
@@ -294,15 +296,15 @@ export const CitizenQueue: React.FC = () => {
                     <div className="w-12 h-12 rounded-xl bg-slate-100 text-slate-400 flex items-center justify-center mb-3">
                         <Ticket className="w-6 h-6" />
                     </div>
-                    <h3 className="text-base font-bold text-slate-900">You do not have an active queue ticket</h3>
+                    <h3 className="text-base font-bold text-slate-900">{t('You do not have an active queue ticket')}</h3>
                     <p className="text-sm text-slate-500 max-w-md mt-1">
-                        Planning to visit the barangay hall? Take a digital queue number in advance to reserve your position in line.
+                        {t('Planning to visit the barangay hall? Take a digital queue number in advance to reserve your position in line.')}
                     </p>
                     <button
                         onClick={() => setIsModalOpen(true)}
                         className="mt-4 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary-hover transition-all cursor-pointer"
                     >
-                        Get a Ticket Now
+                        {t('Get a Ticket Now')}
                     </button>
                 </div>
             )}

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { axiosPrivate } from "../../api/axios";
 import { InlineErrorState } from "../../components/ui/InlineErrorState";
+import { useLanguage } from "../../context/language-context";
 import { 
         Radio,
         Pin,
@@ -30,6 +31,7 @@ interface Activity {
 }
 
 export const CitizenBulletin: React.FC = () => {
+        const { t } = useLanguage();
         const [activeTab, setActiveTab] = useState<'announcements' | 'activities'>('announcements')
         const [announcements, setAnnouncements] = useState<Announcement[]>([])
         const [activities, setActivities] = useState<Activity[]>([])
@@ -74,10 +76,10 @@ return (
             <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
-                        Community Bulletin Board
+                        {t('Community Bulletin Board')}
                     </h1>
                     <p className="text-sm text-slate-500 mt-1">
-                        Official barangay council announcements, public health advisories, and community programs.
+                        {t('Official barangay council announcements, public health advisories, and community programs.')}
                     </p>
                 </div>
                 {/* Tab Switcher */}
@@ -92,7 +94,7 @@ return (
                         }`}
                     >
                         <Megaphone className="w-3.5 h-3.5" />
-                        <span>Announcements ({announcements.length})</span>
+                        <span>{t('Announcements')} ({announcements.length})</span>
                     </button>
                     <button
                         onClick={() => setActiveTab('activities')}
@@ -104,18 +106,18 @@ return (
                         }`}
                     >
                         <Calendar className="w-3.5 h-3.5" />
-                        <span>Activities ({activities.length})</span>
+                        <span>{t('Activities')} ({activities.length})</span>
                     </button>
                 </div>
             </div>
             {loading ? (
                 <div className="bg-white rounded-2xl p-12 border border-slate-200 text-center flex flex-col items-center justify-center text-slate-400">
                     <Loader2 className="w-8 h-8 animate-spin text-primary-text mb-2" />
-                    <p className="text-sm">Retrieving bulletin notices...</p>
+                    <p className="text-sm">{t('Retrieving bulletin notices...')}</p>
                 </div>
             ) : loadErrors[activeTab] ? (
                 <InlineErrorState
-                    message={activeTab === 'announcements' ? "We couldn't load announcements." : "We couldn't load activities."}
+                    message={activeTab === 'announcements' ? t("We couldn't load announcements.") : t("We couldn't load activities.")}
                     onRetry={() => void fetchData()}
                     retrying={loading}
                 />

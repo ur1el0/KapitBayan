@@ -7,6 +7,7 @@ import { NewDocumentRequestModal } from '../../components/citizen-documents/NewD
 import { DOCUMENT_TYPES } from '../../components/citizen-documents/documentTypes';
 import { DocumentRequestRow } from '../../components/citizen-documents/DocumentRequestRow';
 import type { DocumentRequest, PaymentRecipient } from '../../components/citizen-documents/types';
+import { useLanguage } from '../../context/language-context';
 import {
     Plus,
     Loader2,
@@ -14,6 +15,7 @@ import {
 } from 'lucide-react';
 
 export const CitizenDocuments: React.FC = () => {
+    const { t } = useLanguage();
     const [requests, setRequests] = useState<DocumentRequest[]>([]);
     const [loading, setLoading] = useState(true);
     const [loadError, setLoadError] = useState(false);
@@ -71,7 +73,7 @@ export const CitizenDocuments: React.FC = () => {
     const handleCreateRequest = async (e: React.SubmitEvent<HTMLElement>) => {
         e.preventDefault();
         if (!purpose.trim()) {
-            toast.error('Please specify a valid purpose for this certificate.');
+            toast.error(t('Please specify a valid purpose for this certificate.'));
             return;
         }
 
@@ -81,14 +83,14 @@ export const CitizenDocuments: React.FC = () => {
                 document_type: documentType,
                 purpose: purpose.trim(),
             });
-            toast.success('Document request filed successfully!');
+            toast.success(t('Document request filed successfully!'));
             setIsModalOpen(false);
             setPurpose('');
             fetchRequests();
         } catch (err) {
             toast.error(getSafeApiErrorMessage(
                 err,
-                "We couldn't submit your document request. Check your connection and try again.",
+                t("We couldn't submit your document request. Check your connection and try again."),
             ));
         } finally {
             setSubmitting(false);
@@ -96,7 +98,7 @@ export const CitizenDocuments: React.FC = () => {
     };
 
     const handleCancelRequest = async (id: number) => {
-        if (!window.confirm('Are you sure you want to cancel this pending clearance application?')) {
+        if (!window.confirm(t('Are you sure you want to cancel this pending clearance application?'))) {
             return;
         }
 
@@ -104,11 +106,11 @@ export const CitizenDocuments: React.FC = () => {
             setCancellingId(id);
             await axiosPrivate.delete(`/document-requests/${id}/`);
             setRequests((prev) => prev.filter((r) => r.id !== id));
-            toast.success('Document request cancelled.');
+            toast.success(t('Document request cancelled.'));
         } catch (err) {
             toast.error(getSafeApiErrorMessage(
                 err,
-                "We couldn't cancel your request. Check your connection and try again.",
+                t("We couldn't cancel your request. Check your connection and try again."),
             ));
         } finally {
             setCancellingId(null);
@@ -130,9 +132,9 @@ export const CitizenDocuments: React.FC = () => {
             link.click();
             link.remove();
             window.URL.revokeObjectURL(downloadUrl);
-            toast.success('Certificate downloaded.');
+            toast.success(t('Certificate downloaded.'));
         } catch{
-            toast.error('Could not generate PDF. Please contact the barangay hall.');
+            toast.error(t('Could not generate PDF. Please contact the barangay hall.'));
         } finally {
             setDownloadingId(null);
         }
@@ -152,9 +154,9 @@ export const CitizenDocuments: React.FC = () => {
                 request.id === id ? { ...request, ...response.data } : request,
             ));
             setPaymentReference((current) => ({ ...current, [id]: '' }));
-            toast.success('Transfer reference and receipt sent to barangay staff for manual verification.');
+            toast.success(t('Transfer reference and receipt sent to barangay staff for manual verification.'));
         } catch (err: any) {
-            toast.error(err.response?.data?.detail || 'Could not submit the payment reference.');
+            toast.error(err.response?.data?.detail || t('Could not submit the payment reference.'));
         } finally {
             setSubmittingPaymentId(null);
         }
@@ -165,11 +167,11 @@ export const CitizenDocuments: React.FC = () => {
             {/* Header Banner */}
             <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
-                        Barangay Clearances & Certificates
+            <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
+                        {t('Barangay Clearances & Certificates')}
                     </h1>
                     <p className="text-sm text-slate-500 mt-1">
-                        Request official barangay documents, monitor live processing status, and download authenticated certificates.
+                        {t('Request official barangay documents, monitor live processing status, and download authenticated certificates.')}
                     </p>
                 </div>
                 <button
@@ -177,7 +179,7 @@ export const CitizenDocuments: React.FC = () => {
                     className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-primary-foreground text-sm font-semibold shadow-xs transition-all cursor-pointer shrink-0"
                 >
                     <Plus className="w-4 h-4" />
-                    <span>Request New Clearance</span>
+                    <span>{t('Request New Clearance')}</span>
                 </button>
             </div>
 
@@ -185,11 +187,11 @@ export const CitizenDocuments: React.FC = () => {
             {loading ? (
                 <div className="bg-white rounded-2xl p-12 border border-slate-200 flex flex-col items-center justify-center text-slate-400">
                     <Loader2 className="w-8 h-8 animate-spin text-primary-text mb-2" />
-                    <p className="text-sm">Retrieving your certificate records...</p>
+                    <p className="text-sm">{t('Retrieving your certificate records...')}</p>
                 </div>
             ) : loadError ? (
                 <InlineErrorState
-                    message="We couldn't load your document requests."
+                    message={t("We couldn't load your document requests.")}
                     onRetry={() => void fetchRequests()}
                     retrying={loading}
                 />
@@ -198,15 +200,15 @@ export const CitizenDocuments: React.FC = () => {
                     <div className="w-14 h-14 rounded-2xl bg-sky-50 text-primary-text flex items-center justify-center mb-3">
                         <FileCheck2 className="w-7 h-7" />
                     </div>
-                    <h3 className="text-base font-bold text-slate-900">No active document requests</h3>
+                    <h3 className="text-base font-bold text-slate-900">{t('No active document requests')}</h3>
                     <p className="text-sm text-slate-500 max-w-sm mt-1">
-                        You haven't filed any clearance applications yet. Click the button below to submit a new request.
+                        {t("You haven't filed any clearance applications yet. Click the button below to submit a new request.")}
                     </p>
                     <button
                         onClick={() => setIsModalOpen(true)}
                         className="mt-4 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary-hover transition-all cursor-pointer"
                     >
-                        Request Clearance
+                        {t('Request Clearance')}
                     </button>
                 </div>
             ) : (
@@ -215,11 +217,11 @@ export const CitizenDocuments: React.FC = () => {
                         <table className="w-full text-left text-sm text-slate-700">
                             <thead className="bg-[#F8FAFD] border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-wider">
                                 <tr>
-                                    <th className="py-4 px-6">Document Type</th>
-                                    <th className="py-4 px-6">Declared Purpose</th>
-                                    <th className="py-4 px-6">Date Requested</th>
-                                    <th className="py-4 px-6">Current Status</th>
-                                    <th className="py-4 px-6 text-right">Actions</th>
+                                    <th className="py-4 px-6">{t('Document Type')}</th>
+                                    <th className="py-4 px-6">{t('Declared Purpose')}</th>
+                                    <th className="py-4 px-6">{t('Date Requested')}</th>
+                                    <th className="py-4 px-6">{t('Current Status')}</th>
+                                    <th className="py-4 px-6 text-right">{t('Actions')}</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">

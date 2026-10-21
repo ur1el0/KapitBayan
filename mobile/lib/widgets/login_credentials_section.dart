@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/theme/app_colors.dart';
+import '../core/localization/app_language.dart';
 import 'custom_button.dart';
 import 'custom_text_field.dart';
 
@@ -32,7 +33,7 @@ class LoginCredentialsSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         CustomTextField(
-          label: isOfficialMode ? 'Official Email' : 'Citizen ID / Username',
+          label: isOfficialMode ? 'Official Email' : context.tr('Citizen ID / Username'),
           controller: usernameController,
           hintText: isOfficialMode ? 'name@barangay.gov.ph' : 'resident',
           prefixIcon: Icons.person_outline_rounded,
@@ -43,14 +44,14 @@ class LoginCredentialsSection extends StatelessWidget {
             if (value == null || value.trim().isEmpty) {
               return isOfficialMode
                   ? 'Please enter your official email address'
-                  : 'Please enter your citizen ID or username';
+                  : context.tr('Please enter your citizen ID or username');
             }
             return null;
           },
         ),
         const SizedBox(height: 20),
         CustomTextField(
-          label: 'Password',
+          label: context.tr('Password'),
           controller: passwordController,
           hintText: '••••••••',
           prefixIcon: Icons.lock_outline_rounded,
@@ -71,7 +72,7 @@ class LoginCredentialsSection extends StatelessWidget {
           ),
           validator: (value) {
             if (value == null || value.isEmpty) {
-              return 'Please enter your password';
+              return context.tr('Please enter your password');
             }
             return null;
           },
@@ -81,8 +82,8 @@ class LoginCredentialsSection extends StatelessWidget {
           alignment: Alignment.centerRight,
           child: TextButton(
             onPressed: onForgotPassword,
-            child: const Text(
-              'Forgot Password?',
+            child: Text(
+              isOfficialMode ? 'Forgot Password?' : context.tr('Forgot Password?'),
               style: TextStyle(
                 fontSize: 13.5,
                 fontWeight: FontWeight.w700,
@@ -95,7 +96,7 @@ class LoginCredentialsSection extends StatelessWidget {
         CustomButton(
           text: isOfficialMode
               ? 'Authenticate Official'
-              : 'Sign In to Citizen Portal',
+              : context.tr('Sign In to Citizen Portal'),
           isLoading: isLoading,
           icon: Icons.arrow_forward_rounded,
           onPressed: onSubmit,

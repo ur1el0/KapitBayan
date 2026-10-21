@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/localization/app_language.dart';
 import '../core/theme/app_colors.dart';
 import '../models/activity_schedule_model.dart';
 
@@ -45,8 +46,8 @@ class CommunityScheduleSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Community Schedule',
+        Text(
+          context.tr('Community Schedule'),
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w800,
@@ -149,7 +150,7 @@ class CommunityScheduleSection extends StatelessWidget {
 
                               // Event Title
                               Text(
-                                item.title,
+                                context.tr(item.title),
                                 style: const TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w800,
@@ -161,7 +162,7 @@ class CommunityScheduleSection extends StatelessWidget {
 
                               // Event Location
                               Text(
-                                item.location,
+                                context.tr(item.location),
                                 style: const TextStyle(
                                   fontSize: 12.5,
                                   fontWeight: FontWeight.w400,

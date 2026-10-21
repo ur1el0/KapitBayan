@@ -25,6 +25,7 @@ from gridy_services.serializers import (
     PaymentReviewSerializer,
 )
 from gridy_communications.tasks import send_notification_to_user_task
+from gridy_communications.admin_notifications import notify_barangay_admins
 from decimal import Decimal
 from gridy_audit.services import log_action
 from gridy_audit.models import AuditLog
@@ -79,6 +80,7 @@ class DocumentRequestViewSet(viewsets.ModelViewSet):
         # Residents see only their own requests
         return DocumentRequest.objects.filter(user=user).order_by('-created_at')
 
+    @transaction.atomic
     def perform_create(self, serializer):
         user = self.request.user
         data = serializer.validated_data
@@ -162,6 +164,10 @@ class DocumentRequestViewSet(viewsets.ModelViewSet):
             fee_waiver_reason="",
             status=DocumentRequest.Status.PENDING,
             admin_notes="",
+        )
+        notify_barangay_admins(
+            barangay_id=user.barangay_id,
+            notification_type='document',
         )
 
     def perform_destroy(self, instance):

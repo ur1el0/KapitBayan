@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/theme/app_colors.dart';
+import '../core/localization/app_language.dart';
 import 'app_surface.dart';
 
 /// Quick services section providing immediate access to common resident actions
@@ -27,7 +28,7 @@ class QuickServicesSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Quick Services', style: Theme.of(context).textTheme.titleLarge),
+        Text(context.tr('Quick Services'), style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 8),
 
         // Row 1: Request Document & Report Issue
@@ -36,7 +37,7 @@ class QuickServicesSection extends StatelessWidget {
             Expanded(
               child: _QuickServiceCard(
                 icon: Icons.description_outlined,
-                title: 'Request Document',
+              title: context.tr('Request Document'),
                 onTap: onRequestDocument,
               ),
             ),
@@ -44,7 +45,7 @@ class QuickServicesSection extends StatelessWidget {
             Expanded(
               child: _QuickServiceCard(
                 icon: Icons.pest_control_outlined,
-                title: 'Report Issue',
+                title: context.tr('Report Issue'),
                 onTap: onReportIssue,
               ),
             ),
@@ -53,7 +54,7 @@ class QuickServicesSection extends StatelessWidget {
         const SizedBox(height: 8),
         _QuickServiceCard(
           icon: Icons.volunteer_activism_outlined,
-          title: 'Request Assistance',
+          title: context.tr('Request Assistance'),
           onTap: onRequestAid,
         ),
         const SizedBox(height: 8),
@@ -64,7 +65,7 @@ class QuickServicesSection extends StatelessWidget {
             Expanded(
               child: _QuickServiceCard(
                 icon: Icons.phone_outlined,
-                title: 'Barangay Hotline',
+              title: context.tr('Barangay Hotline'),
                 onTap: onBarangayHotline,
               ),
             ),
@@ -72,7 +73,7 @@ class QuickServicesSection extends StatelessWidget {
             Expanded(
               child: _QuickServiceCard(
                 icon: Icons.history_outlined,
-                title: 'My Reports',
+                title: context.tr('My Reports'),
                 onTap: onMyReports,
               ),
             ),
@@ -81,7 +82,7 @@ class QuickServicesSection extends StatelessWidget {
         const SizedBox(height: 8),
         _QuickServiceCard(
           icon: Icons.help_outline_rounded,
-          title: 'Help & FAQs',
+          title: context.tr('Help & FAQs'),
           onTap: onHelpFAQs,
         ),
       ],

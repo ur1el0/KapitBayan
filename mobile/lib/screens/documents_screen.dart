@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/network/api_client.dart';
+import '../core/localization/app_language.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_tokens.dart';
 import '../models/document_request_model.dart';
@@ -253,9 +254,9 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const AppPageHeading(
-                      eyebrow: 'CENTRAL REGISTRY',
-                      title: 'Documents',
+                    AppPageHeading(
+                      eyebrow: context.tr('CENTRAL REGISTRY'),
+                      title: context.tr('Documents'),
                     ),
 
                     const SizedBox(height: 18),
@@ -284,8 +285,8 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
                     const SizedBox(height: 28),
 
                     // My Document Requests Section Header
-                    const Text(
-                      'My Document Requests',
+                    Text(
+                      context.tr('My Document Requests'),
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w800,

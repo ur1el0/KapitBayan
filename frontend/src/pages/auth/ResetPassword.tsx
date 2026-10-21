@@ -3,8 +3,11 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { axiosPublic } from "../../api/axios";
 import { getSafeApiErrorMessage } from "../../api/error-message";
 import { Shield, CheckCircle, AlertTriangle } from "lucide-react";
+import { LanguageSwitcher } from "../../components/language/LanguageSwitcher";
+import { useLanguage } from "../../context/language-context";
 
 export const ResetPassword = () => {
+    const { t } = useLanguage();
     const [searchParams] = useSearchParams()
     const navigate = useNavigate()
 
@@ -21,13 +24,13 @@ export const ResetPassword = () => {
         e.preventDefault()
 
         if(password !== confirmPassword) {
-            setErrorMessage("Password do not match")
+            setErrorMessage(t("Passwords do not match."))
             setStatus('error')
             return
         }
 
         if (password.length < 8) {
-            setErrorMessage("Password must be at least 8 characters")
+            setErrorMessage(t("Password must be at least 8 characters."))
             setStatus('error')
             return
         }
@@ -44,9 +47,9 @@ export const ResetPassword = () => {
         } catch (error: any) {
             setStatus('error')
             const tokenError = error.response?.status < 500 ? error.response?.data?.token?.[0] : undefined
-            setErrorMessage(tokenError || getSafeApiErrorMessage(
+            setErrorMessage(tokenError ? t(tokenError) : getSafeApiErrorMessage(
                 error,
-                "We couldn't reset your password. Try again or request a new reset link.",
+                t("We couldn't reset your password. Try again or request a new reset link."),
             ))
         }
     }
@@ -56,8 +59,9 @@ export const ResetPassword = () => {
             <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
                 <div className="bg-white p-8 rounded-2xl shadow-sm text-center max-w-md w-full">
                     <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-                    <h2 className="text-xl font-bold text-slate-900 mb-2">Invalid Reset Link</h2>
-                    <p className="text-slate-500 text-sm">This password reset link is malformed or missing security tokens. Please request a new email.</p>
+                    <div className="mb-5 flex justify-end"><LanguageSwitcher compact /></div>
+                    <h2 className="text-xl font-bold text-slate-900 mb-2">{t('Invalid Reset Link')}</h2>
+                    <p className="text-slate-500 text-sm">{t('This password reset link is malformed or missing security tokens. Please request a new email.')}</p>
                 </div>
             </div>
         );
@@ -65,18 +69,19 @@ export const ResetPassword = () => {
     return (
         <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
             <div className="bg-white p-8 rounded-2xl shadow-sm max-w-md w-full">
+                <div className="mb-5 flex justify-end"><LanguageSwitcher compact /></div>
                 <div className="flex justify-center mb-6">
                     <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
                         <Shield className="w-6 h-6 text-blue-700" />
                     </div>
                 </div>
                                 
-                <h1 className="text-2xl font-bold text-center text-slate-900 mb-2">Reset Password</h1>
-                <p className="text-sm text-center text-slate-500 mb-8">Enter a new secure password for your account.</p>
+                <h1 className="text-2xl font-bold text-center text-slate-900 mb-2">{t('Reset Password')}</h1>
+                <p className="text-sm text-center text-slate-500 mb-8">{t('Enter a new secure password for your account.')}</p>
                 {status === 'success' ? (
                     <div className="bg-emerald-50 text-emerald-700 p-4 rounded-xl flex items-center gap-3">
                         <CheckCircle className="w-5 h-5 shrink-0" />
-                        <p className="text-sm font-semibold">Password updated securely! Redirecting to login...</p>
+                        <p className="text-sm font-semibold">{t('Password updated securely! Redirecting to login...')}</p>
                     </div>
                 ) : (
                     <form onSubmit={handleSubmit} className="space-y-4">
@@ -86,7 +91,7 @@ export const ResetPassword = () => {
                             </div>
                         )}
                         <div>
-                            <label className="block text-sm font-semibold text-slate-700 mb-1.5">New Password</label>
+                            <label className="block text-sm font-semibold text-slate-700 mb-1.5">{t('New Password')}</label>
                             <input 
                                 type="password" 
                                 required
@@ -96,7 +101,7 @@ export const ResetPassword = () => {
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-semibold text-slate-700 mb-1.5">Confirm Password</label>
+                            <label className="block text-sm font-semibold text-slate-700 mb-1.5">{t('Confirm Password')}</label>
                             <input 
                                 type="password" 
                                 required
@@ -110,7 +115,7 @@ export const ResetPassword = () => {
                             disabled={status === 'loading'}
                             className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold rounded-xl transition-colors"
                         >
-                            {status === 'loading' ? 'Securing Account...' : 'Reset Password'}
+                            {status === 'loading' ? t('Securing Account...') : t('Reset Password')}
                         </button>
                     </form>
                 )}

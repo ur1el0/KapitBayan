@@ -2,6 +2,7 @@ import React from 'react';
 import { Loader2, X } from 'lucide-react';
 import { DOCUMENT_TYPES } from './documentTypes';
 import { useModalFocus } from '../../hooks/useModalFocus';
+import { useLanguage } from '../../context/language-context';
 
 interface NewDocumentRequestModalProps {
     documentType: string;
@@ -22,6 +23,7 @@ export const NewDocumentRequestModal: React.FC<NewDocumentRequestModalProps> = (
     onClose,
     onSubmit,
 }) => {
+    const { t } = useLanguage();
     const dialogTitleId = React.useId();
     const dialogRef = useModalFocus<HTMLDivElement>(true, onClose);
 
@@ -37,11 +39,11 @@ export const NewDocumentRequestModal: React.FC<NewDocumentRequestModalProps> = (
         >
             <div className="flex items-center justify-between pb-4 border-b border-slate-100">
                 <h3 id={dialogTitleId} className="text-lg font-extrabold text-slate-900">
-                    Request Official Clearance
+                    {t('Request Official Clearance')}
                 </h3>
                 <button
                     onClick={onClose}
-                    aria-label="Close request modal"
+                    aria-label={t('Close request modal')}
                     className="text-slate-400 hover:text-slate-600 rounded-lg p-1"
                 >
                     <X className="w-5 h-5" />
@@ -51,7 +53,7 @@ export const NewDocumentRequestModal: React.FC<NewDocumentRequestModalProps> = (
             <form onSubmit={onSubmit} className="mt-4 space-y-4">
                 <div>
                     <label htmlFor="document-type" className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                        Document Type
+                        {t('Document Type')}
                     </label>
                     <select
                         id="document-type"
@@ -69,19 +71,19 @@ export const NewDocumentRequestModal: React.FC<NewDocumentRequestModalProps> = (
 
                 <div>
                     <label htmlFor="document-purpose" className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                        Purpose Statement
+                        {t('Purpose Statement')}
                     </label>
                     <input
                         id="document-purpose"
                         type="text"
                         required
-                        placeholder="e.g. Local Employment, Scholarship, Postal ID"
+                        placeholder={t('e.g. Local Employment, Scholarship, Postal ID')}
                         value={purpose}
                         onChange={(event) => onPurposeChange(event.target.value)}
                         className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-[#F8FAFD] text-sm text-slate-800 font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/20"
                     />
                     <p className="text-[11px] text-slate-500 mt-1">
-                        Required by law. This will be printed on your official barangay certificate.
+                        {t('Required by law. This will be printed on your official barangay certificate.')}
                     </p>
                 </div>
 
@@ -91,7 +93,7 @@ export const NewDocumentRequestModal: React.FC<NewDocumentRequestModalProps> = (
                         onClick={onClose}
                         className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-all cursor-pointer"
                     >
-                        Cancel
+                        {t('Cancel')}
                     </button>
                     <button
                         type="submit"
@@ -99,7 +101,7 @@ export const NewDocumentRequestModal: React.FC<NewDocumentRequestModalProps> = (
                         className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary hover:bg-primary-hover text-primary-foreground text-xs font-bold shadow-xs transition-all cursor-pointer disabled:opacity-50"
                     >
                         {submitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                        <span>{submitting ? 'Submitting...' : 'Submit Application'}</span>
+                        <span>{t(submitting ? 'Submitting...' : 'Submit Application')}</span>
                     </button>
                 </div>
             </form>

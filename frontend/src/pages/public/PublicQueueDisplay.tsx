@@ -8,6 +8,8 @@ import {
 import { useParams } from 'react-router-dom'
 import { Volume2, VolumeX } from 'lucide-react'
 import { axiosPublic } from '../../api/axios'
+import { LanguageSwitcher } from '../../components/language/LanguageSwitcher'
+import { useLanguage } from '../../context/language-context'
 import './PublicQueueDisplay.css'
 
 interface PublicQueueStatus {
@@ -46,6 +48,7 @@ function getReadableTextColor(hexColor: string): string {
 
 export function PublicQueueDisplay() {
     const { barangayId } = useParams<{ barangayId: string }>()
+    const { t, language } = useLanguage()
     const [status, setStatus] = useState<PublicQueueStatus | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -55,6 +58,11 @@ export function PublicQueueDisplay() {
     const audioEnabledRef = useRef(false)
     const audioContextRef = useRef<AudioContext | null>(null)
     const previousTicketRef = useRef<string | null | undefined>(undefined)
+    const languageRef = useRef(language)
+
+    useEffect(() => {
+        languageRef.current = language
+    }, [language])
 
     const playChime = useCallback(async () => {
         if (
@@ -109,10 +117,13 @@ export function PublicQueueDisplay() {
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel()
 
+                const isFilipino = languageRef.current === 'fil'
                 const announcement = new SpeechSynthesisUtterance(
-                    `Now serving ticket ${ticketNumber}. Please proceed to the service counter.`,
+                    isFilipino
+                        ? `Tinatawag na ang numerong ${ticketNumber}. Pumunta na po sa service counter.`
+                        : `Now serving ticket ${ticketNumber}. Please proceed to the service counter.`,
                 )
-                announcement.lang = 'en-PH'
+                announcement.lang = isFilipino ? 'fil-PH' : 'en-PH'
                 announcement.rate = 0.95
 
                 window.speechSynthesis.speak(announcement)
@@ -266,47 +277,56 @@ export function PublicQueueDisplay() {
         '--queue-brand-text-color': getReadableTextColor(brandColor),
     } as CSSProperties
 
+    const translatedError = error
+        ? error === 'A valid barangay ID is required.'
+            ? t(error)
+            : t('Queue status is temporarily unavailable. Retrying.')
+        : ''
+
     return (
         <main className="public-queue" style={brandStyle}>
             <header className="public-queue__header">
                 <div>
-                    <p className="public-queue__eyebrow">Public service queue</p>
-                    <h1>{status?.barangay_name ?? 'Barangay Queue'}</h1>
+                    <p className="public-queue__eyebrow">{t('Public service queue')}</p>
+                    <h1>{status?.barangay_name ?? t('Barangay Queue')}</h1>
                 </div>
 
-                <button
-                    className="public-queue__audio-button"
-                    type="button"
-                    onClick={toggleAudio}
-                    aria-pressed={audioEnabled}
-                >
-                    {audioEnabled ? (
-                        <Volume2 aria-hidden="true" />
-                    ) : (
-                        <VolumeX aria-hidden="true" />
-                    )}
-                    {audioEnabled
-                        ? 'Turn announcements off'
-                        : 'Enable sound announcements'}
-                </button>
+                <div className="flex flex-wrap items-center gap-3">
+                    <LanguageSwitcher compact />
+                    <button
+                        className="public-queue__audio-button"
+                        type="button"
+                        onClick={toggleAudio}
+                        aria-pressed={audioEnabled}
+                    >
+                        {audioEnabled ? (
+                            <Volume2 aria-hidden="true" />
+                        ) : (
+                            <VolumeX aria-hidden="true" />
+                        )}
+                        {audioEnabled
+                            ? t('Turn announcements off')
+                            : t('Enable sound announcements')}
+                    </button>
+                </div>
             </header>
 
             {audioNotice && (
                 <p className="public-queue__audio-notice" role="status">
-                    {audioNotice}
+                    {t(audioNotice)}
                 </p>
             )}
 
             <section className="public-queue__content">
                 {loading && !status && (
                     <p className="public-queue__message" role="status">
-                        Loading queue status…
+                        {t('Loading queue status…')}
                     </p>
                 )}
 
                 {!status && error && (
                     <p className="public-queue__message public-queue__message--error" role="alert">
-                        {error}
+                        {translatedError}
                     </p>
                 )}
 
@@ -317,26 +337,26 @@ export function PublicQueueDisplay() {
                                 className="public-queue__message public-queue__message--error"
                                 role="alert"
                             >
-                                {error}
+                                {translatedError}
                             </p>
                         )}
 
                         <div className="public-queue__ticket-card">
-                            <p className="public-queue__eyebrow">Now serving</p>
+                            <p className="public-queue__eyebrow">{t('Now serving')}</p>
                             <p
                                 className="public-queue__ticket"
                                 aria-live="polite"
                                 aria-atomic="true"
                             >
                                 {status.current_ticket
-                                    ? `Ticket ${status.current_ticket}`
-                                    : 'No ticket is being called'}
+                                    ? `${t('Ticket')} ${status.current_ticket}`
+                                    : t('No ticket is being called')}
                             </p>
                         </div>
 
                         <div className="public-queue__waiting-card">
                             <p className="public-queue__eyebrow">
-                                Residents waiting
+                                {t('Residents waiting')}
                             </p>
                             <strong>{status.total_waiting}</strong>
                         </div>
@@ -344,7 +364,7 @@ export function PublicQueueDisplay() {
                 )}
 
                 <p className="public-queue__refresh-note">
-                    Queue status refreshes automatically every five seconds.
+                    {t('Queue status refreshes automatically every five seconds.')}
                 </p>
             </section>
         </main>

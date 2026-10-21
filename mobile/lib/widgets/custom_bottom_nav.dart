@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/theme/app_colors.dart';
+import '../core/localization/app_language.dart';
 
 /// Floating pill bottom navigation bar matching reference design
 class CustomBottomNav extends StatelessWidget {
@@ -39,28 +40,28 @@ class CustomBottomNav extends StatelessWidget {
               index: 0,
               selectedIndex: currentIndex,
               icon: Icons.grid_view_rounded,
-              label: 'DASHBOARD',
+              label: context.tr('DASHBOARD'),
               onTap: () => onTap(0),
             ),
             _NavItem(
               index: 1,
               selectedIndex: currentIndex,
               icon: Icons.confirmation_number_outlined,
-              label: 'QUEUE',
+              label: context.tr('QUEUE'),
               onTap: () => onTap(1),
             ),
             _NavItem(
               index: 2,
               selectedIndex: currentIndex,
               icon: Icons.description_outlined,
-              label: 'DOCUMENTS',
+              label: context.tr('DOCUMENTS'),
               onTap: () => onTap(2),
             ),
             _NavItem(
               index: 3,
               selectedIndex: currentIndex,
               icon: Icons.calendar_today_outlined,
-              label: 'SCHEDULE',
+              label: context.tr('SCHEDULE'),
               onTap: () => onTap(3),
             ),
           ],

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../core/network/api_exception.dart';
+import '../core/localization/app_language.dart';
 import '../core/theme/app_colors.dart';
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
@@ -62,6 +63,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _removeUtilityBillingPhoto = false;
 
   final ImagePicker _imagePicker = ImagePicker();
+  final ScrollController _profileScrollController = ScrollController();
 
   static const List<String> _secondaryIdTypes = [
     'Passport',
@@ -132,10 +134,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (!registered) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
+          SnackBar(
+            content: Text(context.tr(
               'Could not enable push alerts. Allow notifications and check your connection, then try again.',
-            ),
+            )),
           ),
         );
         return;
@@ -168,7 +170,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not save notification preference.')),
+        SnackBar(content: Text(context.tr('Could not save notification preference.'))),
       );
     } finally {
       if (mounted) setState(() => _isSavingNotificationPreference = false);
@@ -210,6 +212,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _fullNameController.dispose();
     _contactNumberController.dispose();
     _philsysIdController.dispose();
+    _profileScrollController.dispose();
     super.dispose();
   }
 
@@ -318,6 +321,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _resetFieldsFromUser();
       });
 
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _profileScrollController.hasClients) {
+          _profileScrollController.animateTo(
+            0,
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOut,
+          );
+        }
+      });
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Profile updated successfully'),
@@ -359,6 +372,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       backgroundColor: AppColors.background,
       body: SafeArea(
         child: SingleChildScrollView(
+          controller: _profileScrollController,
           padding: const EdgeInsets.symmetric(horizontal: 28),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -385,15 +399,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     icon: Icon(
                       _isEditing ? Icons.close_rounded : Icons.edit_outlined,
                     ),
-                    label: Text(_isEditing ? 'Cancel' : 'Edit Profile'),
+                    label: Text(_isEditing ? context.tr('Cancel') : context.tr('Edit Profile')),
                   ),
                 ],
               ),
               const SizedBox(height: 8),
               const Center(child: KapitBayanLogo(iconSize: 64, textSize: 24)),
               const SizedBox(height: 32),
-              const Text(
-                'My Profile',
+              Text(
+                context.tr('My Profile'),
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 28,
@@ -405,8 +419,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const SizedBox(height: 8),
               Text(
                 _isEditing
-                    ? 'Update your resident information and verification documents below.'
-                    : 'Review your resident information, verification documents, and account details.',
+                    ? context.tr('Update your resident information and verification documents below.')
+                    : context.tr('Review your resident information, verification documents, and account details.'),
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   fontSize: 14.5,
@@ -416,9 +430,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
               const SizedBox(height: 28),
+              if (_currentUser.isResident) _buildLanguagePreference(),
+              if (_currentUser.isResident) const SizedBox(height: 14),
               if (_isEditing) ...[
                 CustomTextField(
-                  label: 'FULL NAME',
+                  label: context.tr('FULL NAME'),
                   controller: _fullNameController,
                   hintText: 'Your full name',
                   prefixIcon: Icons.person_outline_rounded,
@@ -426,7 +442,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 const SizedBox(height: 18),
                 CustomTextField(
-                  label: 'CONTACT NUMBER',
+                  label: context.tr('CONTACT NUMBER'),
                   controller: _contactNumberController,
                   hintText: '09123456789',
                   prefixIcon: Icons.phone_outlined,
@@ -434,8 +450,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   enabled: !_isSaving,
                 ),
                 const SizedBox(height: 18),
-                const Text(
-                  'BIRTH DATE',
+                Text(
+                  context.tr('BIRTH DATE'),
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w800,
@@ -611,6 +627,40 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  Widget _buildLanguagePreference() {
+    final language = AppLanguageScope.of(context);
+    return Card(
+      color: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                context.tr('Language'),
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+            ),
+            DropdownButton<String>(
+              value: language.languageCode,
+              onChanged: (value) {
+                if (value != null) language.setLanguage(value);
+              },
+              items: [
+                DropdownMenuItem(value: 'en', child: Text(context.tr('English'))),
+                DropdownMenuItem(
+                  value: 'fil',
+                  child: Text(context.tr('Filipino (Tagalog)')),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildNotificationPreferences() {
     return Padding(
       padding: const EdgeInsets.only(top: 12),
@@ -626,10 +676,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Padding(
+              Padding(
                 padding: EdgeInsets.only(top: 6, bottom: 4),
                 child: Text(
-                  'Notification Preferences',
+                  context.tr('Notification Preferences'),
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w800,
@@ -637,8 +687,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
               ),
-              const Text(
-                'Choose how you receive queue, document, and community updates.',
+              Text(
+                context.tr('Choose how you receive queue, document, and community updates.'),
                 style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
               ),
               if (_isLoadingNotificationPreferences)
@@ -650,19 +700,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 TextButton.icon(
                   onPressed: _loadNotificationPreferences,
                   icon: const Icon(Icons.refresh_rounded),
-                  label: const Text('Could not load preferences. Try again.'),
+                    label: Text(context.tr('Could not load preferences. Try again.')),
                 )
               else ...[
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   value: _pushAlerts,
                   activeThumbColor: AppColors.primaryNavy,
-                  title: const Text(
-                    'Push notifications',
+                  title: Text(
+                    context.tr('Push notifications'),
                     style: TextStyle(fontWeight: FontWeight.w700),
                   ),
-                  subtitle: const Text(
-                    'Receive queue calls and service updates on this device.',
+                  subtitle: Text(
+                    context.tr('Receive queue calls and service updates on this device.'),
                   ),
                   onChanged: _isSavingNotificationPreference
                       ? null
@@ -675,8 +725,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   contentPadding: EdgeInsets.zero,
                   value: _emailAlerts,
                   activeThumbColor: AppColors.primaryNavy,
-                  title: const Text(
-                    'Email updates',
+                  title: Text(
+                    context.tr('Email updates'),
                     style: TextStyle(fontWeight: FontWeight.w700),
                   ),
                   subtitle: Text(

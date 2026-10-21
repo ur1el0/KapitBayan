@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/localization/app_language.dart';
 import '../core/theme/app_colors.dart';
 
 /// Item definition for the Request New catalog
@@ -81,8 +82,8 @@ class RequestDocumentGrid extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
-              'Request New',
+            Text(
+              context.tr('Request New'),
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w800,
@@ -92,8 +93,8 @@ class RequestDocumentGrid extends StatelessWidget {
             ),
             GestureDetector(
               onTap: onViewAll,
-              child: const Text(
-                'View All',
+              child: Text(
+                context.tr('View All'),
                 style: TextStyle(
                   fontSize: 13.5,
                   fontWeight: FontWeight.w700,
@@ -114,9 +115,9 @@ class RequestDocumentGrid extends StatelessWidget {
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: const Color(0xFFF1F5F9), width: 1.2),
             ),
-            child: const Center(
+            child: Center(
               child: Text(
-                'No matching certificate or permit type found.',
+                context.tr('No matching certificate or permit type found.'),
                 style: TextStyle(
                   fontSize: 13,
                   color: AppColors.textMuted,
@@ -212,7 +213,7 @@ class _RequestCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      item.title,
+                      context.tr(item.title),
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w800,
@@ -224,7 +225,7 @@ class _RequestCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      item.subtitle,
+                      context.tr(item.subtitle),
                       style: const TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w500,

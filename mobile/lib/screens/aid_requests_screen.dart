@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/network/api_client.dart';
 import '../core/theme/app_colors.dart';
+import '../core/localization/app_language.dart';
 import '../services/aid_request_service.dart';
 import '../services/storage_service.dart';
 
@@ -59,7 +60,7 @@ class _AidRequestsScreenState extends State<AidRequestsScreen> {
       final requests = await _service!.fetchRequests();
       if (mounted) setState(() => _requests = requests);
     } catch (_) {
-      if (mounted) _showMessage('Could not load assistance requests.');
+      if (mounted) _showMessage(context.tr('Could not load assistance requests.'));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -76,9 +77,9 @@ class _AidRequestsScreenState extends State<AidRequestsScreen> {
       );
       _reasonController.clear();
       await _loadRequests();
-      if (mounted) _showMessage('Request submitted for barangay staff review.');
+      if (mounted) _showMessage(context.tr('Request submitted for barangay staff review.'));
     } catch (_) {
-      if (mounted) _showMessage('Could not submit your assistance request.');
+      if (mounted) _showMessage(context.tr('Could not submit your assistance request.'));
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -90,16 +91,16 @@ class _AidRequestsScreenState extends State<AidRequestsScreen> {
     ).showSnackBar(SnackBar(content: Text(message)));
   }
 
-  String _statusLabel(String status) {
+  String _statusLabel(BuildContext context, String status) {
     switch (status) {
       case 'UNDER_REVIEW':
-        return 'Under review';
+        return context.tr('Under review');
       case 'APPROVED':
-        return 'Approved';
+        return context.tr('Approved');
       case 'DECLINED':
-        return 'Declined';
+        return context.tr('Declined');
       default:
-        return 'Pending review';
+        return context.tr('Pending review');
     }
   }
 
@@ -108,7 +109,7 @@ class _AidRequestsScreenState extends State<AidRequestsScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text('Barangay Assistance'),
+        title: Text(context.tr('Barangay Assistance')),
         foregroundColor: AppColors.textPrimary,
         backgroundColor: Colors.white,
       ),
@@ -125,16 +126,16 @@ class _AidRequestsScreenState extends State<AidRequestsScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            'Request assistance',
+                          Text(
+                            context.tr('Request assistance'),
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                           const SizedBox(height: 8),
-                          const Text(
-                            'Barangay staff will review your request manually. Submission does not guarantee approval.',
+                          Text(
+                            context.tr('Barangay staff will review your request manually. Submission does not guarantee approval.'),
                             style: TextStyle(
                               color: AppColors.textMuted,
                               height: 1.35,
@@ -143,14 +144,14 @@ class _AidRequestsScreenState extends State<AidRequestsScreen> {
                           const SizedBox(height: 14),
                           DropdownButtonFormField<String>(
                             initialValue: _assistanceType,
-                            decoration: const InputDecoration(
-                              labelText: 'Type of assistance',
+                            decoration: InputDecoration(
+                              labelText: context.tr('Type of assistance'),
                             ),
                             items: _assistanceTypes
                                 .map(
                                   (type) => DropdownMenuItem(
                                     value: type,
-                                    child: Text(type),
+                                    child: Text(context.tr(type)),
                                   ),
                                 )
                                 .toList(),
@@ -165,8 +166,8 @@ class _AidRequestsScreenState extends State<AidRequestsScreen> {
                             controller: _reasonController,
                             maxLength: 2000,
                             maxLines: 4,
-                            decoration: const InputDecoration(
-                              labelText: 'Reason for request',
+                            decoration: InputDecoration(
+                              labelText: context.tr('Reason for request'),
                               alignLabelWithHint: true,
                               border: OutlineInputBorder(),
                             ),
@@ -185,8 +186,8 @@ class _AidRequestsScreenState extends State<AidRequestsScreen> {
                                   : const Icon(Icons.send_outlined),
                               label: Text(
                                 _isSubmitting
-                                    ? 'Submitting…'
-                                    : 'Submit for review',
+                                    ? context.tr('Submitting…')
+                                    : context.tr('Submit for review'),
                               ),
                             ),
                           ),
@@ -195,18 +196,16 @@ class _AidRequestsScreenState extends State<AidRequestsScreen> {
                     ),
                   ),
                   const SizedBox(height: 20),
-                  const Text(
-                    'Your requests',
+                  Text(
+                    context.tr('Your requests'),
                     style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
                   if (_requests.isEmpty)
-                    const Card(
+                    Card(
                       child: Padding(
                         padding: EdgeInsets.all(18),
-                        child: Text(
-                          'No assistance requests have been submitted.',
-                        ),
+                        child: Text(context.tr('No assistance requests have been submitted.')),
                       ),
                     ),
                   ..._requests.map(
@@ -223,14 +222,14 @@ class _AidRequestsScreenState extends State<AidRequestsScreen> {
                                 Expanded(
                                   child: Text(
                                     request['assistance_type']?.toString() ??
-                                        'Assistance request',
+                                        context.tr('Assistance request'),
                                     style: const TextStyle(
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
                                 ),
                                 Text(
-                                  _statusLabel(
+                                  _statusLabel(context,
                                     request['status']?.toString() ?? 'PENDING',
                                   ),
                                 ),
@@ -242,7 +241,7 @@ class _AidRequestsScreenState extends State<AidRequestsScreen> {
                                 .isNotEmpty) ...[
                               const SizedBox(height: 8),
                               Text(
-                                'Staff note: ${request['staff_notes']}',
+                                '${context.tr('Staff note: ')}${request['staff_notes']}',
                                 style: const TextStyle(
                                   color: AppColors.textMuted,
                                 ),

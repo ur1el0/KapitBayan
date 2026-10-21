@@ -4,6 +4,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 
 import '../core/navigation/app_navigation_keys.dart';
+import '../core/localization/app_language.dart';
 import 'hotlines_screen.dart';
 import 'report_issue_screen.dart';
 import '../services/push_notification_service.dart';
@@ -374,7 +375,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Location: ${activity.location}',
+                                  '${context.tr('Location')}: ${activity.location}',
                                   style: const TextStyle(
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -383,14 +384,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 Text(
                                   activity.description.isNotEmpty
                                       ? activity.description
-                                      : 'No additional details provided.',
+                                      : context.tr('No additional details provided.'),
                                 ),
                               ],
                             ),
                             actions: [
                               TextButton(
                                 onPressed: () => Navigator.pop(ctx),
-                                child: const Text('OK'),
+                                child: Text(context.tr('OK')),
                               ),
                             ],
                           ),

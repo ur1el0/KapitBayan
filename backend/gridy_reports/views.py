@@ -1,3 +1,4 @@
+from django.db import transaction
 from rest_framework import viewsets, permissions
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from .models import IssueReport
@@ -6,6 +7,7 @@ from gridy_auth.permissions import IsBarangayOfficial, IsBarangayOfficialOrField
 
 from gridy_audit.services import log_action
 from gridy_audit.models import AuditLog
+from gridy_communications.admin_notifications import notify_barangay_admins
 
 class IssueReportViewSet(viewsets.ModelViewSet):
     serializer_class = IssueReportSerializer
@@ -35,11 +37,16 @@ class IssueReportViewSet(viewsets.ModelViewSet):
         # Standard Residents only see their own reports (and we fixed the created_by typo)
         return IssueReport.objects.filter(reporter=user).order_by('-created_at')
 
+    @transaction.atomic
     def perform_create(self, serializer):
         serializer.save(
             reporter=self.request.user,
             status=IssueReport.Status.PENDING,
             urgency=IssueReport.Urgency.MINOR
+        )
+        notify_barangay_admins(
+            barangay_id=self.request.user.barangay_id,
+            notification_type='report',
         )
 
     def perform_update(self, serializer):

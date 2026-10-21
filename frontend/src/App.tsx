@@ -1,4 +1,5 @@
 import { lazy, Suspense } from "react";
+import { LanguageProvider } from "./context/language-context";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { useAuth } from "./context/auth-context";
@@ -150,7 +151,7 @@ function FieldOfficialWebNotice() {
 export function App() {
     return (
         <ErrorBoundary>
-            <AuthProvider>
+            <LanguageProvider><AuthProvider>
                 <Router>
                     <Suspense fallback={<RouteLoadingFallback />}>
                         <Routes>
@@ -223,7 +224,7 @@ export function App() {
                         </Routes>
                     </Suspense>
                 </Router>
-            </AuthProvider>
+            </AuthProvider></LanguageProvider>
         </ErrorBoundary>
     );
 }

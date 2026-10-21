@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../core/network/api_client.dart';
 import '../core/theme/app_colors.dart';
+import '../core/localization/app_language.dart';
 import '../services/auth_service.dart';
 import '../services/storage_service.dart';
 import '../utils/password_reset_link.dart';
@@ -114,7 +115,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text('Password Recovery'),
+        title: Text(context.tr('Password Recovery')),
         backgroundColor: Colors.white,
         foregroundColor: AppColors.textPrimary,
         elevation: 0,
@@ -140,7 +141,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            _requestSent ? 'Set a new password' : 'Recover your account',
+            context.tr(_requestSent ? 'Set a new password' : 'Recover your account'),
             style: const TextStyle(
               color: AppColors.textPrimary,
               fontSize: 24,
@@ -150,18 +151,18 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           const SizedBox(height: 8),
           Text(
             _requestSent
-                ? 'If the address is registered, a reset link was sent. Open it in your browser, or copy the complete link and paste it below to finish in this app.'
-                : 'Enter the email address associated with your account. We will send reset instructions if it is registered.',
+                ? context.tr('If the address is registered, a reset link was sent. Open it in your browser, or copy the complete link and paste it below to finish in this app.')
+                : context.tr('Enter the email address associated with your account. We will send reset instructions if it is registered.'),
             style: const TextStyle(color: AppColors.textSecondary, height: 1.5),
           ),
           if (_errorMessage != null) ...[
             const SizedBox(height: 16),
-            Text(_errorMessage!, style: const TextStyle(color: Colors.red)),
+            Text(context.tr(_errorMessage!), style: const TextStyle(color: Colors.red)),
           ],
           const SizedBox(height: 24),
           if (!_requestSent) ...[
             CustomTextField(
-              label: 'Registered email',
+              label: context.tr('Registered email'),
               controller: _emailController,
               hintText: 'resident@example.com',
               prefixIcon: Icons.email_outlined,
@@ -169,37 +170,37 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               textInputAction: TextInputAction.done,
               validator: (value) {
                 final email = value?.trim() ?? '';
-                if (email.isEmpty) return 'Enter your email address.';
+                if (email.isEmpty) return context.tr('Enter your email address.');
                 if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
-                  return 'Enter a valid email address.';
+                  return context.tr('Enter a valid email address.');
                 }
                 return null;
               },
             ),
           ] else ...[
             CustomTextField(
-              label: 'Reset link from email',
+              label: context.tr('Reset link from email'),
               controller: _resetLinkController,
-              hintText: 'Paste the complete password reset link',
+              hintText: context.tr('Paste the complete password reset link'),
               prefixIcon: Icons.link_outlined,
               keyboardType: TextInputType.url,
               validator: (value) => PasswordResetLink.parse(value ?? '') != null
                   ? null
-                  : 'Paste the complete, valid reset link from your email.',
+                  : context.tr('Paste the complete, valid reset link from your email.'),
             ),
             Align(
               alignment: Alignment.centerRight,
               child: TextButton.icon(
                 onPressed: _isSubmitting ? null : _pasteResetLink,
                 icon: const Icon(Icons.content_paste_outlined),
-                label: const Text('Paste reset link'),
+                label: Text(context.tr('Paste reset link')),
               ),
             ),
             const SizedBox(height: 16),
             CustomTextField(
-              label: 'New password',
+              label: context.tr('New password'),
               controller: _passwordController,
-              hintText: 'At least 8 characters',
+              hintText: context.tr('At least 8 characters'),
               prefixIcon: Icons.lock_outline,
               obscureText: _obscurePassword,
               suffixIcon: IconButton(
@@ -212,13 +213,13 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               ),
               validator: (value) => (value ?? '').length >= 8
                   ? null
-                  : 'Use at least 8 characters.',
+                  : context.tr('Use at least 8 characters.'),
             ),
             const SizedBox(height: 16),
             CustomTextField(
-              label: 'Confirm new password',
+              label: context.tr('Confirm new password'),
               controller: _confirmPasswordController,
-              hintText: 'Re-enter the new password',
+              hintText: context.tr('Re-enter the new password'),
               prefixIcon: Icons.lock_outline,
               obscureText: _obscureConfirmation,
               suffixIcon: IconButton(
@@ -233,7 +234,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               ),
               validator: (value) => value == _passwordController.text
                   ? null
-                  : 'Passwords do not match.',
+                  : context.tr('Passwords do not match.'),
             ),
           ],
           const SizedBox(height: 24),
@@ -256,7 +257,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       color: Colors.white,
                     ),
                   )
-                : Text(_requestSent ? 'Reset Password' : 'Send Reset Link'),
+                : Text(context.tr(_requestSent ? 'Reset Password' : 'Send Reset Link')),
           ),
           if (_requestSent) ...[
             const SizedBox(height: 8),
@@ -272,7 +273,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                         _confirmPasswordController.clear();
                       });
                     },
-              child: const Text('Use a different email'),
+              child: Text(context.tr('Use a different email')),
             ),
           ],
         ],
@@ -287,7 +288,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     final copiedLink = clipboardData?.text?.trim();
     if (copiedLink == null || copiedLink.isEmpty) {
       setState(
-        () => _errorMessage = 'Copy the reset link from your email first.',
+        () => _errorMessage = context.tr('Copy the reset link from your email first.'),
       );
       return;
     }
@@ -308,8 +309,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           size: 56,
         ),
         const SizedBox(height: 16),
-        const Text(
-          'Password updated',
+        Text(
+          context.tr('Password updated'),
           textAlign: TextAlign.center,
           style: TextStyle(
             color: AppColors.textPrimary,
@@ -318,8 +319,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           ),
         ),
         const SizedBox(height: 8),
-        const Text(
-          'You can now return to the login screen and sign in with your new password.',
+        Text(
+          context.tr('You can now return to the login screen and sign in with your new password.'),
           textAlign: TextAlign.center,
           style: TextStyle(color: AppColors.textSecondary, height: 1.5),
         ),
@@ -331,7 +332,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(vertical: 16),
           ),
-          child: const Text('Return to Login'),
+          child: Text(context.tr('Return to Login')),
         ),
       ],
     );

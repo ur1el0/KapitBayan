@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/localization/app_language.dart';
 import '../core/theme/app_colors.dart';
 
 class EmptyDocumentRequests extends StatelessWidget {
@@ -38,8 +39,8 @@ class EmptyDocumentRequests extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             isSearching
-                ? 'No requests matching "$searchQuery"'
-                : 'No active document requests',
+                ? '${context.tr('No requests matching')} "$searchQuery"'
+                : context.tr('No active document requests'),
             style: const TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w700,
@@ -49,8 +50,8 @@ class EmptyDocumentRequests extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             isSearching
-                ? 'Try adjusting your search query or clear the filter.'
-                : 'Tap any certificate above to submit a new request.',
+                ? context.tr('Try adjusting your search query or clear the filter.')
+                : context.tr('Tap any certificate above to submit a new request.'),
             textAlign: TextAlign.center,
             style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
           ),

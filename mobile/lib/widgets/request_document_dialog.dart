@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/localization/app_language.dart';
 import '../core/theme/app_colors.dart';
 import '../models/document_request_model.dart';
 import '../services/document_service.dart';
@@ -64,7 +65,7 @@ class _RequestDocumentDialogState extends State<RequestDocumentDialog> {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Request for $_selectedType submitted successfully!'),
+            content: Text('${context.tr('Request for')} ${context.tr(_selectedType)} ${context.tr('submitted successfully!')}'),
             backgroundColor: const Color(0xFF10B981),
             behavior: SnackBarBehavior.floating,
           ),
@@ -110,8 +111,8 @@ class _RequestDocumentDialogState extends State<RequestDocumentDialog> {
           ),
           const SizedBox(height: 18),
 
-          const Text(
-            'New Document Request',
+          Text(
+            context.tr('New Document Request'),
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w800,
@@ -120,8 +121,8 @@ class _RequestDocumentDialogState extends State<RequestDocumentDialog> {
             ),
           ),
           const SizedBox(height: 6),
-          const Text(
-            'Fill in the details below to submit your official request.',
+          Text(
+            context.tr('Fill in the details below to submit your official request.'),
             style: TextStyle(
               fontSize: 13,
               color: AppColors.textMuted,
@@ -130,8 +131,8 @@ class _RequestDocumentDialogState extends State<RequestDocumentDialog> {
           const SizedBox(height: 20),
 
           // Document Type Dropdown
-          const Text(
-            'DOCUMENT TYPE',
+          Text(
+            context.tr('DOCUMENT TYPE'),
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w700,
@@ -156,7 +157,7 @@ class _RequestDocumentDialogState extends State<RequestDocumentDialog> {
                   return DropdownMenuItem<String>(
                     value: type,
                     child: Text(
-                      type,
+                      context.tr(type),
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
@@ -175,8 +176,8 @@ class _RequestDocumentDialogState extends State<RequestDocumentDialog> {
           ),
           const SizedBox(height: 18),
           
-          const Text(
-            'STATED PURPOSE (OPTIONAL)',
+          Text(
+            context.tr('STATED PURPOSE (OPTIONAL)'),
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w700,
@@ -188,7 +189,7 @@ class _RequestDocumentDialogState extends State<RequestDocumentDialog> {
           TextField(
             controller: _purposeController,
             decoration: InputDecoration(
-              hintText: 'e.g. For local employment application',
+              hintText: context.tr('e.g. For local employment application'),
               hintStyle: const TextStyle(fontSize: 13, color: Color(0xFF94A3B8)),
               filled: true,
               fillColor: const Color(0xFFF8FAFC),
@@ -204,8 +205,8 @@ class _RequestDocumentDialogState extends State<RequestDocumentDialog> {
             ),
           ),
           // Processing Urgency
-          const Text(
-            'PROCESSING SPEED',
+          Text(
+            context.tr('PROCESSING SPEED'),
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w700,
@@ -218,8 +219,8 @@ class _RequestDocumentDialogState extends State<RequestDocumentDialog> {
             children: [
               Expanded(
                 child: _UrgencyChoiceCard(
-                  title: 'Regular',
-                  subtitle: '1-3 Business Days',
+                  title: context.tr('Regular'),
+                  subtitle: context.tr('1-3 Business Days'),
                   isSelected: _selectedUrgency == 'REGULAR',
                   onTap: () => setState(() => _selectedUrgency = 'REGULAR'),
                 ),
@@ -227,8 +228,8 @@ class _RequestDocumentDialogState extends State<RequestDocumentDialog> {
               const SizedBox(width: 12),
               Expanded(
                 child: _UrgencyChoiceCard(
-                  title: 'Urgent',
-                  subtitle: 'Same Day / Priority',
+                  title: context.tr('Urgent'),
+                  subtitle: context.tr('Same Day / Priority'),
                   isSelected: _selectedUrgency == 'URGENT',
                   onTap: () => setState(() => _selectedUrgency = 'URGENT'),
                 ),
@@ -267,7 +268,7 @@ class _RequestDocumentDialogState extends State<RequestDocumentDialog> {
 
           // Submit Button
           CustomButton(
-            text: 'Submit Request',
+            text: context.tr('Submit Request'),
             isLoading: _isSubmitting,
             onPressed: _submitRequest,
           ),

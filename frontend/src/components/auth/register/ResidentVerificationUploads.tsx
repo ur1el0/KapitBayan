@@ -2,6 +2,7 @@ import React from 'react';
 import { IdCard, ChevronDown } from 'lucide-react';
 import { TextField } from '../../ui/TextField';
 import { FileUploadZone } from '../../ui/FileUploadZone';
+import { useLanguage } from '../../../context/language-context';
 
 interface ResidentVerificationUploadsProps {
     isExpanded: boolean;
@@ -36,6 +37,7 @@ export const ResidentVerificationUploads: React.FC<ResidentVerificationUploadsPr
     secondaryIdPhoto,
     onSecondaryIdPhotoChange,
 }) => {
+    const { t } = useLanguage();
     const utilityBillingTypeId = React.useId();
     const secondaryIdTypeId = React.useId();
     const hasUploadedProof = Boolean(philsysPhoto || utilityBillingPhoto || secondaryIdPhoto);
@@ -52,21 +54,21 @@ export const ResidentVerificationUploads: React.FC<ResidentVerificationUploadsPr
                     <IdCard className="w-4 h-4 text-[#0284C7] shrink-0" />
                     <div>
                         <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800">
-                            Identity & Residency Verification
+                            {t('Identity & Residency Verification')}
                         </h4>
                         <p className="text-[11px] text-slate-500">
                             {isExpanded
-                                ? 'Tap to collapse verification documents'
+                                ? t('Tap to collapse verification documents')
                                 : hasUploadedProof
-                                    ? 'Verification document attached'
-                                    : 'Required: upload at least one ID or proof of residency'}
+                                    ? t('Verification document attached')
+                                    : t('Required: upload at least one ID or proof of residency')}
                         </p>
                     </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                     {hasUploadedProof && (
                         <span className="text-[10px] bg-emerald-100 text-emerald-700 font-bold px-2 py-0.5 rounded-full">
-                            Document Attached
+                            {t('Document Attached')}
                         </span>
                     )}
                     <ChevronDown className={"w-4 h-4 text-slate-400 transition-transform duration-200 " + (isExpanded ? "rotate-180" : "")} />
@@ -76,13 +78,13 @@ export const ResidentVerificationUploads: React.FC<ResidentVerificationUploadsPr
             {isExpanded && (
                 <div className="p-3.5 pt-3 space-y-4 border-t border-slate-200 bg-white">
                     <p className="text-[11px] text-slate-500 leading-relaxed">
-                        Upload at least one image to register: a PhilSys ID, a secondary valid ID, or proof of residency such as a utility bill or lease. A typed ID number alone does not count.
+                        {t('Upload at least one image to register: a PhilSys ID, a secondary valid ID, or proof of residency such as a utility bill or lease. A typed ID number alone does not count.')}
                     </p>
 
                     {/* 1. PhilSys ID Number & Photo */}
                     <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-3">
                         <TextField
-                            label="PHILSYS NATIONAL ID NUMBER"
+                            label={t('PHILSYS NATIONAL ID NUMBER')}
                             type="text"
                             value={philsysIdNumber}
                             onChange={(e) => onPhilsysIdNumberChange(e.target.value)}
@@ -90,7 +92,7 @@ export const ResidentVerificationUploads: React.FC<ResidentVerificationUploadsPr
                             className="font-mono"
                         />
                         <FileUploadZone
-                            label="UPLOAD PHILSYS ID CARD PHOTO"
+                            label={t('UPLOAD PHILSYS ID CARD PHOTO')}
                             file={philsysPhoto}
                             onFileChange={onPhilsysPhotoChange}
                         />
@@ -100,7 +102,7 @@ export const ResidentVerificationUploads: React.FC<ResidentVerificationUploadsPr
                     <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-3">
                         <div>
                             <label htmlFor={utilityBillingTypeId} className="block text-[10px] font-bold tracking-wider text-slate-600 uppercase mb-1">
-                                SELECT PRIMARY RESIDENCY PROOF
+                                {t('SELECT PRIMARY RESIDENCY PROOF')}
                             </label>
                             <select
                                 id={utilityBillingTypeId}
@@ -108,14 +110,14 @@ export const ResidentVerificationUploads: React.FC<ResidentVerificationUploadsPr
                                 onChange={(e) => onUtilityBillingTypeChange(e.target.value)}
                                 className="w-full px-3 py-2 bg-white border border-slate-200 focus:border-[#0284C7] rounded-lg text-xs font-semibold text-slate-700 outline-none transition-all cursor-pointer"
                             >
-                                <option value="Electric Bill">Electric Bill (Meralco/Quezelco)</option>
-                                <option value="Water Bill">Water Bill (PrimeWater/Maynilad)</option>
-                                <option value="Internet / Telco Bill">Internet / Telco Bill</option>
-                                <option value="Lease Agreement">Residential Lease Contract</option>
+                                <option value="Electric Bill">{t('Electric Bill')} (Meralco/Quezelco)</option>
+                                <option value="Water Bill">{t('Water Bill')} (PrimeWater/Maynilad)</option>
+                                <option value="Internet / Telco Bill">{t('Internet / Telco Bill')}</option>
+                                <option value="Lease Agreement">{t('Residential Lease Contract')}</option>
                             </select>
                         </div>
                         <FileUploadZone
-                            label="UPLOAD RECENT UTILITY BILL (LAST 3 MONTHS)"
+                            label={t('UPLOAD RECENT UTILITY BILL (LAST 3 MONTHS)')}
                             file={utilityBillingPhoto}
                             onFileChange={onUtilityBillingPhotoChange}
                         />
@@ -125,7 +127,7 @@ export const ResidentVerificationUploads: React.FC<ResidentVerificationUploadsPr
                     <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-3">
                         <div>
                             <label htmlFor={secondaryIdTypeId} className="block text-[10px] font-bold tracking-wider text-slate-600 uppercase mb-1 flex items-center gap-2">
-                                SECONDARY ID <span className="text-[9px] font-bold text-slate-400 bg-slate-200 px-1.5 py-0.5 rounded uppercase">Optional</span>
+                                {t('SECONDARY ID')} <span className="text-[9px] font-bold text-slate-400 bg-slate-200 px-1.5 py-0.5 rounded uppercase">{t('Optional')}</span>
                             </label>
                             <select
                                 id={secondaryIdTypeId}
@@ -133,7 +135,7 @@ export const ResidentVerificationUploads: React.FC<ResidentVerificationUploadsPr
                                 onChange={(e) => onSecondaryIdTypeChange(e.target.value)}
                                 className="w-full px-3 py-2 bg-white border border-slate-200 focus:border-[#0284C7] rounded-lg text-xs font-semibold text-slate-700 outline-none transition-all cursor-pointer"
                             >
-                                <option value="">None (I only have PhilSys ID)</option>
+                                <option value="">{t('None (I only have PhilSys ID)')}</option>
                                 <option value="Voter ID">Voter's ID / Certification</option>
                                 <option value="Driver License">Driver's License</option>
                                 <option value="Passport">Passport</option>
@@ -142,7 +144,7 @@ export const ResidentVerificationUploads: React.FC<ResidentVerificationUploadsPr
                             </select>
                         </div>
                         <FileUploadZone
-                            label="UPLOAD SECONDARY ID PHOTO"
+                            label={t('UPLOAD SECONDARY ID PHOTO')}
                             file={secondaryIdPhoto}
                             onFileChange={onSecondaryIdPhotoChange}
                             disabled={!secondaryIdType}

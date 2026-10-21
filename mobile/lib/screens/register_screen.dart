@@ -3,6 +3,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../core/network/api_client.dart';
 import '../core/network/api_exception.dart';
+import '../core/localization/app_language.dart';
 import '../core/theme/app_colors.dart';
 import '../models/user_model.dart';
 import '../models/barangay_model.dart';
@@ -381,14 +382,30 @@ class _RegisterScreenState extends State<RegisterScreen> {
               children: [
                 const SizedBox(height: 32),
 
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: DropdownButton<String>(
+                    value: AppLanguageScope.of(context).languageCode,
+                    onChanged: (value) {
+                      if (value != null) {
+                        AppLanguageScope.of(context).setLanguage(value);
+                      }
+                    },
+                    items: [
+                      DropdownMenuItem(value: 'en', child: Text(context.tr('English'))),
+                      DropdownMenuItem(value: 'fil', child: Text(context.tr('Filipino (Tagalog)'))),
+                    ],
+                  ),
+                ),
+
                 // Logo & Brand Name
                 const KapitBayanLogo(iconSize: 64, textSize: 24),
 
                 const SizedBox(height: 32),
 
                 // Header Typography
-                const Text(
-                  'Create an Account',
+                Text(
+                  context.tr('Create an Account'),
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 28,
@@ -398,8 +415,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                const Text(
-                  'Please provide your details to join our\ncommunity.',
+                Text(
+                  context.tr('Please provide your details to join our\ncommunity.'),
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 14.5,
@@ -533,7 +550,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                 // Register Account Action Button
                 CustomButton(
-                  text: 'Register Account',
+                  text: context.tr('Register Account'),
                   isLoading: _isLoading,
                   icon: Icons.arrow_forward_rounded,
                   onPressed: _handleRegister,
@@ -546,8 +563,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   child: GestureDetector(
                     onTap: _isLoading ? null : _navigateToLogin,
                     child: Text.rich(
-                      const TextSpan(
-                        text: 'Already have an account? ',
+                      TextSpan(
+                        text: context.tr('Already have an account? '),
                         style: TextStyle(
                           fontSize: 14,
                           color: AppColors.textSecondary,
@@ -555,7 +572,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ),
                         children: [
                           TextSpan(
-                            text: 'Login here',
+                            text: context.tr('Login here'),
                             style: TextStyle(
                               color: AppColors.primaryNavy,
                               fontWeight: FontWeight.w800,
