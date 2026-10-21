@@ -144,7 +144,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(color: const Color(0xFFE2E8F0)),
                       ),
-                      child: const Row(
+                      child: Row(
                         children: [
                           Icon(Icons.admin_panel_settings_rounded, color: AppColors.primaryNavy, size: 20),
                           SizedBox(width: 8),
