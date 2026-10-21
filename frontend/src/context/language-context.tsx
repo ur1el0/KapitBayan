@@ -427,6 +427,8 @@ const FILIPINO: Record<string, string> = {
     'Your barangay has not configured an e-payment recipient. Contact the barangay hall or pay in person at the treasurer desk.': 'Wala pang itinakdang tatanggap ng elektronikong bayad ang barangay. Kontakin ang barangay hall o magbayad nang personal sa tanggapan ng ingat-yaman.',
     'Payment recipient': 'Tatanggap ng bayad',
     'Payment recipient for request': 'Tatanggap ng bayad para sa request',
+    'Transfer reference for request': 'Reference ng transfer para sa request',
+    'Transaction date and time for request': 'Petsa at oras ng transaksyon para sa request',
     'Select a recipient': 'Pumili ng tatanggap',
     'Transfer Reference': 'Reference ng transfer',
     'Transfer reference (e.g. MP-123456789)': 'Reference ng transfer (hal. MP-123456789)',

@@ -262,7 +262,7 @@ export const PaymentReferenceForm: React.FC<PaymentReferenceFormProps> = ({
                             required
                             maxLength={100}
                             minLength={3}
-                            aria-label={`${t('Transfer Reference')} ${requestId}`}
+                            aria-label={`${t('Transfer reference for request')} ${requestId}`}
                             value={activeReference}
                             onChange={(event) => {
                                 const val = event.target.value;
@@ -283,7 +283,7 @@ export const PaymentReferenceForm: React.FC<PaymentReferenceFormProps> = ({
                         <input
                             type="datetime-local"
                             required
-                            aria-label={`${t('Transaction Date and Time (Manila Time)')} ${requestId}`}
+                            aria-label={`${t('Transaction date and time for request')} ${requestId}`}
                             value={paymentTransactedAt}
                             onChange={(event) => setPaymentTransactedAt(event.target.value)}
                             className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs focus:ring-2 focus:ring-primary focus:outline-none"

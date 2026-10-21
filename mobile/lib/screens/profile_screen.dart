@@ -63,6 +63,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _removeUtilityBillingPhoto = false;
 
   final ImagePicker _imagePicker = ImagePicker();
+  final ScrollController _profileScrollController = ScrollController();
 
   static const List<String> _secondaryIdTypes = [
     'Passport',
@@ -211,6 +212,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _fullNameController.dispose();
     _contactNumberController.dispose();
     _philsysIdController.dispose();
+    _profileScrollController.dispose();
     super.dispose();
   }
 
@@ -319,6 +321,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _resetFieldsFromUser();
       });
 
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _profileScrollController.hasClients) {
+          _profileScrollController.animateTo(
+            0,
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOut,
+          );
+        }
+      });
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Profile updated successfully'),
@@ -360,6 +372,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       backgroundColor: AppColors.background,
       body: SafeArea(
         child: SingleChildScrollView(
+          controller: _profileScrollController,
           padding: const EdgeInsets.symmetric(horizontal: 28),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
