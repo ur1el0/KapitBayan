@@ -12,6 +12,7 @@ import {
     YAxis,
 } from 'recharts';
 import type { NamedCount, NamedValue } from './types';
+import { useLanguage } from '../../context/language-context';
 
 interface DemographicsChartsProps {
     purokData: NamedValue[];
@@ -23,10 +24,13 @@ const COLORS = ['var(--brand-primary)', '#00C49F', '#FFBB28', '#FF8042', '#8884d
 export const DemographicsCharts: React.FC<DemographicsChartsProps> = ({
     purokData,
     ageData,
-}) => (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+}) => {
+    const { t } = useLanguage();
+
+    return (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-surface rounded-large p-6 shadow-xs border border-border/80">
-            <h2 className="text-base font-bold text-neutral-primary mb-6">Purok Distribution</h2>
+            <h2 className="text-base font-bold text-neutral-primary mb-6">{t('Purok Distribution')}</h2>
             <div className="h-[250px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
@@ -50,7 +54,7 @@ export const DemographicsCharts: React.FC<DemographicsChartsProps> = ({
         </div>
 
         <div className="bg-surface rounded-large p-6 shadow-xs border border-border/80">
-            <h2 className="text-base font-bold text-neutral-primary mb-6">Age Demographics</h2>
+            <h2 className="text-base font-bold text-neutral-primary mb-6">{t('Age Demographics')}</h2>
             <div className="h-[250px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={ageData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
@@ -63,5 +67,6 @@ export const DemographicsCharts: React.FC<DemographicsChartsProps> = ({
                 </ResponsiveContainer>
             </div>
         </div>
-    </div>
-);
+        </div>
+    );
+};
