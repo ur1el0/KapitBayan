@@ -158,7 +158,7 @@ class _AdminDocumentCatalogScreenState
               child: ListView.separated(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
                 itemCount: _offerings.length + (_error != null ? 1 : 0),
-                separatorBuilder: (_, __) => const SizedBox(height: 10),
+                separatorBuilder: (_, _) => const SizedBox(height: 10),
                 itemBuilder: (context, index) {
                   if (_error != null && index == 0) {
                     return MaterialBanner(
