@@ -33,7 +33,7 @@ class LoginCredentialsSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         CustomTextField(
-          label: isOfficialMode ? 'Official Email' : context.tr('Citizen ID / Username'),
+          label: isOfficialMode ? context.tr('Official Email') : context.tr('Citizen ID / Username'),
           controller: usernameController,
           hintText: isOfficialMode ? 'name@barangay.gov.ph' : 'resident',
           prefixIcon: Icons.person_outline_rounded,
@@ -43,7 +43,7 @@ class LoginCredentialsSection extends StatelessWidget {
           validator: (value) {
             if (value == null || value.trim().isEmpty) {
               return isOfficialMode
-                  ? 'Please enter your official email address'
+                  ? context.tr('Please enter your official email address')
                   : context.tr('Please enter your citizen ID or username');
             }
             return null;
@@ -83,7 +83,7 @@ class LoginCredentialsSection extends StatelessWidget {
           child: TextButton(
             onPressed: onForgotPassword,
             child: Text(
-              isOfficialMode ? 'Forgot Password?' : context.tr('Forgot Password?'),
+              context.tr('Forgot Password?'),
               style: TextStyle(
                 fontSize: 13.5,
                 fontWeight: FontWeight.w700,
@@ -95,7 +95,7 @@ class LoginCredentialsSection extends StatelessWidget {
         const SizedBox(height: 28),
         CustomButton(
           text: isOfficialMode
-              ? 'Authenticate Official'
+              ? context.tr('Authenticate Official')
               : context.tr('Sign In to Citizen Portal'),
           isLoading: isLoading,
           icon: Icons.arrow_forward_rounded,
