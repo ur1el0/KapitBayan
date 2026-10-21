@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Bell, CheckCircle, Clock, AlertTriangle, FileText, Users, UserRoundPlus, Flag, Trash2, CheckSquare, Square, Check, Loader2, ArrowUpRight } from 'lucide-react';
 import { axiosPrivate } from '../../api/axios';
 import { InlineErrorState } from '../../components/ui/InlineErrorState';
@@ -24,7 +23,6 @@ const TYPE_CONFIG = {
 };
 
 export const Notifications: React.FC = () => {
-    const navigate = useNavigate();
     const [notifications, setNotifications] = useState<AdminNotification[]>([]);
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
     const [loading, setLoading] = useState(true);
@@ -111,7 +109,7 @@ export const Notifications: React.FC = () => {
             registration: '/residents?tab=verifications',
         };
         const route = routes[notification.notification_type];
-        if (route) navigate(route);
+        if (route) window.location.assign(route);
     };
 
     // 3. Action Logic: Delete

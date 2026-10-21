@@ -4,7 +4,6 @@ export type ResidentLanguage = 'en' | 'fil';
 
 const FILIPINO: Record<string, string> = {
     'Resident navigation': 'Pag-navigate ng residente',
-    'Documents & Clearances': 'Mga Dokumento at Sertipikasyon',
     'Documents': 'Mga Dokumento',
     'Live Queue Ticker': 'Live na Pila',
     'Queue': 'Pila',
@@ -339,7 +338,7 @@ const FILIPINO: Record<string, string> = {
     'Verification': 'Pagpapatunay',
     'Your username and email are shown for reference. Edit the resident information below.': 'Ipinapakita rito ang iyong username at email bilang sanggunian. I-edit sa ibaba ang impormasyon ng residente.',
     'your account email': 'email ng iyong account',
-    'Documents &amp; Clearances': 'Mga Dokumento at Sertipikasyon',
+    'Documents & Clearances': 'Mga Dokumento at Sertipikasyon',
     'Certificate downloaded.': 'Na-download na ang sertipiko.',
     'Could not generate PDF. Please contact the barangay hall.': 'Hindi magawa ang PDF. Kontakin ang barangay hall.',
     'Transfer reference and receipt sent to barangay staff for manual verification.': 'Naipadala sa kawani ng barangay ang reference at resibo para sa manu-manong pagpapatunay.',
@@ -427,6 +426,7 @@ const FILIPINO: Record<string, string> = {
     'Retry payment recipient loading': 'Subukan muling kunin ang tatanggap ng bayad',
     'Your barangay has not configured an e-payment recipient. Contact the barangay hall or pay in person at the treasurer desk.': 'Wala pang itinakdang tatanggap ng elektronikong bayad ang barangay. Kontakin ang barangay hall o magbayad nang personal sa tanggapan ng ingat-yaman.',
     'Payment recipient': 'Tatanggap ng bayad',
+    'Payment recipient for request': 'Tatanggap ng bayad para sa request',
     'Select a recipient': 'Pumili ng tatanggap',
     'Transfer Reference': 'Reference ng transfer',
     'Transfer reference (e.g. MP-123456789)': 'Reference ng transfer (hal. MP-123456789)',
@@ -438,6 +438,7 @@ const FILIPINO: Record<string, string> = {
     'Please ensure your uploaded screenshot visibly shows the transaction reference number, amount, and date/time.': 'Tiyaking malinaw na nakikita sa screenshot ang reference number, halaga, petsa, at oras ng transaksyon.',
     'JPEG, PNG, or WEBP (up to 5 MB)': 'JPEG, PNG, o WEBP (hanggang 5 MB)',
     'Payment proof screenshot': 'Screenshot ng patunay ng bayad',
+    'Payment proof screenshot for request': 'Screenshot ng patunay ng bayad para sa request',
     'Assessment': 'Pagtatasa',
     'Transacted at': 'Oras ng transaksyon',
     'Staff Note': 'Tala ng kawani',

@@ -39,6 +39,9 @@ class AppLanguageController extends ChangeNotifier {
 }
 
 class AppLanguageScope extends InheritedNotifier<AppLanguageController> {
+  static final AppLanguageController _fallbackController =
+      AppLanguageController();
+
   const AppLanguageScope({
     super.key,
     required AppLanguageController controller,
@@ -47,8 +50,9 @@ class AppLanguageScope extends InheritedNotifier<AppLanguageController> {
 
   static AppLanguageController of(BuildContext context) {
     final scope = context.dependOnInheritedWidgetOfExactType<AppLanguageScope>();
-    assert(scope != null, 'AppLanguageScope is missing above this context.');
-    return scope!.notifier!;
+    // Screens used outside the application shell (for example in previews)
+    // remain readable in English until the persisted language scope is added.
+    return scope?.notifier ?? _fallbackController;
   }
 }
 
