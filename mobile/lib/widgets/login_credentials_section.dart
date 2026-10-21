@@ -33,7 +33,7 @@ class LoginCredentialsSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         CustomTextField(
-          label: isOfficialMode ? 'Official Email' : context.tr('Username or Email'),
+          label: isOfficialMode ? 'Official Email' : context.tr('Citizen ID / Username'),
           controller: usernameController,
           hintText: isOfficialMode ? 'name@barangay.gov.ph' : 'resident',
           prefixIcon: Icons.person_outline_rounded,
