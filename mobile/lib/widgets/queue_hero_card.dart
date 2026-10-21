@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/localization/app_language.dart';
 
 /// Primary hero card displaying the currently served queue ticket at the counter
 class QueueHeroCard extends StatelessWidget {
@@ -43,8 +44,8 @@ class QueueHeroCard extends StatelessWidget {
                   color: Colors.white.withValues(alpha: 0.18),
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: const Text(
-                  'CURRENTLY AT COUNTER',
+                child: Text(
+                  context.tr('CURRENTLY AT COUNTER'),
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 10.5,

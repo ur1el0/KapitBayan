@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/localization/app_language.dart';
 import '../core/network/api_client.dart';
 import '../services/issue_service.dart';
 import '../services/storage_service.dart';
@@ -71,8 +72,8 @@ class _MyIssuesScreenState extends State<MyIssuesScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC), // slate-50 background
       appBar: AppBar(
-        title: const Text(
-          'My Report History',
+        title: Text(
+          context.tr('My Report History'),
           style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0F172A), fontSize: 20),
         ),
         backgroundColor: Colors.white,
@@ -94,7 +95,7 @@ class _MyIssuesScreenState extends State<MyIssuesScreen> {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator(color: Color(0xFF2563EB)));
                   } else if (snapshot.hasError) {
-                    return Center(child: Text('Error: ${snapshot.error}', style: const TextStyle(color: Colors.red)));
+                    return Center(child: Text('${context.tr('Could not load reports.')}: ${snapshot.error}', style: const TextStyle(color: Colors.red)));
                   } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
                     return Center(
                       child: Column(
@@ -102,7 +103,7 @@ class _MyIssuesScreenState extends State<MyIssuesScreen> {
                         children: [
                           Icon(Icons.assignment_outlined, size: 64, color: Color(0xFFCBD5E1)),
                           const SizedBox(height: 16),
-                          Text('No reports submitted yet.', style: TextStyle(color: Color(0xFF64748B), fontSize: 16)),
+                          Text(context.tr('No reports submitted yet.'), style: TextStyle(color: Color(0xFF64748B), fontSize: 16)),
                         ],
                       ),
                     );
@@ -156,7 +157,7 @@ class _MyIssuesScreenState extends State<MyIssuesScreen> {
                                       border: Border.all(color: statusColor.withValues(alpha: 0.2)),
                                     ),
                                     child: Text(
-                                      issue.status.replaceAll('_', ' '),
+                                      context.tr(issue.status.replaceAll('_', ' ')),
                                       style: TextStyle(color: statusColor, fontWeight: FontWeight.bold, fontSize: 10),
                                     ),
                                   ),
@@ -199,7 +200,7 @@ class _MyIssuesScreenState extends State<MyIssuesScreen> {
                                             Icon(Icons.broken_image_outlined, color: Color(0xFF94A3B8), size: 32),
                                             const SizedBox(height: 8),
                                             Text(
-                                              'Image unavailable',
+                                              context.tr('Image unavailable'),
                                               style: TextStyle(color: Color(0xFF64748B), fontSize: 12),
                                             ),
                                           ],

@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Bell, CheckCircle, Clock, AlertTriangle, FileText, Users, Trash2, CheckSquare, Square, Check, Loader2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Bell, CheckCircle, Clock, AlertTriangle, FileText, Users, UserRoundPlus, Flag, Trash2, CheckSquare, Square, Check, Loader2, ArrowUpRight } from 'lucide-react';
 import { axiosPrivate } from '../../api/axios';
 import { InlineErrorState } from '../../components/ui/InlineErrorState';
 import toast from 'react-hot-toast';
 
 interface AdminNotification {
     id: number;
-    notification_type: 'queue' | 'document' | 'system' | 'alert';
+    notification_type: 'queue' | 'document' | 'report' | 'registration' | 'system' | 'alert';
     title: string;
     message: string;
     is_read: boolean;
@@ -16,11 +17,14 @@ interface AdminNotification {
 const TYPE_CONFIG = {
     queue: { icon: Users, color: 'text-orange-600', bg: 'bg-orange-50' },
     document: { icon: FileText, color: 'text-primary-text', bg: 'bg-primary/10' },
+    report: { icon: Flag, color: 'text-rose-600', bg: 'bg-rose-50' },
+    registration: { icon: UserRoundPlus, color: 'text-violet-600', bg: 'bg-violet-50' },
     system: { icon: CheckCircle, color: 'text-emerald-600', bg: 'bg-emerald-50' },
     alert: { icon: AlertTriangle, color: 'text-red-600', bg: 'bg-red-50' },
 };
 
 export const Notifications: React.FC = () => {
+    const navigate = useNavigate();
     const [notifications, setNotifications] = useState<AdminNotification[]>([]);
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
     const [loading, setLoading] = useState(true);
@@ -79,10 +83,35 @@ export const Notifications: React.FC = () => {
                 toast.success(`Marked ${selectedIds.length} notification(s) as read.`);
             }
             setSelectedIds([]);
+            window.dispatchEvent(new Event('gridy:admin-notifications-changed'));
         } catch (err) {
             console.error("Failed to update notifications:", err);
             toast.error("Failed to update notification status.");
         }
+    };
+
+    const openNotification = async (notification: AdminNotification) => {
+        if (!notification.is_read) {
+            try {
+                await axiosPrivate.patch(`/admin-notifications/${notification.id}/`, { is_read: true });
+                setNotifications((current) => current.map((item) =>
+                    item.id === notification.id ? { ...item, is_read: true } : item,
+                ));
+                window.dispatchEvent(new Event('gridy:admin-notifications-changed'));
+            } catch {
+                toast.error('Could not update the notification.');
+                return;
+            }
+        }
+
+        const routes: Partial<Record<AdminNotification['notification_type'], string>> = {
+            queue: '/queue',
+            document: '/documents',
+            report: '/reports',
+            registration: '/residents?tab=verifications',
+        };
+        const route = routes[notification.notification_type];
+        if (route) navigate(route);
     };
 
     // 3. Action Logic: Delete
@@ -94,6 +123,7 @@ export const Notifications: React.FC = () => {
             );
             setNotifications(prev => prev.filter(n => !idsToDelete.includes(n.id)));
             setSelectedIds([]);
+            window.dispatchEvent(new Event('gridy:admin-notifications-changed'));
             toast.success("Notification(s) deleted.");
         } catch (err) {
             console.error("Failed to delete notifications:", err);
@@ -207,6 +237,18 @@ export const Notifications: React.FC = () => {
                                         <p className="text-sm text-slate-500 leading-relaxed">
                                             {notif.message}
                                         </p>
+                                        {notif.notification_type !== 'system' && notif.notification_type !== 'alert' && (
+                                            <button
+                                                type="button"
+                                                onClick={(event) => {
+                                                    event.stopPropagation();
+                                                    void openNotification(notif);
+                                                }}
+                                                className="mt-2 inline-flex min-h-9 items-center gap-1 rounded-lg px-2 text-xs font-bold text-primary-text hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                                            >
+                                                Open related page <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
+                                            </button>
+                                        )}
                                     </div>
                                     
                                     {/* Unread Indicator Dot */}

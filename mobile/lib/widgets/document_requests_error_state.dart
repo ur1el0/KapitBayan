@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/localization/app_language.dart';
 import '../core/theme/app_colors.dart';
 
 class DocumentRequestsErrorState extends StatelessWidget {
@@ -55,7 +56,7 @@ class DocumentRequestsErrorState extends StatelessWidget {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : const Icon(Icons.refresh_rounded),
-            label: Text(retrying ? 'Trying again…' : 'Try again'),
+            label: Text(retrying ? context.tr('Trying again…') : context.tr('Try again')),
             style: OutlinedButton.styleFrom(
               foregroundColor: AppColors.primaryNavy,
               minimumSize: const Size(0, 48),

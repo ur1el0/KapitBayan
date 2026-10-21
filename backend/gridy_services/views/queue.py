@@ -14,6 +14,7 @@ from gridy_audit.services import log_action
 from gridy_auth.models import Barangay, User
 from gridy_auth.permissions import IsBarangayOfficial, IsBarangayOfficialOrField
 from gridy_communications.models import ResidentNotification
+from gridy_communications.admin_notifications import notify_barangay_admins
 from gridy_communications.tasks import send_notification_to_user_task
 from gridy_services.models import MANILA_TIME_ZONE, QueueTicket
 from gridy_services.serializers import (
@@ -67,6 +68,10 @@ class QueueTicketViewSet(viewsets.ModelViewSet):
                     barangay=user.barangay,
                     priority_status=QueueTicket.Priority.REGULAR,
                     is_priority=False,
+                )
+                notify_barangay_admins(
+                    barangay_id=user.barangay_id,
+                    notification_type='queue',
                 )
             else:
                 raise PermissionDenied(

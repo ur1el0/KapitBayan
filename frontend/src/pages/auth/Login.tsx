@@ -4,6 +4,8 @@ import { useAuth } from '../../context/auth-context';
 import { axiosPublic } from '../../api/axios';
 import { getSafeApiErrorMessage } from '../../api/error-message';
 import { Shield, FileCheck2, Clock, Users, KeyRound } from 'lucide-react';
+import { useLanguage } from '../../context/language-context';
+import { LanguageSwitcher } from '../../components/language/LanguageSwitcher';
 
 export const Login: React.FC = () => {
     const [username, setUsername] = useState('');
@@ -14,6 +16,7 @@ export const Login: React.FC = () => {
     const location = useLocation();
     const navigate = useNavigate();
     const isAdminMode = location.pathname === '/official-login';
+    const { t } = useLanguage();
 
     const handleLogin = async (e: React.SubmitEvent<HTMLElement>) => {
         e.preventDefault();
@@ -45,9 +48,9 @@ export const Login: React.FC = () => {
                 }
 
                 if (userData?.role === 'FIELD_OFFICIAL') {
-                    setError('Field Official accounts must use the KapitBayan mobile app. Web access is not available for this role.');
+                    setError(t('Field Official accounts must use the KapitBayan mobile app. Web access is not available for this role.'));
                 } else if (!isAdminMode) {
-                    setError('Administrative officials must sign in through the official sign-in page.');
+                    setError(t('Administrative officials must sign in through the official sign-in page.'));
                 } else {
                     setError('Resident accounts are not authorized to access the Barangay Authority Command.');
                 }
@@ -69,10 +72,10 @@ export const Login: React.FC = () => {
                 setError('Login failed: Authentication token was not returned.');
             }
         } catch (err) {
-            setError(getSafeApiErrorMessage(
+            setError(t(getSafeApiErrorMessage(
                 err,
                 "We couldn't sign you in. Check your connection and credentials, then try again.",
-            ));
+            )));
         } finally {
             setLoading(false);
         }
@@ -183,22 +186,27 @@ export const Login: React.FC = () => {
             {/* Right Login Section */}
             <div className="w-full md:w-7/12 lg:w-[60%] flex flex-col justify-center items-center px-6 py-8 sm:p-12 lg:p-16">
                 <div className="w-full max-w-md">
+                    {!isAdminMode && (
+                        <div className="mb-5 flex justify-end">
+                            <LanguageSwitcher />
+                        </div>
+                    )}
                     {/* Welcome Header */}
                     <div className="mb-8">
                         <div className="flex items-center gap-2 mb-2">
                             <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider ${
                                 isAdminMode ? 'bg-amber-100 text-amber-900' : 'bg-sky-100 text-sky-900'
                             }`}>
-                                {isAdminMode ? 'Official Personnel' : 'Resident Access'}
+                                {isAdminMode ? 'Official Personnel' : t('Resident Access')}
                             </span>
                         </div>
                         <h2 className="text-3xl lg:text-4xl font-extrabold text-slate-900 tracking-tight">
-                            {isAdminMode ? 'Staff Sign In' : 'Welcome Back'}
+                            {isAdminMode ? 'Staff Sign In' : t('Welcome Back')}
                         </h2>
                         <p className="text-slate-500 text-sm mt-2 font-normal">
                             {isAdminMode
                                 ? 'Enter your administrative credentials to access the operations desk.'
-                                : 'Please enter your credentials to access your barangay portal.'}
+                                : t('Please enter your credentials to access your barangay portal.')}
                         </p>
                     </div>
 
@@ -217,7 +225,7 @@ export const Login: React.FC = () => {
                         {/* Username Field */}
                         <div>
                             <label className="block text-[11px] font-bold tracking-wider text-slate-500 uppercase mb-2">
-                                {isAdminMode ? 'OFFICIAL EMAIL' : 'USERNAME OR EMAIL'}
+                                {isAdminMode ? 'OFFICIAL EMAIL' : t('USERNAME OR EMAIL')}
                             </label>
                             <div className="relative flex items-center">
                                 <div className="absolute left-3.5 text-slate-400 pointer-events-none">
@@ -231,7 +239,7 @@ export const Login: React.FC = () => {
                                     value={username}
                                     onChange={(e) => setUsername(e.target.value)}
                                     className="w-full pl-11 pr-4 py-3.5 bg-[#EEF2F6] focus:bg-white border border-transparent focus:border-[#0284C7] focus:ring-1 focus:ring-[#0284C7] rounded-xl text-sm font-medium text-slate-900 placeholder-slate-400 outline-none transition-all"
-                                    placeholder={isAdminMode ? 'Enter your official email' : 'Enter your username or email'}
+                                    placeholder={isAdminMode ? 'Enter your official email' : t('Enter your username or email')}
                                 />
                             </div>
                         </div>
@@ -240,10 +248,10 @@ export const Login: React.FC = () => {
                         <div>
                             <div className="flex items-center justify-between mb-2">
                                 <label className="block text-[11px] font-bold tracking-wider text-slate-500 uppercase">
-                                    PASSWORD
+                                    {isAdminMode ? 'PASSWORD' : t('PASSWORD')}
                                 </label>
                                 <Link to="/forgot-password" className="text-xs font-bold text-[#0284C7] hover:underline transition-colors">
-                                    Forgot password?
+                                    {isAdminMode ? 'Forgot password?' : t('Forgot password?')}
                                 </Link>
                             </div>
                             <div className="relative flex items-center">
@@ -276,10 +284,10 @@ export const Login: React.FC = () => {
                             >
                                 <span>
                                     {loading
-                                        ? 'Signing in...'
+                                        ? isAdminMode ? 'Signing in...' : t('Signing in...')
                                         : isAdminMode
                                         ? 'Sign in to Official Portal'
-                                        : 'Login to Resident Portal'}
+                                        : t('Login to Resident Portal')}
                                 </span>
                                 {!loading && (
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
@@ -303,9 +311,9 @@ export const Login: React.FC = () => {
                                     </>
                                 ) : (
                                     <>
-                                        Don't have an account?{' '}
+                                        {t('Don’t have an account?')}{' '}
                                         <Link to="/register" className="font-bold text-slate-900 hover:text-[#0284C7] hover:underline transition-colors">
-                                            Register as Resident
+                                            {t('Register as Resident')}
                                         </Link>
                                     </>
                                 )}

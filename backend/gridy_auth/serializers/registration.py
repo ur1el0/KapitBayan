@@ -7,6 +7,7 @@ from datetime import date
 from django.conf import settings
 from django.utils import timezone
 from django.db.models import Q
+from gridy_communications.admin_notifications import notify_barangay_admins
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
@@ -183,6 +184,10 @@ class RegisterSerializer(serializers.ModelSerializer):
                 privacy_consent_version=privacy_consent_version,
                 privacy_consent_at=timezone.now(),
                 **profile_data,
+            )
+            notify_barangay_admins(
+                barangay_id=user.barangay_id,
+                notification_type='registration',
             )
 
         return user

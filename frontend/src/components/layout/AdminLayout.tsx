@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/auth-context';
 import { 
@@ -15,6 +15,37 @@ export const AdminLayout: React.FC = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
     const [isMobileNavigationOpen, setIsMobileNavigationOpen] = useState(false);
+    const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
+
+    useEffect(() => {
+        let isMounted = true;
+        const loadUnreadCount = async () => {
+            try {
+                const response = await axiosPrivate.get('/admin-notifications/unread_count/');
+                if (isMounted) {
+                    setUnreadNotificationCount(Number(response.data?.count) || 0);
+                }
+            } catch {
+                // Keep the last known count visible while the network recovers.
+            }
+        };
+
+        const handleVisibility = () => {
+            if (document.visibilityState === 'visible') void loadUnreadCount();
+        };
+
+        void loadUnreadCount();
+        const interval = window.setInterval(() => void loadUnreadCount(), 30_000);
+        window.addEventListener('gridy:admin-notifications-changed', loadUnreadCount);
+        document.addEventListener('visibilitychange', handleVisibility);
+
+        return () => {
+            isMounted = false;
+            window.clearInterval(interval);
+            window.removeEventListener('gridy:admin-notifications-changed', loadUnreadCount);
+            document.removeEventListener('visibilitychange', handleVisibility);
+        };
+    }, []);
 
     const userInitial = user?.full_name 
         ? user.full_name.charAt(0).toUpperCase() 
@@ -50,8 +81,13 @@ export const AdminLayout: React.FC = () => {
 
                     {/* Right Header Controls */}
                     <div className="flex shrink-0 items-center gap-2 sm:gap-4">
-                        <button type="button" onClick={() => navigate('/notifications')} className="rounded-full p-2 text-primary-text transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-admin/40" aria-label="Notifications">
+                        <button type="button" onClick={() => navigate('/notifications')} className="relative rounded-full p-2 text-primary-text transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-admin/40" aria-label={unreadNotificationCount ? `Notifications, ${unreadNotificationCount} unread` : 'Notifications'}>
                             <Bell className="w-5 h-5" aria-hidden="true" />
+                            {unreadNotificationCount > 0 && (
+                                <span aria-hidden="true" className="absolute -right-1 -top-1 min-w-5 rounded-full bg-rose-600 px-1 text-center text-[10px] font-extrabold leading-5 text-white">
+                                    {unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}
+                                </span>
+                            )}
                         </button>
                         
                         <button type="button" onClick={() => navigate('/faqs')} className="rounded-full p-2 text-primary-text transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-admin/40" aria-label="Help and information">

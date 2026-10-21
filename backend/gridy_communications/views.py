@@ -1,5 +1,5 @@
 import logging
-from rest_framework import viewsets, permissions, status
+from rest_framework import mixins, viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -24,6 +24,7 @@ from gridy_communications.serializers import (
     EmergencyHotlineSerializer,
     FAQSerializer,
     AdminNotificationSerializer,
+    AdminNotificationReadSerializer,
     ResidentNotificationSerializer,
 )
 from gridy_communications.tasks import send_announcement_notification_task
@@ -287,9 +288,20 @@ class IsAdminNotificationRecipient(permissions.BasePermission):
         )
 
 
-class AdminNotificationViewSet(viewsets.ModelViewSet):
+class AdminNotificationViewSet(
+    mixins.ListModelMixin,
+    mixins.UpdateModelMixin,
+    mixins.DestroyModelMixin,
+    viewsets.GenericViewSet,
+):
     serializer_class = AdminNotificationSerializer
     permission_classes = [permissions.IsAuthenticated, IsAdminNotificationRecipient]
+    http_method_names = ['get', 'patch', 'delete', 'post', 'head', 'options']
+
+    def get_serializer_class(self):
+        if self.action in {'update', 'partial_update'}:
+            return AdminNotificationReadSerializer
+        return AdminNotificationSerializer
 
     def get_queryset(self):
         # Notifications remain owner-scoped and tenant-role guarded.
@@ -300,6 +312,10 @@ class AdminNotificationViewSet(viewsets.ModelViewSet):
         # Custom endpoint to clear the notification bell badge
         self.get_queryset().filter(is_read=False).update(is_read=True)
         return Response({"status": "success", "message": "All notifications marked as read."})
+
+    @action(detail=False, methods=['get'])
+    def unread_count(self, request):
+        return Response({"count": self.get_queryset().filter(is_read=False).count()})
 
 
 class ResidentNotificationViewSet(viewsets.ReadOnlyModelViewSet):

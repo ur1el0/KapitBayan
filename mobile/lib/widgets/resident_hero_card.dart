@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/user_model.dart';
+import '../core/localization/app_language.dart';
 
 /// Hero status banner displaying resident verification badge, dynamic greeting,
 /// and review notice with deep navy gradient styling.
@@ -73,7 +74,9 @@ class ResidentHeroCard extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        isVerified ? 'VERIFIED RESIDENT' : 'PENDING VERIFICATION',
+                        isVerified
+                            ? context.tr('VERIFIED RESIDENT')
+                            : context.tr('PENDING VERIFICATION'),
                         style: TextStyle(
                           fontSize: 11.5,
                           fontWeight: FontWeight.w700,
@@ -89,7 +92,7 @@ class ResidentHeroCard extends StatelessWidget {
 
                   // Greeting Headline
                   Text(
-                    'Welcome back, $displayName',
+                    '${context.tr('Welcome back')}, $displayName',
                     style: const TextStyle(
                       fontSize: 22.0,
                       fontWeight: FontWeight.w800,
@@ -102,8 +105,8 @@ class ResidentHeroCard extends StatelessWidget {
                   // Status & Pending Actions Subtitle
                   Text(
                     pendingCount > 0
-                        ? 'Your status is current. There are $pendingCount pending actions for your review.'
-                        : 'Your status is current. All your records are up to date.',
+                        ? '${context.tr('Your status is current. There are')} $pendingCount ${context.tr('pending actions for your review.')}'
+                        : context.tr('Your status is current. All your records are up to date.'),
                     style: TextStyle(
                       fontSize: 13.5,
                       fontWeight: FontWeight.w400,

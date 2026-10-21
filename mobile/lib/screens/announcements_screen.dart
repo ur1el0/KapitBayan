@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/localization/app_language.dart';
 import '../models/announcement_model.dart';
 import '../services/dashboard_service.dart';
 import '../services/storage_service.dart';
@@ -102,7 +103,7 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
-                          ann.isPinned ? 'PINNED ANNOUNCEMENT' : 'BARANGAY BROADCAST',
+                          context.tr(ann.isPinned ? 'PINNED ANNOUNCEMENT' : 'BARANGAY BROADCAST'),
                           style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
@@ -113,7 +114,7 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
                       Text(
                         ann.createdAt != null
                             ? '${ann.createdAt!.month}/${ann.createdAt!.day}/${ann.createdAt!.year}'
-                            : 'Recent',
+                            : context.tr('Recent'),
                         style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
                       ),
                     ],
@@ -148,8 +149,8 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      child: const Text(
-                        'Close Bulletin',
+                      child: Text(
+                        context.tr('Close Bulletin'),
                         style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                       ),
                     ),
@@ -168,8 +169,8 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text(
-          'Barangay Bulletin',
+        title: Text(
+          context.tr('Barangay Bulletin'),
           style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
         ),
         backgroundColor: Colors.white,
@@ -188,7 +189,7 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
                           Icon(Icons.campaign_outlined, size: 64, color: Colors.grey.shade400),
                           const SizedBox(height: 12),
                           Text(
-                            'No announcements broadcasted yet.',
+                            context.tr('No announcements broadcasted yet.'),
                             style: TextStyle(color: Colors.grey.shade600, fontSize: 16),
                           ),
                         ],
@@ -250,12 +251,12 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
                                               color: const Color(0xFFFEF3C7),
                                               borderRadius: BorderRadius.circular(20),
                                             ),
-                                            child: const Row(
+                                            child: Row(
                                               children: [
                                                 Icon(Icons.push_pin, size: 14, color: Color(0xFFD97706)),
                                                 SizedBox(width: 4),
                                                 Text(
-                                                  'PINNED ANNOUNCEMENT',
+                                                  context.tr('PINNED ANNOUNCEMENT'),
                                                   style: TextStyle(
                                                     fontSize: 10,
                                                     fontWeight: FontWeight.bold,
@@ -272,8 +273,8 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
                                               color: const Color(0xFFF1F5F9),
                                               borderRadius: BorderRadius.circular(20),
                                             ),
-                                            child: const Text(
-                                              'BROADCAST',
+                                            child: Text(
+                                              context.tr('BROADCAST'),
                                               style: TextStyle(
                                                 fontSize: 10,
                                                 fontWeight: FontWeight.bold,
@@ -284,7 +285,7 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
                                         Text(
                                           ann.createdAt != null
                                               ? '${ann.createdAt!.month}/${ann.createdAt!.day}/${ann.createdAt!.year}'
-                                              : 'Recent',
+                                              : context.tr('Recent'),
                                           style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
                                         ),
                                       ],

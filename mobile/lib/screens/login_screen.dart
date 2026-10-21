@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../core/network/api_client.dart';
 import '../core/network/api_exception.dart';
+import '../core/localization/app_language.dart';
 import '../core/theme/app_colors.dart';
 import '../models/auth_response.dart';
 import '../services/auth_service.dart';
@@ -231,6 +232,23 @@ class _LoginScreenState extends State<LoginScreen> {
                       children: [
                         const SizedBox(height: 36),
 
+                        if (!_isOfficialMode)
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: DropdownButton<String>(
+                              value: AppLanguageScope.of(context).languageCode,
+                              onChanged: (value) {
+                                if (value != null) {
+                                  AppLanguageScope.of(context).setLanguage(value);
+                                }
+                              },
+                              items: [
+                                DropdownMenuItem(value: 'en', child: Text(context.tr('English'))),
+                                DropdownMenuItem(value: 'fil', child: Text(context.tr('Filipino (Tagalog)'))),
+                              ],
+                            ),
+                          ),
+
                         // Logo & Brand Name with Hidden Toggle
                         Center(
                           child: GestureDetector(
@@ -244,7 +262,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   content: Text(
                                     _isOfficialMode
                                         ? 'Barangay Personnel Official Mode Activated'
-                                        : 'Switched to Citizen Resident Portal',
+                                        : context.tr('Switched to Citizen Resident Portal'),
                                     style: const TextStyle(
                                       fontWeight: FontWeight.w600,
                                     ),
@@ -296,7 +314,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ],
 
                         Text(
-                          _isOfficialMode ? 'Official Sign In' : 'Welcome Back',
+                          _isOfficialMode ? 'Official Sign In' : context.tr('Welcome Back'),
                           style: const TextStyle(
                             fontSize: 28,
                             fontWeight: FontWeight.w800,
@@ -308,7 +326,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         Text(
                           _isOfficialMode
                               ? 'Authorized officials, Tanod, and barangay administrators'
-                              : 'Please enter your citizen credentials to continue',
+                              : context.tr('Please enter your citizen credentials to continue'),
                           style: const TextStyle(
                             fontSize: 14.5,
                             fontWeight: FontWeight.w400,

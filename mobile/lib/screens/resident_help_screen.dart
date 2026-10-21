@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/localization/app_language.dart';
 import '../core/network/api_client.dart';
 import '../core/theme/app_colors.dart';
 import '../models/faq_model.dart';
@@ -116,14 +117,14 @@ class _ResidentHelpScreenState extends State<ResidentHelpScreen> {
               color: AppColors.error,
             ),
             const SizedBox(height: 12),
-            const Text(
-              'Help could not be loaded.',
+            Text(
+              context.tr('Help could not be loaded.'),
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 8),
-            const Text(
-              'Check your internet connection and try again. If the problem continues, contact your Barangay using verified office information.',
+            Text(
+              context.tr('Check your internet connection and try again. If the problem continues, contact your Barangay using verified office information.'),
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 16,
@@ -135,7 +136,7 @@ class _ResidentHelpScreenState extends State<ResidentHelpScreen> {
             FilledButton.icon(
               onPressed: _loadFAQs,
               icon: const Icon(Icons.refresh),
-              label: const Text('Try again'),
+              label: Text(context.tr('Try again')),
             ),
           ],
         ),
@@ -151,7 +152,7 @@ class _ResidentHelpScreenState extends State<ResidentHelpScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Help and FAQs'),
+        title: Text(context.tr('Help and FAQs')),
         backgroundColor: Colors.white,
         foregroundColor: AppColors.primaryNavy,
         elevation: 0,
@@ -163,7 +164,7 @@ class _ResidentHelpScreenState extends State<ResidentHelpScreen> {
               ),
             ),
             icon: const Icon(Icons.menu_book_outlined),
-            label: const Text('Tutorial'),
+            label: Text(context.tr('Tutorial')),
           ),
         ],
       ),
@@ -174,8 +175,8 @@ class _ResidentHelpScreenState extends State<ResidentHelpScreen> {
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
           children: [
-            const Text(
-              'Find answers about your account and Barangay services. Local steps and programs can differ, so confirm current instructions with your Barangay.',
+            Text(
+              context.tr('Find answers about your account and Barangay services. Local steps and programs can differ, so confirm current instructions with your Barangay.'),
               style: TextStyle(
                 fontSize: 16,
                 height: 1.5,
@@ -188,13 +189,13 @@ class _ResidentHelpScreenState extends State<ResidentHelpScreen> {
               onChanged: (value) => setState(() => _query = value),
               textInputAction: TextInputAction.search,
               decoration: InputDecoration(
-                labelText: 'Search help questions and answers',
-                hintText: 'For example: request a document',
+                labelText: context.tr('Search help questions and answers'),
+                hintText: context.tr('For example: request a document'),
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: _query.isEmpty
                     ? null
                     : IconButton(
-                        tooltip: 'Clear search',
+                        tooltip: context.tr('Clear search'),
                         onPressed: () {
                           _searchController.clear();
                           setState(() => _query = '');
@@ -218,8 +219,8 @@ class _ResidentHelpScreenState extends State<ResidentHelpScreen> {
                   return ChoiceChip(
                     label: Text(
                       category == 'ALL'
-                          ? 'All topics'
-                          : _categoryLabel(category),
+                          ? context.tr('All topics')
+                          : context.tr(_categoryLabel(category)),
                     ),
                     selected: selected,
                     onSelected: (_) => setState(() => _category = category),
@@ -260,8 +261,8 @@ class _ResidentHelpScreenState extends State<ResidentHelpScreen> {
                       const SizedBox(height: 8),
                       Text(
                         _faqs.isEmpty
-                            ? 'No FAQs are available yet.'
-                            : 'No answers match your search.',
+                            ? context.tr('No FAQs are available yet.')
+                            : context.tr('No answers match your search.'),
                         textAlign: TextAlign.center,
                         style: const TextStyle(
                           fontSize: 17,
@@ -269,8 +270,8 @@ class _ResidentHelpScreenState extends State<ResidentHelpScreen> {
                         ),
                       ),
                       const SizedBox(height: 6),
-                      const Text(
-                        'For current local instructions, contact your Barangay office.',
+                      Text(
+                        context.tr('For current local instructions, contact your Barangay office.'),
                         textAlign: TextAlign.center,
                         style: TextStyle(fontSize: 15, height: 1.5),
                       ),
@@ -317,16 +318,16 @@ class _ResidentHelpScreenState extends State<ResidentHelpScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Want a step-by-step guide?',
+                    Text(
+                      context.tr('Want a step-by-step guide?'),
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
                     const SizedBox(height: 6),
-                    const Text(
-                      'Open the simple tutorial for help finding services and using your account.',
+                    Text(
+                      context.tr('Open the simple tutorial for help finding services and using your account.'),
                       style: TextStyle(fontSize: 16, height: 1.5),
                     ),
                     const SizedBox(height: 12),
@@ -337,14 +338,14 @@ class _ResidentHelpScreenState extends State<ResidentHelpScreen> {
                         ),
                       ),
                       icon: const Icon(Icons.menu_book_outlined),
-                      label: const Text('How to use KapitBayan'),
+                      label: Text(context.tr('How to use KapitBayan')),
                     ),
                   ],
                 ),
               ),
             ),
             const SizedBox(height: 12),
-            const Card(
+            Card(
               child: Padding(
                 padding: EdgeInsets.all(16),
                 child: Row(
@@ -354,7 +355,7 @@ class _ResidentHelpScreenState extends State<ResidentHelpScreen> {
                     SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        'Do not share your password, OTP, or identity documents in personal messages. Confirm local eligibility, fees, required documents, and office hours with your Barangay.',
+                        context.tr('Do not share your password, OTP, or identity documents in personal messages. Confirm local eligibility, fees, required documents, and office hours with your Barangay.'),
                         style: TextStyle(fontSize: 15, height: 1.5),
                       ),
                     ),

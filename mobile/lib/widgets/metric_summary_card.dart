@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/localization/app_language.dart';
 import '../core/theme/app_colors.dart';
 import 'app_surface.dart';
 
@@ -32,9 +33,9 @@ class MetricSummaryRow extends StatelessWidget {
           child: _MetricCard(
             icon: Icons.campaign_outlined,
             iconColor: AppColors.primaryNavy,
-            badgeText: hasNewAnnouncements ? 'New' : null,
+            badgeText: hasNewAnnouncements ? context.tr('New') : null,
             count: annCountStr,
-            label: 'ANNOUNCEMENTS',
+            label: context.tr('ANNOUNCEMENTS'),
             onTap: onAnnouncementsTap,
           ),
         ),
@@ -46,7 +47,7 @@ class MetricSummaryRow extends StatelessWidget {
             icon: Icons.assignment_outlined,
             iconColor: const Color(0xFFC2410C), // Warm amber/orange accent
             count: reqCountStr,
-            label: 'MY PENDING\nREQUESTS',
+            label: context.tr('MY PENDING\nREQUESTS'),
             onTap: onPendingRequestsTap,
           ),
         ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/theme/app_colors.dart';
+import '../core/localization/app_language.dart';
 import '../models/barangay_model.dart';
 import 'custom_text_field.dart';
 import 'barangay_select_field.dart';
@@ -68,7 +69,7 @@ class ResidentRegistrationDetailsSection extends StatelessWidget {
       children: [
         // Full Name Input
         CustomTextField(
-          label: 'FULL NAME',
+          label: context.tr('FULL NAME (AS IN ID)'),
           controller: fullNameController,
           hintText: 'Johnathan Doe',
           prefixIcon: Icons.person_outline_rounded,
@@ -76,7 +77,7 @@ class ResidentRegistrationDetailsSection extends StatelessWidget {
           enabled: !isLoading,
           validator: (value) {
             if (value == null || value.trim().isEmpty) {
-              return 'Please enter your full name';
+              return context.tr('Please enter your full name');
             }
             return null;
           },
@@ -88,8 +89,8 @@ class ResidentRegistrationDetailsSection extends StatelessWidget {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'LOCAL BARANGAY JURISDICTION',
+            Text(
+              context.tr('LOCAL BARANGAY JURISDICTION'),
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
@@ -112,20 +113,20 @@ class ResidentRegistrationDetailsSection extends StatelessWidget {
               ),
             ),
             if (isLoadingBarangays)
-              const Padding(
-                padding: EdgeInsets.only(top: 8),
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
                 child: Text(
-                  'Loading approved barangays…',
+                  context.tr('Loading approved barangays…'),
                   style: TextStyle(color: AppColors.textMuted, fontSize: 12),
                 ),
               ),
             if (!isLoadingBarangays &&
                 barangays.isEmpty &&
                 barangayLoadError == null)
-              const Padding(
-                padding: EdgeInsets.only(top: 8),
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
                 child: Text(
-                  'No registered barangays are currently available.',
+                  context.tr('No registered barangays are currently available.'),
                   style: TextStyle(color: AppColors.textMuted, fontSize: 12),
                 ),
               ),
@@ -142,7 +143,7 @@ class ResidentRegistrationDetailsSection extends StatelessWidget {
 
         const SizedBox(height: 18),
         CustomTextField(
-          label: 'PUROK / ZONE',
+          label: context.tr('PUROK / ZONE'),
           controller: purokController,
           hintText: 'e.g. Purok 3 or Zone 2',
           prefixIcon: Icons.place_outlined,
@@ -150,10 +151,10 @@ class ResidentRegistrationDetailsSection extends StatelessWidget {
           enabled: !isLoading,
           validator: (value) {
             if (value == null || value.trim().isEmpty) {
-              return 'Please enter your Purok or Zone';
+              return context.tr('Please enter your Purok or Zone');
             }
             if (value.trim().length > 100) {
-              return 'Purok or Zone must be 100 characters or fewer';
+              return context.tr('Purok or Zone must be 100 characters or fewer');
             }
             return null;
           },
@@ -161,20 +162,20 @@ class ResidentRegistrationDetailsSection extends StatelessWidget {
 
         const SizedBox(height: 18),
         CustomTextField(
-          label: 'HOUSE / STREET / LANDMARK (OPTIONAL)',
+          label: context.tr('HOUSE / STREET / LANDMARK (OPTIONAL)'),
           controller: addressDetailsController,
           hintText: 'e.g. House 12, Mabini Street, near chapel',
           prefixIcon: Icons.home_outlined,
           textInputAction: TextInputAction.next,
           enabled: !isLoading,
           validator: (value) => value != null && value.trim().length > 255
-              ? 'Address details must be 255 characters or fewer'
+              ? context.tr('Address details must be 255 characters or fewer')
               : null,
         ),
 
         // Barangay ID / Username Input
         CustomTextField(
-          label: 'BARANGAY ID / USERNAME',
+          label: context.tr('USERNAME'),
           controller: usernameController,
           hintText: 'CID-99201',
           prefixIcon: Icons.fingerprint_rounded,
@@ -182,7 +183,7 @@ class ResidentRegistrationDetailsSection extends StatelessWidget {
           enabled: !isLoading,
           validator: (value) {
             if (value == null || value.trim().isEmpty) {
-              return 'Please enter your barangay ID or username';
+              return context.tr('Please enter your username');
             }
             return null;
           },
@@ -192,7 +193,7 @@ class ResidentRegistrationDetailsSection extends StatelessWidget {
 
         // Email Address Input
         CustomTextField(
-          label: 'EMAIL ADDRESS',
+          label: context.tr('EMAIL ADDRESS'),
           controller: emailController,
           hintText: 'name@civic.gov',
           prefixIcon: Icons.mail_outline_rounded,
@@ -201,11 +202,11 @@ class ResidentRegistrationDetailsSection extends StatelessWidget {
           enabled: !isLoading,
           validator: (value) {
             if (value == null || value.trim().isEmpty) {
-              return 'Please enter your email address';
+              return context.tr('Please enter your email address');
             }
             final emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
             if (!emailRegex.hasMatch(value.trim())) {
-              return 'Please enter a valid email address';
+              return context.tr('Please enter a valid email address');
             }
             return null;
           },
@@ -215,7 +216,7 @@ class ResidentRegistrationDetailsSection extends StatelessWidget {
 
         // Password Input
         CustomTextField(
-          label: 'PASSWORD',
+          label: context.tr('PASSWORD'),
           controller: passwordController,
           hintText: '••••••••',
           prefixIcon: Icons.lock_outline_rounded,
@@ -236,10 +237,10 @@ class ResidentRegistrationDetailsSection extends StatelessWidget {
           ),
           validator: (value) {
             if (value == null || value.isEmpty) {
-              return 'Please enter a password';
+              return context.tr('Please enter a password');
             }
             if (value.length < 8) {
-              return 'Password must be at least 8 characters';
+              return context.tr('Password must be at least 8 characters');
             }
             return null;
           },
@@ -249,7 +250,7 @@ class ResidentRegistrationDetailsSection extends StatelessWidget {
 
         // Confirm Password Input
         CustomTextField(
-          label: 'CONFIRM PASSWORD',
+          label: context.tr('CONFIRM PASSWORD'),
           controller: confirmPasswordController,
           hintText: '••••••••',
           prefixIcon: Icons.shield_outlined,
@@ -271,10 +272,10 @@ class ResidentRegistrationDetailsSection extends StatelessWidget {
           ),
           validator: (value) {
             if (value == null || value.isEmpty) {
-              return 'Please confirm your password';
+              return context.tr('Please confirm your password');
             }
             if (value != passwordController.text) {
-              return 'Passwords do not match';
+              return context.tr('Passwords do not match');
             }
             return null;
           },
@@ -283,7 +284,7 @@ class ResidentRegistrationDetailsSection extends StatelessWidget {
         const SizedBox(height: 24),
 
         CustomTextField(
-          label: 'CONTACT NUMBER (OPTIONAL)',
+          label: context.tr('CONTACT NUMBER'),
           controller: contactNumberController,
           hintText: '09123456789',
           prefixIcon: Icons.phone_outlined,
@@ -292,8 +293,8 @@ class ResidentRegistrationDetailsSection extends StatelessWidget {
         ),
         const SizedBox(height: 24),
 
-        const Text(
-          'BIRTH DATE',
+        Text(
+          context.tr('DATE OF BIRTH'),
           style: TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.w800,
@@ -323,7 +324,7 @@ class ResidentRegistrationDetailsSection extends StatelessWidget {
                 Text(
                   birthDate != null
                       ? "${birthDate!.year}-${birthDate!.month.toString().padLeft(2, '0')}-${birthDate!.day.toString().padLeft(2, '0')}"
-                      : "Select your birth date",
+                      : context.tr('Select your birth date'),
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
@@ -340,15 +341,15 @@ class ResidentRegistrationDetailsSection extends StatelessWidget {
         if (requiresGuardian) ...[
           const SizedBox(height: 24),
           CustomTextField(
-            label: "GUARDIAN'S REGISTERED ID (REQUIRED)",
+            label: context.tr("GUARDIAN'S REGISTERED USERNAME *"),
             controller: guardianController,
             hintText: 'CID-XXXXX',
             prefixIcon: Icons.supervisor_account_outlined,
             enabled: !isLoading,
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Residents under 18 must be registered under a verified parent or guardian.',
+          Text(
+            context.tr('Residents under 18 must be registered under a verified parent or guardian.'),
             style: TextStyle(
               fontSize: 12,
               color: Color(0xFFEF4444),
@@ -359,8 +360,8 @@ class ResidentRegistrationDetailsSection extends StatelessWidget {
 
         const SizedBox(height: 16),
         SwitchListTile(
-          title: const Text(
-            'Registered Voter in this Barangay',
+          title: Text(
+            context.tr('Registered Voter in this Barangay'),
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w700,

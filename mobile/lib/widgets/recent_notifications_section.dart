@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/localization/app_language.dart';
 import '../core/theme/app_colors.dart';
 import '../models/notification_item_model.dart';
 
@@ -30,8 +31,8 @@ class RecentNotificationsSection extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
-              'Recent Notifications',
+            Text(
+              context.tr('Recent Notifications'),
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w800,
@@ -41,8 +42,8 @@ class RecentNotificationsSection extends StatelessWidget {
             ),
             GestureDetector(
               onTap: onViewAll,
-              child: const Text(
-                'View all',
+              child: Text(
+                context.tr('View all'),
                 style: TextStyle(
                   fontSize: 13.5,
                   fontWeight: FontWeight.w700,
@@ -94,8 +95,8 @@ class RecentNotificationsSection extends StatelessWidget {
                     children: [
                       Text(
                         notifications.isNotEmpty
-                            ? 'Some notifications could not load'
-                            : 'Unable to load notifications',
+                            ? context.tr('Some notifications could not load')
+                            : context.tr('Unable to load notifications'),
                         style: TextStyle(
                           fontSize: 14.5,
                           fontWeight: FontWeight.w700,
@@ -104,7 +105,7 @@ class RecentNotificationsSection extends StatelessWidget {
                       ),
                       const SizedBox(height: 3),
                       Text(
-                        errorMessage ?? 'Check connection and tap retry',
+                        context.tr(errorMessage ?? 'Check connection and tap retry'),
                         style: const TextStyle(
                           fontSize: 12.5,
                           fontWeight: FontWeight.w400,
@@ -119,7 +120,7 @@ class RecentNotificationsSection extends StatelessWidget {
                 if (onRetry != null)
                   IconButton(
                     onPressed: onRetry,
-                    tooltip: 'Retry loading notifications',
+                    tooltip: context.tr('Retry loading notifications'),
                     constraints: const BoxConstraints(
                       minWidth: 48,
                       minHeight: 48,
@@ -140,9 +141,9 @@ class RecentNotificationsSection extends StatelessWidget {
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: const Color(0xFFF1F5F9)),
             ),
-            child: const Center(
+            child: Center(
               child: Text(
-                'No new notifications at this time.',
+                context.tr('No new notifications at this time.'),
                 style: TextStyle(fontSize: 13.5, color: AppColors.textMuted),
               ),
             ),

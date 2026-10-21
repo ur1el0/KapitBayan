@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../core/localization/app_language.dart';
 import '../core/config/app_config.dart';
 import '../core/network/api_client.dart';
 import '../core/theme/app_colors.dart';
@@ -115,7 +116,7 @@ class _HotlinesScreenState extends State<HotlinesScreen> {
 
     if (!launched && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not launch phone dialer')),
+        SnackBar(content: Text(context.tr('Could not launch phone dialer'))),
       );
     }
   }
@@ -167,8 +168,8 @@ class _HotlinesScreenState extends State<HotlinesScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text(
-          'Emergency Hotlines',
+        title: Text(
+          context.tr('Emergency Hotlines'),
           style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
         ),
         backgroundColor: Colors.white,
@@ -191,8 +192,8 @@ class _HotlinesScreenState extends State<HotlinesScreen> {
                   ),
                   child: TextField(
                     onChanged: (val) => setState(() => _searchQuery = val),
-                    decoration: const InputDecoration(
-                      hintText: 'Search hotlines, departments...',
+                    decoration: InputDecoration(
+                      hintText: context.tr('Search hotlines, departments...'),
                       hintStyle: TextStyle(fontSize: 13, color: Color(0xFF94A3B8)),
                       prefixIcon: Icon(Icons.search, size: 20, color: Color(0xFF64748B)),
                       border: InputBorder.none,
@@ -212,7 +213,7 @@ class _HotlinesScreenState extends State<HotlinesScreen> {
                         padding: const EdgeInsets.only(right: 8),
                         child: ChoiceChip(
                           label: Text(
-                            cat == 'ALL' ? 'All Services' : cat,
+                            context.tr(cat == 'ALL' ? 'All Services' : cat),
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
@@ -239,7 +240,7 @@ class _HotlinesScreenState extends State<HotlinesScreen> {
                 : _filteredHotlines.isEmpty
                     ? Center(
                         child: Text(
-                          'No matching emergency contacts found.',
+                          context.tr('No matching emergency contacts found.'),
                           style: TextStyle(color: Colors.grey.shade500, fontSize: 14),
                         ),
                       )
@@ -279,7 +280,7 @@ class _HotlinesScreenState extends State<HotlinesScreen> {
                                 style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF0F172A)),
                               ),
                               subtitle: Text(
-                                h.categoryDisplay,
+                                context.tr(h.categoryDisplay),
                                 style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                               ),
                               trailing: Material(
@@ -289,7 +290,7 @@ class _HotlinesScreenState extends State<HotlinesScreen> {
                                   onLongPress: () {
                                     Clipboard.setData(ClipboardData(text: h.number));
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('Number copied to clipboard')),
+                                      SnackBar(content: Text(context.tr('Number copied to clipboard'))),
                                     );
                                   },
                                   borderRadius: BorderRadius.circular(10),

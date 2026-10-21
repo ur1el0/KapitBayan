@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../core/theme/app_colors.dart';
+import '../core/localization/app_language.dart';
 import 'custom_text_field.dart';
 import 'photo_upload_card.dart';
 
@@ -75,8 +76,8 @@ class ResidentIdentityVerificationSection extends StatelessWidget {
                 color: AppColors.primaryNavy,
                 size: 22,
               ),
-              title: const Text(
-                'IDENTITY & RESIDENCY VERIFICATION',
+              title: Text(
+                context.tr('IDENTITY & RESIDENCY VERIFICATION'),
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w800,
@@ -86,8 +87,8 @@ class ResidentIdentityVerificationSection extends StatelessWidget {
               ),
               subtitle: Text(
                 hasUploadedProof
-                    ? 'Document attached (Tap to view/edit)'
-                    : 'Required: upload at least one ID or proof of residency',
+                    ? context.tr('Document attached (Tap to view/edit)')
+                    : context.tr('Required: upload at least one ID or proof of residency'),
                 style: TextStyle(
                   fontSize: 11,
                   color: hasUploadedProof
@@ -100,8 +101,8 @@ class ResidentIdentityVerificationSection extends StatelessWidget {
               ),
               childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
               children: [
-                const Text(
-                  'Upload at least one image to register: a PhilSys ID, a secondary valid ID, or proof of residency such as a utility bill or lease. A typed ID number alone does not count.',
+                Text(
+                  context.tr('Upload at least one image to register: a PhilSys ID, a secondary valid ID, or proof of residency such as a utility bill or lease. A typed ID number alone does not count.'),
                   style: TextStyle(
                     fontSize: 12,
                     color: AppColors.textSecondary,
@@ -112,7 +113,7 @@ class ResidentIdentityVerificationSection extends StatelessWidget {
 
                 // 1. PhilSys ID Number
                 CustomTextField(
-                  label: 'PHILSYS NATIONAL ID NUMBER',
+                  label: context.tr('PHILSYS NATIONAL ID NUMBER'),
                   controller: philsysIdController,
                   hintText: 'e.g. 1234-5678-9012-3456',
                   prefixIcon: Icons.fingerprint_rounded,
@@ -121,10 +122,10 @@ class ResidentIdentityVerificationSection extends StatelessWidget {
                 const SizedBox(height: 12),
 
                 // PhilSys ID Photo Upload
-                const Align(
+                Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
-                    'PHILSYS ID CARD PHOTO',
+                    context.tr('PHILSYS ID CARD PHOTO'),
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
@@ -135,7 +136,7 @@ class ResidentIdentityVerificationSection extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 PhotoUploadCard(
-                  title: 'Upload PhilSys ID Photo',
+                  title: context.tr('Upload PhilSys ID Photo'),
                   selectedFile: philsysPhoto,
                   onPick: onPickPhilsysPhoto,
                   onRemove: onRemovePhilsysPhoto,
@@ -145,10 +146,10 @@ class ResidentIdentityVerificationSection extends StatelessWidget {
                 const SizedBox(height: 18),
 
                 // 2. Utility Proof of Residency
-                const Align(
+                Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
-                    'BILLING STATEMENT TYPE',
+                    context.tr('BILLING STATEMENT TYPE'),
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
@@ -184,7 +185,7 @@ class ResidentIdentityVerificationSection extends StatelessWidget {
                           (type) => DropdownMenuItem(
                             value: type,
                             child: Text(
-                              type,
+                              context.tr(type),
                               style: const TextStyle(
                                 fontSize: 14,
                                 color: AppColors.textPrimary,
@@ -205,10 +206,10 @@ class ResidentIdentityVerificationSection extends StatelessWidget {
                 const SizedBox(height: 12),
 
                 // Utility Billing Photo Upload
-                const Align(
+                Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
-                    'UPLOAD BILLING RECEIPT',
+                    context.tr('UPLOAD BILLING RECEIPT'),
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
@@ -219,7 +220,7 @@ class ResidentIdentityVerificationSection extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 PhotoUploadCard(
-                  title: 'Upload Billing Receipt Photo',
+                  title: context.tr('Upload Billing Receipt Photo'),
                   selectedFile: utilityBillingPhoto,
                   onPick: onPickUtilityBillingPhoto,
                   onRemove: onRemoveUtilityBillingPhoto,
@@ -229,10 +230,10 @@ class ResidentIdentityVerificationSection extends StatelessWidget {
                 const SizedBox(height: 18),
 
                 // 3. Optional Secondary Valid ID
-                const Align(
+                Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
-                    'SECONDARY VALID ID (OPTIONAL)',
+                    context.tr('SECONDARY VALID ID (OPTIONAL)'),
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
@@ -268,7 +269,7 @@ class ResidentIdentityVerificationSection extends StatelessWidget {
                           (type) => DropdownMenuItem(
                             value: type,
                             child: Text(
-                              type.isEmpty ? 'None / Not Applicable' : type,
+                              type.isEmpty ? context.tr('None / Not Applicable') : context.tr(type),
                               style: const TextStyle(
                                 fontSize: 14,
                                 color: AppColors.textPrimary,
@@ -288,10 +289,10 @@ class ResidentIdentityVerificationSection extends StatelessWidget {
                 ),
                 if (secondaryIdType.isNotEmpty) ...[
                   const SizedBox(height: 12),
-                  const Align(
+                  Align(
                     alignment: Alignment.centerLeft,
                     child: Text(
-                      'UPLOAD SECONDARY ID',
+                      context.tr('UPLOAD SECONDARY ID'),
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
@@ -302,7 +303,7 @@ class ResidentIdentityVerificationSection extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   PhotoUploadCard(
-                    title: 'Upload Secondary ID Photo',
+                    title: context.tr('Upload Secondary ID Photo'),
                     selectedFile: secondaryIdPhoto,
                     onPick: onPickSecondaryIdPhoto,
                     onRemove: onRemoveSecondaryIdPhoto,
@@ -322,8 +323,8 @@ class ResidentIdentityVerificationSection extends StatelessWidget {
           activeColor: AppColors.primaryNavy,
           contentPadding: EdgeInsets.zero,
           controlAffinity: ListTileControlAffinity.leading,
-          title: const Text(
-            'I consent to provide my personal data as a resident for barangay verification, in accordance with the RA 10173 Data Privacy Act.',
+          title: Text(
+            context.tr('I consent to provide my personal data as a resident for barangay verification, in accordance with the RA 10173 Data Privacy Act.'),
             style: TextStyle(
               fontSize: 12,
               color: AppColors.textSecondary,

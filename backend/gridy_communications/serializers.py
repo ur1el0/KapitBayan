@@ -81,8 +81,17 @@ class FAQSerializer(serializers.ModelSerializer):
 class AdminNotificationSerializer(serializers.ModelSerializer):
     class Meta:
         model = AdminNotification
-        fields = '__all__'
-        read_only_fields = ['user', 'created_at']
+        fields = [
+            'id', 'notification_type', 'title', 'message', 'is_read',
+            'created_at',
+        ]
+        read_only_fields = fields
+
+
+class AdminNotificationReadSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AdminNotification
+        fields = ['is_read']
 
 
 class ResidentNotificationSerializer(serializers.ModelSerializer):

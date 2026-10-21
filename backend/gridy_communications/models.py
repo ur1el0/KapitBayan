@@ -138,6 +138,8 @@ class AdminNotification(models.Model):
     class Type(models.TextChoices):
         QUEUE = 'queue', 'Queue Alert'
         DOCUMENT = 'document', 'Document Request'
+        REPORT = 'report', 'Issue Report'
+        REGISTRATION = 'registration', 'Resident Registration'
         SYSTEM = 'system', 'System Update'
         ALERT = 'alert', 'Security/Verification Alert'
         

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/localization/app_language.dart';
 
 import '../core/theme/app_colors.dart';
 import '../models/notification_item_model.dart';
@@ -40,8 +41,8 @@ class NotificationCenterSheet extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Notification Center',
+              Text(
+                context.tr('Notification Center'),
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -61,8 +62,8 @@ class NotificationCenterSheet extends StatelessWidget {
                 ),
                 child: Text(
                   hasError
-                      ? (notifications.isEmpty ? 'Error' : 'Partial')
-                      : '${notifications.length} Active',
+                      ? context.tr(notifications.isEmpty ? 'Error' : 'Partial')
+                      : '${notifications.length} ${context.tr('Active')}',
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
@@ -89,8 +90,8 @@ class NotificationCenterSheet extends StatelessWidget {
                             size: 40,
                           ),
                           const SizedBox(height: 12),
-                          const Text(
-                            'Unable to load notifications',
+                          Text(
+                            context.tr('Unable to load notifications'),
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
@@ -99,8 +100,8 @@ class NotificationCenterSheet extends StatelessWidget {
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            errorMessage ??
-                                'Failed to retrieve notification updates',
+                            context.tr(errorMessage ??
+                                'Failed to retrieve notification updates'),
                             textAlign: TextAlign.center,
                             style: const TextStyle(
                               color: AppColors.textMuted,
@@ -112,7 +113,7 @@ class NotificationCenterSheet extends StatelessWidget {
                             OutlinedButton.icon(
                               onPressed: onRetry,
                               icon: const Icon(Icons.refresh_rounded, size: 18),
-                              label: const Text('Try again'),
+                              label: Text(context.tr('Try again')),
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: AppColors.primaryNavy,
                                 side: const BorderSide(
@@ -129,9 +130,9 @@ class NotificationCenterSheet extends StatelessWidget {
                     ),
                   )
                 : notifications.isEmpty
-                ? const Center(
+                ? Center(
                     child: Text(
-                      'No recent notifications',
+                      context.tr('No recent notifications'),
                       style: TextStyle(color: AppColors.textMuted),
                     ),
                   )
@@ -326,7 +327,9 @@ class NotificationDetailSheet extends StatelessWidget {
               child: Text(
                 item.description?.trim().isNotEmpty == true
                     ? item.description!.trim()
-                    : 'Advisory Category: ${item.category}\n\nOfficial notice regarding "${item.title}". Check your document requests or community bulletin for real-time status updates.',
+                    : context.tr('Advisory Category: {category}\n\nOfficial notice regarding "{title}". Check your document requests or community bulletin for real-time status updates.')
+                        .replaceAll('{category}', item.category)
+                        .replaceAll('{title}', item.title),
                 style: const TextStyle(
                   fontSize: 13.5,
                   color: AppColors.textPrimary,
@@ -346,8 +349,8 @@ class NotificationDetailSheet extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                child: const Text(
-                  'Dismiss',
+                child: Text(
+                  context.tr('Dismiss'),
                   style: TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.w700,

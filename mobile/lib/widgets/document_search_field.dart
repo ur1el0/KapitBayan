@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/localization/app_language.dart';
 import '../core/theme/app_colors.dart';
 
 class DocumentSearchField extends StatelessWidget {
@@ -33,7 +34,7 @@ class DocumentSearchField extends StatelessWidget {
           color: AppColors.textPrimary,
         ),
         decoration: InputDecoration(
-          hintText: 'Search for certificates or permits...',
+          hintText: context.tr('Search for certificates or permits...'),
           hintStyle: const TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w500,
@@ -46,7 +47,7 @@ class DocumentSearchField extends StatelessWidget {
           ),
           suffixIcon: query.isNotEmpty
               ? IconButton(
-                  tooltip: 'Clear search',
+                  tooltip: context.tr('Clear search'),
                   icon: const Icon(
                     Icons.clear_rounded,
                     size: 18,

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../core/localization/app_language.dart';
 import '../core/network/api_client.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_tokens.dart';
@@ -76,7 +77,7 @@ class _QueueScreenState extends State<QueueScreen> with WidgetsBindingObserver {
       );
       if (mounted) {
         messenger.showSnackBar(
-          SnackBar(content: Text('Ticket ${ticket.ticketNumber} generated!')),
+          SnackBar(content: Text('${context.tr('Ticket generated!')} ${ticket.ticketNumber}')),
         );
         _loadQueueData();
       }
@@ -294,9 +295,9 @@ class _QueueScreenState extends State<QueueScreen> with WidgetsBindingObserver {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const AppPageHeading(
-                          eyebrow: 'LIVE QUEUE STATUS',
-                          title: "Today's Queue",
+                        AppPageHeading(
+                          eyebrow: context.tr('LIVE QUEUE STATUS'),
+                          title: context.tr("Today's Queue"),
                         ),
 
                         const SizedBox(height: 20),
@@ -338,8 +339,8 @@ class _QueueScreenState extends State<QueueScreen> with WidgetsBindingObserver {
                             completedTickets: _queueStatus.recentCompleted,
                             onViewAll: () {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Viewing complete queue history'),
+                                SnackBar(
+                                  content: Text(context.tr('Viewing complete queue history')),
                                   behavior: SnackBarBehavior.floating,
                                 ),
                               );
@@ -377,8 +378,8 @@ class _QueueScreenState extends State<QueueScreen> with WidgetsBindingObserver {
           Icons.confirmation_number_outlined,
           color: Colors.white,
         ),
-        label: const Text(
-          'Get Ticket',
+        label: Text(
+          context.tr('Get Ticket'),
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
       ),
@@ -408,8 +409,8 @@ class _QueueScreenState extends State<QueueScreen> with WidgetsBindingObserver {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'CURRENTLY AT COUNTER',
+                Text(
+                  context.tr('CURRENTLY AT COUNTER'),
                   style: TextStyle(
                     color: Color(0xFF64748B),
                     fontSize: 11,
@@ -418,8 +419,8 @@ class _QueueScreenState extends State<QueueScreen> with WidgetsBindingObserver {
                   ),
                 ),
                 const SizedBox(height: 4),
-                const Text(
-                  'Live Queue Unavailable',
+                Text(
+                  context.tr('Live Queue Unavailable'),
                   style: TextStyle(
                     color: Color(0xFFB91C1C),
                     fontSize: 16,
@@ -429,7 +430,7 @@ class _QueueScreenState extends State<QueueScreen> with WidgetsBindingObserver {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  _queueStatus.liveStatusErrorMessage ?? 'Unable to connect to live queue desk.',
+                  _queueStatus.liveStatusErrorMessage ?? context.tr('Unable to connect to live queue desk.'),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -443,7 +444,7 @@ class _QueueScreenState extends State<QueueScreen> with WidgetsBindingObserver {
           ),
           IconButton(
             onPressed: _isRetrying ? null : () => _loadQueueData(isRetry: true),
-            tooltip: 'Retry loading live queue status',
+            tooltip: context.tr('Retry loading live queue status'),
             icon: _isRetrying
                 ? const SizedBox(
                     width: 18,
@@ -482,15 +483,15 @@ class _QueueScreenState extends State<QueueScreen> with WidgetsBindingObserver {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(
+              Icon(
                 Icons.cloud_off_outlined,
                 color: Color(0xFFB91C1C),
                 size: 36,
-                semanticLabel: 'Unable to load live queue status',
+                semanticLabel: context.tr('Unable to load live queue status'),
               ),
               const SizedBox(height: 12),
-              const Text(
-                'Live Queue Unavailable',
+              Text(
+                context.tr('Live Queue Unavailable'),
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w800,
@@ -501,7 +502,7 @@ class _QueueScreenState extends State<QueueScreen> with WidgetsBindingObserver {
               Semantics(
                 liveRegion: true,
                 child: Text(
-                  _errorMessage ?? 'Unable to connect to queue system.',
+                  _errorMessage ?? context.tr('Unable to connect to queue system.'),
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     fontSize: 13.5,
@@ -520,7 +521,7 @@ class _QueueScreenState extends State<QueueScreen> with WidgetsBindingObserver {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.refresh_rounded),
-                label: Text(_isRetrying ? 'Retrying…' : 'Try again'),
+                label: Text(_isRetrying ? context.tr('Retrying…') : context.tr('Try again')),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppColors.primaryNavy,
                   side: const BorderSide(color: AppColors.primaryNavy),

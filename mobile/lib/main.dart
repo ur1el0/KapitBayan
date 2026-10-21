@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'core/theme/app_theme.dart';
+import 'core/localization/app_language.dart';
 import 'core/navigation/app_navigation_keys.dart';
 import 'screens/login_screen.dart';
 import 'screens/dashboard_screen.dart';
@@ -16,6 +17,7 @@ void main() async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   final storage = await StorageService.init();
+  final languageController = await AppLanguageController.load();
   final user = storage.getUser();
   final hasValidSession = storage.getAccessToken() != null && user != null;
 
@@ -45,23 +47,27 @@ void main() async {
     ),
   );
 
-  runApp(KapitBayanApp(home: initialScreen));
+  runApp(KapitBayanApp(home: initialScreen, languageController: languageController));
 }
 
 class KapitBayanApp extends StatelessWidget {
   final Widget? home;
+  final AppLanguageController? languageController;
 
-  const KapitBayanApp({super.key, this.home});
+  const KapitBayanApp({super.key, this.home, this.languageController});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      navigatorKey: appNavigatorKey,
-      scaffoldMessengerKey: appScaffoldMessengerKey,
-      title: 'KapitBayan - Resident Portal',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
-      home: home ?? const LoginScreen(),
+    return AppLanguageScope(
+      controller: languageController ?? AppLanguageController(),
+      child: MaterialApp(
+        navigatorKey: appNavigatorKey,
+        scaffoldMessengerKey: appScaffoldMessengerKey,
+        title: 'KapitBayan - Resident Portal',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.lightTheme,
+        home: home ?? const LoginScreen(),
+      ),
     );
   }
 }

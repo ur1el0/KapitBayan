@@ -1,4 +1,5 @@
 import React from 'react';
+import { useLanguage } from '../../../context/language-context';
 
 export interface PublicBarangay {
     id: number;
@@ -27,6 +28,7 @@ export const BarangaySelectField: React.FC<BarangaySelectFieldProps> = ({
     isAdminMode,
 }) => {
     const barangayIdFieldId = React.useId();
+    const { t } = useLanguage();
 
     return (
         <div>
@@ -35,7 +37,7 @@ export const BarangaySelectField: React.FC<BarangaySelectFieldProps> = ({
                     htmlFor={barangayIdFieldId}
                     className="block text-[11px] font-bold tracking-wider text-slate-500 uppercase mb-1.5"
                 >
-                    LOCAL BARANGAY JURISDICTION
+                    {t('LOCAL BARANGAY JURISDICTION')}
                 </label>
                 <select
                     id={barangayIdFieldId}
@@ -47,7 +49,7 @@ export const BarangaySelectField: React.FC<BarangaySelectFieldProps> = ({
                         isAdminMode ? 'focus:border-[#091B35] focus:ring-1 focus:ring-[#091B35]' : 'focus:border-[#0284C7]'
                     }`}
                 >
-                    <option value="">{loadingBarangays ? 'Loading approved barangays…' : 'Select your Barangay'}</option>
+                    <option value="">{loadingBarangays ? t('Loading approved barangays…') : t('Select your Barangay')}</option>
                     {barangays.map((barangay) => (
                         <option key={barangay.id} value={barangay.id}>
                             {barangay.name}{barangay.municipality ? ` (${barangay.municipality}${barangay.province ? `, ${barangay.province}` : ''})` : ''}
@@ -56,7 +58,7 @@ export const BarangaySelectField: React.FC<BarangaySelectFieldProps> = ({
                 </select>
                 {loadingBarangays && !barangayDirectoryError && (
                     <p role="status" aria-live="polite" className="sr-only">
-                        Loading approved barangay list…
+                        {t('Loading approved barangay list…')}
                     </p>
                 )}
                 {barangayDirectoryError && (
@@ -64,16 +66,16 @@ export const BarangaySelectField: React.FC<BarangaySelectFieldProps> = ({
                         <p>{barangayDirectoryError}</p>
                         <button
                             type="button"
-                            aria-label="Retry approved barangay list"
+                            aria-label={t('Retry approved barangay list')}
                             onClick={onRetry}
                             disabled={loadingBarangays}
                             className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg border border-rose-300 px-3 font-semibold text-rose-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 disabled:cursor-wait disabled:opacity-60"
                         >
-                            {loadingBarangays ? 'Retrying…' : 'Try again'}
+                            {loadingBarangays ? t('Retrying…') : t('Try again')}
                         </button>
                         {loadingBarangays && (
                             <span role="status" aria-live="polite" className="sr-only">
-                                Retrying approved barangay list…
+                                {t('Retrying approved barangay list…')}
                             </span>
                         )}
                     </div>
