@@ -215,7 +215,7 @@ class DocumentService {
         '/document-requests/',
         body: {
           'document_type': documentType,
-          if (offeringId != null) 'offering_id': offeringId,
+          'offering_id': ?offeringId,
           'urgency_tag': urgencyTag.toUpperCase(),
           'purpose': ?purpose,
         },
