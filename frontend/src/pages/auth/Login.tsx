@@ -52,7 +52,7 @@ export const Login: React.FC = () => {
                 } else if (!isAdminMode) {
                     setError(t('Administrative officials must sign in through the official sign-in page.'));
                 } else {
-                    setError('Resident accounts are not authorized to access the Barangay Authority Command.');
+                    setError(t('Resident accounts are not authorized to access the Barangay Authority Command.'));
                 }
                 return;
             }
@@ -110,23 +110,13 @@ export const Login: React.FC = () => {
                 {/* Middle Main Content (Hidden on mobile, visible on tablet/desktop) */}
                 <div className="relative z-10 my-auto py-8 hidden md:block">
                     <h1 className="text-4xl lg:text-[2.75rem] font-extrabold text-white tracking-tight leading-[1.15] mb-4">
-                        {isAdminMode ? (
-                            <>
-                                Barangay<br />
-                                Authority<br />
-                                Command
-                            </>
-                        ) : (
-                            <>
-                                Resident<br />
-                                Self-Service<br />
-                                Portal
-                            </>
-                        )}
+                        {isAdminMode
+                            ? t('Barangay Authority Command')
+                            : t('Resident Self-Service Portal')}
                     </h1>
                     <p className="text-blue-100/80 text-sm lg:text-base font-normal max-w-sm mb-10 leading-relaxed">
                         {isAdminMode
-                            ? 'Sign in to Barangay operations or review new Barangay onboarding requests.'
+                            ? t('Sign in to Barangay operations or review new Barangay onboarding requests.')
                             : 'Request official clearances, join the live lobby queue, and access community services.'}
                     </p>
 
@@ -139,7 +129,7 @@ export const Login: React.FC = () => {
                                         <Shield className="w-5 h-5 text-amber-300" />
                                     </div>
                                     <span className="text-[11px] lg:text-xs font-semibold tracking-wider text-blue-100/90 uppercase">
-                                        OFFICIAL EMAIL ACCESS
+                                        {t('OFFICIAL EMAIL ACCESS')}
                                     </span>
                                 </div>
                                 <div className="flex items-center gap-3.5">
@@ -147,7 +137,7 @@ export const Login: React.FC = () => {
                                         <KeyRound className="w-5 h-5 text-amber-300" />
                                     </div>
                                     <span className="text-[11px] lg:text-xs font-semibold tracking-wider text-blue-100/90 uppercase">
-                                        BARANGAY ONBOARDING REVIEW
+                                        {t('BARANGAY ONBOARDING REVIEW')}
                                     </span>
                                 </div>
                             </>
@@ -158,7 +148,7 @@ export const Login: React.FC = () => {
                                         <FileCheck2 className="w-5 h-5 text-sky-200" />
                                     </div>
                                     <span className="text-[11px] lg:text-xs font-semibold tracking-wider text-blue-100/90 uppercase">
-                                        OFFICIAL DOCUMENT CLEARANCES
+                                        {t('OFFICIAL DOCUMENT CLEARANCES')}
                                     </span>
                                 </div>
                                 <div className="flex items-center gap-3.5">
@@ -166,7 +156,7 @@ export const Login: React.FC = () => {
                                         <Clock className="w-5 h-5 text-sky-200" />
                                     </div>
                                     <span className="text-[11px] lg:text-xs font-semibold tracking-wider text-blue-100/90 uppercase">
-                                        LIVE LOBBY QUEUE TRACKER
+                                        {t('LIVE LOBBY QUEUE TRACKER')}
                                     </span>
                                 </div>
                                 <div className="flex items-center gap-3.5">
@@ -174,7 +164,7 @@ export const Login: React.FC = () => {
                                         <Users className="w-5 h-5 text-sky-200" />
                                     </div>
                                     <span className="text-[11px] lg:text-xs font-semibold tracking-wider text-blue-100/90 uppercase">
-                                        COMMUNITY PROGRAMS & BULLETINS
+                                        {t('COMMUNITY PROGRAMS & BULLETINS')}
                                     </span>
                                 </div>
                             </>
@@ -186,26 +176,24 @@ export const Login: React.FC = () => {
             {/* Right Login Section */}
             <div className="w-full md:w-7/12 lg:w-[60%] flex flex-col justify-center items-center px-6 py-8 sm:p-12 lg:p-16">
                 <div className="w-full max-w-md">
-                    {!isAdminMode && (
-                        <div className="mb-5 flex justify-end">
-                            <LanguageSwitcher />
-                        </div>
-                    )}
+                    <div className="mb-5 flex justify-end">
+                        <LanguageSwitcher />
+                    </div>
                     {/* Welcome Header */}
                     <div className="mb-8">
                         <div className="flex items-center gap-2 mb-2">
                             <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider ${
                                 isAdminMode ? 'bg-amber-100 text-amber-900' : 'bg-sky-100 text-sky-900'
                             }`}>
-                                {isAdminMode ? 'Official Personnel' : t('Resident Access')}
+                                {isAdminMode ? t('Official Personnel') : t('Resident Access')}
                             </span>
                         </div>
                         <h2 className="text-3xl lg:text-4xl font-extrabold text-slate-900 tracking-tight">
-                            {isAdminMode ? 'Staff Sign In' : t('Welcome Back')}
+                            {isAdminMode ? t('Staff Sign In') : t('Welcome Back')}
                         </h2>
                         <p className="text-slate-500 text-sm mt-2 font-normal">
                             {isAdminMode
-                                ? 'Enter your administrative credentials to access the operations desk.'
+                                ? t('Enter your administrative credentials to access the operations desk.')
                                 : t('Please enter your credentials to access your barangay portal.')}
                         </p>
                     </div>
@@ -225,7 +213,7 @@ export const Login: React.FC = () => {
                         {/* Username Field */}
                         <div>
                             <label className="block text-[11px] font-bold tracking-wider text-slate-500 uppercase mb-2">
-                                {isAdminMode ? 'OFFICIAL EMAIL' : t('USERNAME OR EMAIL')}
+                                {isAdminMode ? t('OFFICIAL EMAIL') : t('USERNAME OR EMAIL')}
                             </label>
                             <div className="relative flex items-center">
                                 <div className="absolute left-3.5 text-slate-400 pointer-events-none">
@@ -239,7 +227,7 @@ export const Login: React.FC = () => {
                                     value={username}
                                     onChange={(e) => setUsername(e.target.value)}
                                     className="w-full pl-11 pr-4 py-3.5 bg-[#EEF2F6] focus:bg-white border border-transparent focus:border-[#0284C7] focus:ring-1 focus:ring-[#0284C7] rounded-xl text-sm font-medium text-slate-900 placeholder-slate-400 outline-none transition-all"
-                                    placeholder={isAdminMode ? 'Enter your official email' : t('Enter your username or email')}
+                                    placeholder={isAdminMode ? t('Enter your official email') : t('Enter your username or email')}
                                 />
                             </div>
                         </div>
@@ -248,10 +236,10 @@ export const Login: React.FC = () => {
                         <div>
                             <div className="flex items-center justify-between mb-2">
                                 <label className="block text-[11px] font-bold tracking-wider text-slate-500 uppercase">
-                                    {isAdminMode ? 'PASSWORD' : t('PASSWORD')}
+                                    {t('PASSWORD')}
                                 </label>
                                 <Link to="/forgot-password" className="text-xs font-bold text-[#0284C7] hover:underline transition-colors">
-                                    {isAdminMode ? 'Forgot password?' : t('Forgot password?')}
+                                    {t('Forgot password?')}
                                 </Link>
                             </div>
                             <div className="relative flex items-center">
@@ -284,9 +272,9 @@ export const Login: React.FC = () => {
                             >
                                 <span>
                                     {loading
-                                        ? isAdminMode ? 'Signing in...' : t('Signing in...')
+                                        ? t('Signing in...')
                                         : isAdminMode
-                                        ? 'Sign in to Official Portal'
+                                        ? t('Sign in to Official Portal')
                                         : t('Login to Resident Portal')}
                                 </span>
                                 {!loading && (
@@ -302,11 +290,11 @@ export const Login: React.FC = () => {
                             <p className="text-xs text-slate-500 font-medium">
                                 {isAdminMode ? (
                                     <>
-                                        Barangay staff accounts are managed by their Barangay Administrator.
+                                        {t('Barangay staff accounts are managed by their Barangay Administrator.')}
                                         <br />
-                                        Is your Barangay new to KapitBayan?{' '}
+                                        {t('Is your Barangay new to KapitBayan?')}{' '}
                                         <Link to="/register/barangay" className="font-bold text-slate-900 hover:text-primary hover:underline transition-colors">
-                                            Request onboarding
+                                            {t('Request onboarding')}
                                         </Link>
                                     </>
                                 ) : (
@@ -321,11 +309,11 @@ export const Login: React.FC = () => {
                             <p className="mt-3 text-xs text-slate-500">
                                 {isAdminMode ? (
                                     <Link to="/login" className="font-semibold text-slate-700 hover:text-primary hover:underline">
-                                        Resident sign in
+                                        {t('Resident sign in')}
                                     </Link>
                                 ) : (
                                     <Link to="/official-login" className="font-semibold text-slate-700 hover:text-primary hover:underline">
-                                        Barangay staff sign in
+                                        {t('Barangay staff sign in')}
                                     </Link>
                                 )}
                             </p>
