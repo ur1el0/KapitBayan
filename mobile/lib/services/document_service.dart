@@ -180,8 +180,34 @@ class DocumentService {
   /// Creates a new document request for the authenticated resident
   Future<DocumentRequestModel> createDocumentRequest({
     required String documentType,
-    int? offeringId,
     String urgencyTag = 'REGULAR',
+    String? purpose,
+  }) async {
+    return _createDocumentRequest(
+      documentType: documentType,
+      urgencyTag: urgencyTag,
+      purpose: purpose,
+    );
+  }
+
+  Future<DocumentRequestModel> createDocumentRequestFromOffering({
+    required int offeringId,
+    required String documentType,
+    String urgencyTag = 'REGULAR',
+    String? purpose,
+  }) async {
+    return _createDocumentRequest(
+      documentType: documentType,
+      offeringId: offeringId,
+      urgencyTag: urgencyTag,
+      purpose: purpose,
+    );
+  }
+
+  Future<DocumentRequestModel> _createDocumentRequest({
+    required String documentType,
+    int? offeringId,
+    required String urgencyTag,
     String? purpose,
   }) async {
     try {

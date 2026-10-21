@@ -47,7 +47,7 @@ describe('accessible modal names', () => {
             />,
         );
 
-        expect(screen.getByRole('dialog', { name: 'Request Official Clearance' })).toBeInTheDocument();
+        expect(screen.getByRole('dialog', { name: 'Request a document' })).toBeInTheDocument();
     });
 
     it('names the document review dialog', () => {

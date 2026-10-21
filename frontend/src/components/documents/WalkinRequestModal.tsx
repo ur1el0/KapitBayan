@@ -14,9 +14,9 @@ export interface WalkinRequestModalProps {
     setWalkinName: (name: string) => void;
     walkinPurok: string;
     setWalkinPurok: (purok: string) => void;
-    offerings: DocumentServiceOffering[];
-    selectedOfferingId: number | null;
-    setSelectedOfferingId: (id: number | null) => void;
+    offerings?: DocumentServiceOffering[];
+    selectedOfferingId?: number | null;
+    setSelectedOfferingId?: (id: number | null) => void;
     newDocType: string;
     setNewDocType: (type: string) => void;
     newPurpose: string;
@@ -31,9 +31,9 @@ export const WalkinRequestModal: React.FC<WalkinRequestModalProps> = ({
     setWalkinName,
     walkinPurok,
     setWalkinPurok,
-    offerings,
-    selectedOfferingId,
-    setSelectedOfferingId,
+    offerings = [],
+    selectedOfferingId = null,
+    setSelectedOfferingId = () => {},
     newDocType,
     setNewDocType,
     newPurpose,

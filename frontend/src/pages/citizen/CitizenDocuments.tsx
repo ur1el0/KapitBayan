@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { axiosPrivate } from '../../api/axios';
 import { getSafeApiErrorMessage } from '../../api/error-message';
@@ -17,10 +16,10 @@ import {
 
 export const CitizenDocuments: React.FC = () => {
     const { t } = useLanguage();
-    const navigate = useNavigate();
     const [requests, setRequests] = useState<DocumentRequest[]>([]);
     const [offerings, setOfferings] = useState<DocumentServiceOffering[]>([]);
     const [offeringsLoadError, setOfferingsLoadError] = useState(false);
+    const [offeringsLoaded, setOfferingsLoaded] = useState(false);
     const [loading, setLoading] = useState(true);
     const [loadError, setLoadError] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -88,17 +87,19 @@ export const CitizenDocuments: React.FC = () => {
         } catch {
             setOfferings([]);
             setOfferingsLoadError(true);
+        } finally {
+            setOfferingsLoaded(true);
         }
     };
 
     const openNewRequest = () => {
+        if (!offeringsLoaded) void fetchOfferings();
         setOfferingId((current) => current ?? offerings.find((offering) => offering.is_active)?.id ?? null);
         setIsModalOpen(true);
     };
 
     useEffect(() => {
         fetchRequests();
-        void fetchOfferings();
         void fetchPaymentRecipients();
     }, []);
 
@@ -148,7 +149,7 @@ export const CitizenDocuments: React.FC = () => {
                 document_request_id: request.id,
             });
             toast.success(`${t('Counter ticket generated:')} ${response.data.ticket_number}`);
-            navigate('/portal/queue');
+            window.location.assign('/portal/queue');
         } catch (err) {
             toast.error(getSafeApiErrorMessage(
                 err,

@@ -72,6 +72,7 @@ export const DocumentRequests: React.FC = () => {
     const [requests, setRequests] = useState<DocumentRequest[]>([]);
     const [offerings, setOfferings] = useState<DocumentServiceOffering[]>([]);
     const [offeringsLoadError, setOfferingsLoadError] = useState(false);
+    const [offeringsLoaded, setOfferingsLoaded] = useState(false);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [retrying, setRetrying] = useState(false);
@@ -118,13 +119,14 @@ export const DocumentRequests: React.FC = () => {
                 err,
                 "We couldn't load your Barangay's document service catalog.",
             ));
+        } finally {
+            setOfferingsLoaded(true);
         }
     }, []);
 
     useEffect(() => {
         void fetchRequests();
-        void fetchOfferings();
-    }, [fetchRequests, fetchOfferings]);
+    }, [fetchRequests]);
 
     const getStatusBadge = (status: string) => {
         switch (status.toLowerCase()) {
@@ -324,6 +326,11 @@ export const DocumentRequests: React.FC = () => {
         setIsCreateModalOpen(true);
     };
 
+    const openCatalogManager = async () => {
+        await fetchOfferings();
+        setIsCatalogModalOpen(true);
+    };
+
     if (loading) return <div className="p-4 md:p-8"><TableSkeleton /></div>;
 
     return (
@@ -331,13 +338,13 @@ export const DocumentRequests: React.FC = () => {
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                    <h2 className="text-2xl font-bold text-slate-900 tracking-tight">{t('Document Services & Requests')}</h2>
+                    <h2 className="text-2xl font-bold text-slate-900 tracking-tight">{t('Clearance Desk & Document Requests')}</h2>
                     <p className="text-sm text-slate-500 mt-1">{t('Manage resident document requests and set your Barangay requirements, published fees, and details.')}</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
                     <button
                         type="button"
-                        onClick={() => setIsCatalogModalOpen(true)}
+                        onClick={openCatalogManager}
                         className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition-all hover:bg-slate-50"
                     >
                         {t('Manage document services')}
@@ -351,12 +358,12 @@ export const DocumentRequests: React.FC = () => {
                 </div>
             </div>
 
-            {offeringsLoadError ? (
+            {offeringsLoaded && offeringsLoadError ? (
                 <div role="alert" className="flex flex-col gap-3 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900 sm:flex-row sm:items-center sm:justify-between">
                     <span>{t("We couldn't load your document service catalog. Residents may not see current requirements until it is available.")}</span>
                     <button type="button" onClick={() => void fetchOfferings()} className="shrink-0 rounded-lg border border-rose-300 bg-white px-3 py-2 font-semibold">{t('Retry catalog')}</button>
                 </div>
-            ) : !offerings.some((offering) => offering.is_active) ? (
+            ) : offeringsLoaded && !offerings.some((offering) => offering.is_active) ? (
                 <div role="status" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
                     {t('No active document services are published. Add each document your Barangay offers, then save it to show its requirements and fee to residents.')}
                 </div>
@@ -410,7 +417,7 @@ export const DocumentRequests: React.FC = () => {
                 <DocumentCatalogManagerModal
                     offerings={offerings}
                     onClose={() => setIsCatalogModalOpen(false)}
-                    onSaved={fetchOfferings}
+                    onSaved={async () => { await fetchOfferings(); }}
                 />
             )}
         </div>

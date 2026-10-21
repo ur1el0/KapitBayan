@@ -559,7 +559,6 @@ const Map<String, String> _filipino = {
       'Naaayon sa dokumento at Barangay na ito ang mga kinakailangan.',
   'Published fee amount (PHP)': 'Nakalathalang halaga (PHP)',
   'Leave blank if it varies or is not published. A value of 0 means no fee.': 'Iwanang blangko kung nag-iiba o hindi nakalathala. Ang 0 ay nangangahulugang walang bayad.',
-  'Additional details': 'Karagdagang detalye',
   'Add preparation, schedule, or payment details':
       'Magdagdag ng detalye tungkol sa paghahanda, iskedyul, o bayad',
   'Available to residents': 'Makikita ng mga residente',

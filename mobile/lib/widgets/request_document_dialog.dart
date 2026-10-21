@@ -110,14 +110,21 @@ class _RequestDocumentDialogState extends State<RequestDocumentDialog> {
     });
 
     try {
-      final newDoc = await widget.documentService.createDocumentRequest(
-        documentType: documentType,
-        offeringId: selectedOffering?.id,
-        urgencyTag: _selectedUrgency,
-        purpose: _purposeController.text.isNotEmpty
-            ? _purposeController.text
-            : null,
-      );
+      final purpose = _purposeController.text.isNotEmpty
+          ? _purposeController.text
+          : null;
+      final newDoc = selectedOffering == null
+          ? await widget.documentService.createDocumentRequest(
+              documentType: documentType,
+              urgencyTag: _selectedUrgency,
+              purpose: purpose,
+            )
+          : await widget.documentService.createDocumentRequestFromOffering(
+              offeringId: selectedOffering.id,
+              documentType: documentType,
+              urgencyTag: _selectedUrgency,
+              purpose: purpose,
+            );
 
       if (mounted) {
         widget.onCreated(newDoc);
