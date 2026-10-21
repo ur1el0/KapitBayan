@@ -69,7 +69,7 @@ class ResidentRegistrationDetailsSection extends StatelessWidget {
       children: [
         // Full Name Input
         CustomTextField(
-          label: context.tr('FULL NAME (AS IN ID)'),
+          label: context.tr('FULL NAME'),
           controller: fullNameController,
           hintText: 'Johnathan Doe',
           prefixIcon: Icons.person_outline_rounded,
@@ -175,7 +175,7 @@ class ResidentRegistrationDetailsSection extends StatelessWidget {
 
         // Barangay ID / Username Input
         CustomTextField(
-          label: context.tr('USERNAME'),
+          label: context.tr('BARANGAY ID / USERNAME'),
           controller: usernameController,
           hintText: 'CID-99201',
           prefixIcon: Icons.fingerprint_rounded,
@@ -183,7 +183,7 @@ class ResidentRegistrationDetailsSection extends StatelessWidget {
           enabled: !isLoading,
           validator: (value) {
             if (value == null || value.trim().isEmpty) {
-              return context.tr('Please enter your username');
+              return context.tr('Please enter your barangay ID or username');
             }
             return null;
           },
@@ -284,7 +284,7 @@ class ResidentRegistrationDetailsSection extends StatelessWidget {
         const SizedBox(height: 24),
 
         CustomTextField(
-          label: context.tr('CONTACT NUMBER'),
+          label: context.tr('CONTACT NUMBER (OPTIONAL)'),
           controller: contactNumberController,
           hintText: '09123456789',
           prefixIcon: Icons.phone_outlined,
@@ -294,7 +294,7 @@ class ResidentRegistrationDetailsSection extends StatelessWidget {
         const SizedBox(height: 24),
 
         Text(
-          context.tr('DATE OF BIRTH'),
+          context.tr('BIRTH DATE'),
           style: TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.w800,
@@ -341,7 +341,7 @@ class ResidentRegistrationDetailsSection extends StatelessWidget {
         if (requiresGuardian) ...[
           const SizedBox(height: 24),
           CustomTextField(
-            label: context.tr("GUARDIAN'S REGISTERED USERNAME *"),
+            label: context.tr("GUARDIAN'S REGISTERED ID (REQUIRED)"),
             controller: guardianController,
             hintText: 'CID-XXXXX',
             prefixIcon: Icons.supervisor_account_outlined,

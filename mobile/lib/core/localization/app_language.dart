@@ -137,6 +137,7 @@ const Map<String, String> _filipino = {
   'Could not load preferences. Try again.':
       'Hindi ma-load ang mga setting. Subukan muli.',
   'FULL NAME': 'BUONG PANGALAN',
+  'Citizen ID / Username': 'ID ng residente / username',
   'Receive queue calls and service updates on this device.':
       'Tumanggap ng tawag sa pila at update sa serbisyo sa device na ito.',
   'Review your resident information, verification documents, and account details.':
@@ -211,8 +212,9 @@ const Map<String, String> _filipino = {
       'Hindi dapat lumampas sa 255 character ang detalye ng tirahan.',
   'CONFIRM PASSWORD': 'KUMPIRMAHIN ANG PASSWORD',
   'DATE OF BIRTH': 'PETSA NG KAPANGANAKAN',
+  'CONTACT NUMBER (OPTIONAL)': 'NUMERO NG TELEPONO (OPSYONAL)',
   'EMAIL ADDRESS': 'EMAIL ADDRESS',
-  'FULL NAME (AS IN ID)': 'BUONG PANGALAN (AYON SA ID)',
+  'BARANGAY ID / USERNAME': 'ID NG BARANGAY / USERNAME',
   'HOUSE / STREET / LANDMARK (OPTIONAL)':
       'BAHAY / KALYE / PALATANDAAN (OPSYONAL)',
   'LOCAL BARANGAY JURISDICTION': 'IYONG BARANGAY',
@@ -228,13 +230,16 @@ const Map<String, String> _filipino = {
   'Please enter your Purok or Zone': 'Ilagay ang iyong purok o sona.',
   'Please enter your email address': 'Ilagay ang iyong email address.',
   'Please enter your full name': 'Ilagay ang iyong buong pangalan.',
+  'Please enter your barangay ID or username':
+      'Ilagay ang iyong ID ng barangay o username.',
   'Please enter your username': 'Ilagay ang iyong username.',
   'Purok or Zone must be 100 characters or fewer':
       'Hindi dapat lumampas sa 100 character ang purok o sona.',
   'Registered Voter in this Barangay': 'Botante sa Barangay na ito',
   'Residents under 18 must be registered under a verified parent or guardian.':
       'Ang wala pang 18 taong gulang ay kailangang irehistro ng beripikadong magulang o tagapag-alaga.',
-  'USERNAME': 'USERNAME',
+  "GUARDIAN'S REGISTERED ID (REQUIRED)":
+      'ID NG TAGAPAG-ALAGA NA NAKAREHISTRO (KINAKAILANGAN)',
   'Select your birth date': 'Piliin ang petsa ng iyong kapanganakan.',
   'No registered barangays are currently available.':
       'Wala pang aprubadong barangay sa ngayon.',
