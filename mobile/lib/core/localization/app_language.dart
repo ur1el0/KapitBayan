@@ -40,7 +40,7 @@ class AppLanguageController extends ChangeNotifier {
 
 class AppLanguageScope extends InheritedNotifier<AppLanguageController> {
   static final AppLanguageController _fallbackController =
-      AppLanguageController();
+      _EnglishFallbackLanguageController();
 
   const AppLanguageScope({
     super.key,
@@ -50,10 +50,16 @@ class AppLanguageScope extends InheritedNotifier<AppLanguageController> {
 
   static AppLanguageController of(BuildContext context) {
     final scope = context.dependOnInheritedWidgetOfExactType<AppLanguageScope>();
-    // Screens used outside the application shell (for example in previews)
-    // remain readable in English until the persisted language scope is added.
+    // Screens used outside the application shell (for example in tests and
+    // previews) remain readable in English without sharing mutable language
+    // state with other standalone screens.
     return scope?.notifier ?? _fallbackController;
   }
+}
+
+class _EnglishFallbackLanguageController extends AppLanguageController {
+  @override
+  Future<void> setLanguage(String languageCode) async {}
 }
 
 extension AppLanguageText on BuildContext {
