@@ -232,24 +232,23 @@ class _LoginScreenState extends State<LoginScreen> {
                       children: [
                         const SizedBox(height: 36),
 
-                        if (!_isOfficialMode)
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: DropdownButton<String>(
-                              value: AppLanguageScope.of(context).languageCode,
-                              onChanged: (value) {
-                                if (value != null) {
-                                  AppLanguageScope.of(context).setLanguage(value);
-                                }
-                              },
-                              items: [
-                                DropdownMenuItem(value: 'en', child: Text(context.tr('English'))),
-                                DropdownMenuItem(value: 'fil', child: Text(context.tr('Filipino (Tagalog)'))),
-                              ],
-                            ),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: DropdownButton<String>(
+                            value: AppLanguageScope.of(context).languageCode,
+                            onChanged: (value) {
+                              if (value != null) {
+                                AppLanguageScope.of(context).setLanguage(value);
+                              }
+                            },
+                            items: [
+                              DropdownMenuItem(value: 'en', child: Text(context.tr('English'))),
+                              DropdownMenuItem(value: 'fil', child: Text(context.tr('Filipino (Tagalog)'))),
+                            ],
                           ),
+                        ),
 
-                        // Logo & Brand Name with Hidden Toggle
+                        // Logo & Brand Name with Official Mode Toggle
                         Center(
                           child: GestureDetector(
                             onLongPress: () {
@@ -261,7 +260,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 SnackBar(
                                   content: Text(
                                     _isOfficialMode
-                                        ? 'Barangay Personnel Official Mode Activated'
+                                        ? context.tr('Barangay Personnel Official Mode Activated')
                                         : context.tr('Switched to Citizen Resident Portal'),
                                     style: const TextStyle(
                                       fontWeight: FontWeight.w600,
@@ -297,8 +296,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                   color: const Color(0xFFFCD34D),
                                 ),
                               ),
-                              child: const Text(
-                                'BARANGAY PERSONNEL ACCESS',
+                              child: Text(
+                                context.tr('BARANGAY PERSONNEL ACCESS'),
                                 style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w800,
@@ -314,7 +313,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         ],
 
                         Text(
-                          _isOfficialMode ? 'Official Sign In' : context.tr('Welcome Back'),
+                          _isOfficialMode
+                              ? context.tr('Official Sign In')
+                              : context.tr('Welcome Back'),
                           style: const TextStyle(
                             fontSize: 28,
                             fontWeight: FontWeight.w800,
@@ -325,7 +326,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         const SizedBox(height: 8),
                         Text(
                           _isOfficialMode
-                              ? 'Authorized officials, Tanod, and barangay administrators'
+                              ? context.tr('Authorized officials, Tanod, and barangay administrators')
                               : context.tr('Please enter your citizen credentials to continue'),
                           style: const TextStyle(
                             fontSize: 14.5,

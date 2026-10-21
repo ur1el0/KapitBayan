@@ -1,6 +1,8 @@
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/auth-context';
+import { useLanguage } from '../../context/language-context';
+import { LanguageSwitcher } from '../language/LanguageSwitcher';
 
 import { 
     Settings, 
@@ -39,10 +41,11 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({ compact = false, onNavigate }) => {
     const { logout } = useAuth();
     const location = useLocation();
+    const { t } = useLanguage();
 
     return (
         <aside
-            aria-label={compact ? 'Mobile administration menu' : 'Administration sidebar'}
+            aria-label={compact ? t('Mobile administration menu') : t('Administration sidebar')}
             className={`${compact ? 'w-full' : 'hidden h-screen w-64 shrink-0 border-r md:flex'} bg-[#F8FAFD] border-[#E2E8F0] flex flex-col justify-between select-none`}
         >
             <div>
@@ -52,7 +55,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ compact = false, onNavigate })
                     </div>
                     <div className="flex flex-col justify-center">
                         <span className="text-[9px] font-bold tracking-[0.14em] text-[#64748b] uppercase leading-tight mt-0.5">
-                            BARANGAY AUTHORITY
+                            {t('BARANGAY AUTHORITY')}
                         </span>
                     </div>
                 </div>
@@ -85,7 +88,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ compact = false, onNavigate })
                                                     : 'text-[#64748b] group-hover:text-[#0f172a]'
                                             }`} />
                                         </div>
-                                        <span>{item.name}</span>
+                                        <span>{t(item.name)}</span>
                                     </NavLink>
                                 </li>
                             );
@@ -95,6 +98,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ compact = false, onNavigate })
             </div>
 
             <div className="px-3.5 pb-6 space-y-1">
+                {compact && (
+                    <div className="px-4 py-3">
+                        <LanguageSwitcher />
+                    </div>
+                )}
                 <NavLink
                     to="/settings"
                     onClick={onNavigate}
@@ -110,7 +118,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ compact = false, onNavigate })
                     <div className="w-5 h-5 flex items-center justify-center shrink-0">
                         <Settings className="w-[19px] h-[19px] text-[#475569] group-hover:text-[#0f172a] transition-colors" />
                     </div>
-                    <span>Settings</span>
+                    <span>{t('Settings')}</span>
                 </NavLink>
 
                 <button
@@ -119,13 +127,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ compact = false, onNavigate })
                         await logout();
                     }}
                     type="button"
-                    aria-label="Log out"
+                    aria-label={t('Logout')}
                     className="w-full flex min-h-[44px] items-center gap-3.5 px-4 py-2.5 rounded-xl text-sm font-semibold text-[#DC2626] hover:bg-red-50 hover:text-red-700 transition-all duration-150 text-left cursor-pointer group"
                 >
                     <div className="w-5 h-5 flex items-center justify-center shrink-0">
                         <LogOut className="w-[19px] h-[19px] text-[#DC2626] group-hover:text-red-700 transition-colors" />
                     </div>
-                    <span>Logout</span>
+                    <span>{t('Logout')}</span>
                 </button>
             </div>
         </aside>

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../core/network/api_client.dart';
+import '../core/localization/app_language.dart';
 import '../core/theme/app_colors.dart';
 import '../models/user_model.dart';
 import '../services/storage_service.dart';
@@ -80,6 +81,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final language = AppLanguageScope.of(context);
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
@@ -88,20 +90,37 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Executive Console',
+            Text(
+              context.tr('Executive Console'),
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.white),
             ),
             Text(
-              _currentUser?.fullName.isNotEmpty == true ? _currentUser!.fullName : 'Barangay Captain',
+              _currentUser?.fullName.isNotEmpty == true ? _currentUser!.fullName : context.tr('Barangay Captain'),
               style: const TextStyle(fontSize: 12, color: Color(0xFF38BDF8), fontWeight: FontWeight.w600),
             ),
           ],
         ),
         actions: [
+          PopupMenuButton<String>(
+            tooltip: context.tr('Choose language'),
+            onSelected: (value) => language.setLanguage(value),
+            itemBuilder: (context) => [
+              PopupMenuItem(value: 'en', child: Text(context.tr('English'))),
+              PopupMenuItem(value: 'fil', child: Text(context.tr('Filipino (Tagalog)'))),
+            ],
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Center(
+                child: Text(
+                  language.languageCode.toUpperCase(),
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800),
+                ),
+              ),
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.logout_rounded, color: Colors.white),
-            tooltip: 'Logout',
+            tooltip: context.tr('Logout'),
             onPressed: _handleLogout,
           ),
         ],
@@ -125,12 +144,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(color: const Color(0xFFE2E8F0)),
                       ),
-                      child: const Row(
+                      child: Row(
                         children: [
                           Icon(Icons.admin_panel_settings_rounded, color: AppColors.primaryNavy, size: 20),
                           SizedBox(width: 8),
                           Text(
-                            'Executive Mode Active',
+                            context.tr('Executive Mode Active'),
                             style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: AppColors.textPrimary),
                           ),
                         ],
@@ -140,8 +159,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     const SizedBox(height: 20),
 
                     // Executive Metric Cards (Aligned with Web Admin)
-                    const Text(
-                      'OVERVIEW METRICS',
+                    Text(
+                      context.tr('OVERVIEW METRICS'),
                       style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800, color: Color(0xFF64748B), letterSpacing: 1.2),
                     ),
                     const SizedBox(height: 12),
@@ -170,7 +189,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         _buildMetricCard(
                           title: 'Waiting Queue',
                           value: '$_waitingQueue',
-                          subtitle: _servingNow != null ? 'Serving: $_servingNow' : null,
+                          subtitle: _servingNow != null ? context.tr('Serving: {ticket}').replaceAll('{ticket}', _servingNow!) : null,
                           icon: Icons.confirmation_number_outlined,
                           iconColor: const Color(0xFF10B981),
                           bgColor: const Color(0xFFECFDF5),
@@ -188,8 +207,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     const SizedBox(height: 24),
 
                     // Executive Management Actions
-                    const Text(
-                      'EXECUTIVE OPERATIONS',
+                    Text(
+                      context.tr('EXECUTIVE OPERATIONS'),
                       style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800, color: Color(0xFF64748B), letterSpacing: 1.2),
                     ),
                     const SizedBox(height: 12),
@@ -197,8 +216,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     _buildActionTile(
                       icon: Icons.shield_rounded,
                       iconBg: const Color(0xFF091B35),
-                      title: 'Field Operations Desk',
-                      subtitle: 'Advance queue ticker, verify clearance QR, triage incidents',
+                      title: context.tr('Field Operations Desk'),
+                      subtitle: context.tr('Advance queue ticker, verify clearance QR, triage incidents'),
                       onTap: () {
                         Navigator.push(
                           context,
@@ -212,8 +231,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     _buildActionTile(
                       icon: Icons.confirmation_number_rounded,
                       iconBg: const Color(0xFF0284C7),
-                      title: 'Live Queue Desk',
-                      subtitle: 'Monitor tickets, manage priority lane',
+                      title: context.tr('Live Queue Desk'),
+                      subtitle: context.tr('Monitor tickets, manage priority lane'),
                       onTap: () {
                         Navigator.push(
                           context,
@@ -268,13 +287,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               ),
               const SizedBox(height: 2),
               Text(
-                title,
+                context.tr(title),
                 style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF64748B)),
               ),
               if (subtitle != null) ...[
                 const SizedBox(height: 2),
                 Text(
-                  subtitle,
+                  context.tr(subtitle),
                   style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: iconColor),
                 ),
               ],
@@ -314,9 +333,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, color: AppColors.textPrimary)),
+                  Text(context.tr(title), style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, color: AppColors.textPrimary)),
                   const SizedBox(height: 2),
-                  Text(subtitle, style: const TextStyle(fontSize: 11.5, color: Color(0xFF64748B))),
+                  Text(context.tr(subtitle), style: const TextStyle(fontSize: 11.5, color: Color(0xFF64748B))),
                 ],
               ),
             ),
