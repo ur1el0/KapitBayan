@@ -2,6 +2,7 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { InlineErrorState } from '../ui/InlineErrorState';
 import type { ActivityItem } from './types';
+import { useLanguage } from '../../context/language-context';
 
 interface AppointmentsTableProps {
     activities: ActivityItem[];
@@ -17,19 +18,22 @@ export const AppointmentsTable: React.FC<AppointmentsTableProps> = ({
     loadError,
     onRetry,
     retrying,
-}) => (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+}) => {
+    const { t } = useLanguage();
+
+    return (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
         <div className="lg:col-span-12 bg-surface rounded-large p-6 shadow-xs border border-border/80 flex flex-col justify-between">
             <div>
                 <div className="flex items-center justify-between mb-5">
                     <h2 className="text-base lg:text-lg font-bold text-neutral-primary">
-                        Today's Appointments
+                        {t("Today's Appointments")}
                     </h2>
                     <NavLink
                         to="/communications"
                         className="text-xs lg:text-sm font-semibold text-primary-text hover:underline"
                     >
-                        View All Schedule
+                        {t('View All Schedule')}
                     </NavLink>
                 </div>
 
@@ -37,17 +41,17 @@ export const AppointmentsTable: React.FC<AppointmentsTableProps> = ({
                     <table className="w-full text-left">
                         <thead>
                             <tr className="bg-surface-table/70 text-neutral-muted text-[11px] font-bold uppercase tracking-wider">
-                                <th className="py-2.5 px-4 rounded-l-lg">TIME / DATE</th>
-                                <th className="py-2.5 px-4">EVENT</th>
-                                <th className="py-2.5 px-4">LOCATION</th>
-                                <th className="py-2.5 px-4 rounded-r-lg">STATUS</th>
+                                <th className="py-2.5 px-4 rounded-l-lg">{t('TIME / DATE')}</th>
+                                <th className="py-2.5 px-4">{t('EVENT')}</th>
+                                <th className="py-2.5 px-4">{t('LOCATION')}</th>
+                                <th className="py-2.5 px-4 rounded-r-lg">{t('STATUS')}</th>
                             </tr>
                         </thead>
                         <tbody className="text-sm divide-y divide-surface-subtle">
                             {loading && activities.length === 0 && (
                                 <tr>
                                     <td colSpan={4} role="status" className="py-12 text-center text-sm text-neutral-hint font-medium">
-                                        Loading appointments…
+                                        {t('Loading appointments…')}
                                     </td>
                                 </tr>
                             )}
@@ -55,7 +59,7 @@ export const AppointmentsTable: React.FC<AppointmentsTableProps> = ({
                                 <tr>
                                     <td colSpan={4} className="p-3">
                                         <InlineErrorState
-                                            message="We couldn't load today's appointments."
+                                            message={t("We couldn't load today's appointments.")}
                                             onRetry={onRetry}
                                             retrying={retrying}
                                         />
@@ -65,7 +69,7 @@ export const AppointmentsTable: React.FC<AppointmentsTableProps> = ({
                             {!loading && !loadError && activities.length === 0 && (
                                 <tr>
                                     <td colSpan={4} className="py-12 text-center text-sm text-neutral-hint font-medium">
-                                        No appointments or activities scheduled.
+                                        {t('No appointments or activities scheduled.')}
                                     </td>
                                 </tr>
                             )}
@@ -112,7 +116,7 @@ export const AppointmentsTable: React.FC<AppointmentsTableProps> = ({
                                                             : 'bg-surface-waiting text-neutral-muted'
                                                     }`}
                                                 >
-                                                    {isUpcoming ? 'Upcoming' : 'Completed'}
+                                                    {isUpcoming ? t('Upcoming') : t('Completed')}
                                                 </span>
                                             </td>
                                         </tr>
@@ -123,5 +127,6 @@ export const AppointmentsTable: React.FC<AppointmentsTableProps> = ({
                 </div>
             </div>
         </div>
-    </div>
-);
+        </div>
+    );
+};
