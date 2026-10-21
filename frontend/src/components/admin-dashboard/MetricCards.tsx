@@ -1,6 +1,7 @@
 import React from 'react';
 import { Banknote, FileText, Hourglass, Users } from 'lucide-react';
 import type { DashboardSummary } from './types';
+import { useLanguage } from '../../context/language-context';
 
 interface MetricCardsProps {
     loading: boolean;
@@ -17,7 +18,10 @@ const MetricCardSkeleton = () => (
     </div>
 );
 
-export const MetricCards: React.FC<MetricCardsProps> = ({ loading, summary }) => (
+export const MetricCards: React.FC<MetricCardsProps> = ({ loading, summary }) => {
+    const { t } = useLanguage();
+
+    return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {loading ? (
             <>
@@ -34,7 +38,7 @@ export const MetricCards: React.FC<MetricCardsProps> = ({ loading, summary }) =>
                             <Users className="w-5 h-5" />
                         </div>
                         <h3 className="text-neutral-muted text-xs font-semibold uppercase tracking-wider mt-4">
-                            Total Registered Residents
+                            {t('Total Registered Residents')}
                         </h3>
                         <p className="text-3xl font-extrabold text-neutral-primary mt-1">
                             {summary?.total_residents?.toLocaleString() ?? '--'}
@@ -48,7 +52,7 @@ export const MetricCards: React.FC<MetricCardsProps> = ({ loading, summary }) =>
                             <FileText className="w-5 h-5" />
                         </div>
                         <h3 className="text-neutral-muted text-xs font-semibold uppercase tracking-wider mt-4">
-                            Pending Requests
+                            {t('Pending Requests')}
                         </h3>
                         <p className="text-3xl font-extrabold text-neutral-primary mt-1">
                             {summary !== null ? summary.document_requests.pending : '--'}
@@ -62,7 +66,7 @@ export const MetricCards: React.FC<MetricCardsProps> = ({ loading, summary }) =>
                             <Hourglass className="w-5 h-5" />
                         </div>
                         <h3 className="text-neutral-muted text-xs font-semibold uppercase tracking-wider mt-4">
-                            Active Issues (In Progress)
+                            {t('Active Issues (In Progress)')}
                         </h3>
                         <p className="text-3xl font-extrabold text-neutral-primary mt-1">
                             {summary !== null ? summary.issue_reports.in_progress : '--'}
@@ -76,7 +80,7 @@ export const MetricCards: React.FC<MetricCardsProps> = ({ loading, summary }) =>
                             <Banknote className="w-5 h-5" />
                         </div>
                         <h3 className="text-neutral-muted text-xs font-semibold uppercase tracking-wider mt-4">
-                            Clearance Collections
+                            {t('Clearance Collections')}
                         </h3>
                         <p className="text-3xl font-extrabold text-neutral-primary mt-1">
                             ₱{summary?.document_requests?.total_revenue !== undefined
@@ -88,4 +92,5 @@ export const MetricCards: React.FC<MetricCardsProps> = ({ loading, summary }) =>
             </>
         )}
     </div>
-);
+    );
+};
