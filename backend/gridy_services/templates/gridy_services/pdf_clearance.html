@@ -121,9 +121,7 @@
                 <div style="border: 1px solid #333; padding: 10px; font-size: 10pt; width: 85%;">
                     <strong style="font-size: 10pt; text-decoration: underline;">OFFICIAL ASSESSMENT</strong><br />
                     <span>Control / Doc ID: #{{ document.id }}</span><br />
-                    <span>O.R. Number: <strong>{{ document.or_number|default:"N/A" }}</strong></span><br />
-                    <span>Amount Paid: <strong>PHP {{ document.fee_amount|default:"0.00" }}</strong></span><br />
-                    <span>Date Issued: {{ date_issued|date:"Y-m-d" }}</span>
+                    <span>O.R. Number: <strong>{{ document.or_number|default:"N/A" }}</strong></span>
                 </div>
             </td>
 
