@@ -279,6 +279,7 @@ REST_FRAMEWORK = {
         'resident_import': '5/hour',
         'barangay_onboarding_application': '5/hour',
         'barangay_onboarding_verification': '10/hour',
+        'kiosk_intake': '20/hour',
     }
 }
 

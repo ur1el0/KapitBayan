@@ -1,6 +1,6 @@
 import { lazy, Suspense } from "react";
 import { LanguageProvider } from "./context/language-context";
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { useAuth } from "./context/auth-context";
 import { ProtectedRoute } from "./components/core/ProtectedRoute";
@@ -99,6 +99,9 @@ const ResidentTutorial = lazy(() =>
 const ResidentProfileSettings = lazy(() =>
     import("./pages/citizen/ResidentProfileSettings").then(({ ResidentProfileSettings }) => ({ default: ResidentProfileSettings })),
 );
+const PublicKiosk = lazy(() =>
+    import("./pages/public/PublicKiosk").then(({ PublicKiosk }) => ({ default: PublicKiosk })),
+);
 
 function RootRedirect() {
     const { isAuthenticated, isAuthReady, user } = useAuth();
@@ -151,10 +154,33 @@ function FieldOfficialWebNotice() {
 export function App() {
     return (
         <ErrorBoundary>
-            <LanguageProvider><AuthProvider>
+            <LanguageProvider>
                 <Router>
-                    <Suspense fallback={<RouteLoadingFallback />}>
-                        <Routes>
+                    <AppRouteContent />
+                </Router>
+            </LanguageProvider>
+        </ErrorBoundary>
+    );
+}
+
+function AppRouteContent() {
+    const location = useLocation();
+    if (location.pathname.replace(/\/+$/, '') === '/kiosk') {
+        return (
+            <Suspense fallback={<RouteLoadingFallback />}>
+                <PublicKiosk />
+            </Suspense>
+        );
+    }
+
+    return <AuthenticatedAppRoutes />;
+}
+
+function AuthenticatedAppRoutes() {
+    return (
+        <AuthProvider>
+            <Suspense fallback={<RouteLoadingFallback />}>
+                <Routes>
                             {/* Root Intelligent Redirection */}
                             <Route path="/" element={<RootRedirect />} />
 
@@ -221,10 +247,8 @@ export function App() {
 
                             {/* Fallback wildcard */}
                             <Route path="*" element={<RootRedirect />} />
-                        </Routes>
-                    </Suspense>
-                </Router>
-            </AuthProvider></LanguageProvider>
-        </ErrorBoundary>
+                </Routes>
+            </Suspense>
+        </AuthProvider>
     );
 }

@@ -76,6 +76,8 @@ class DocumentRequest(models.Model):
     is_walkin = models.BooleanField(default=False, db_index=True)
     walkin_name = models.CharField(max_length=255, blank=True, null=True)
     walkin_purok = models.CharField(max_length=100, blank=True, null=True)
+    privacy_notice_version = models.CharField(max_length=64, blank=True, null=True)
+    privacy_acknowledged_at = models.DateTimeField(blank=True, null=True)
 
     document_type = models.CharField(max_length=100)
     purpose = models.TextField(blank=True, null=True)
@@ -289,6 +291,8 @@ class QueueTicket(models.Model):
         default=Status.WAITING,
     )
     is_priority = models.BooleanField(default=False)
+    privacy_notice_version = models.CharField(max_length=64, blank=True, null=True)
+    privacy_acknowledged_at = models.DateTimeField(blank=True, null=True)
     called_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

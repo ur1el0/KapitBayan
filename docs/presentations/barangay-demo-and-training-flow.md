@@ -2,7 +2,7 @@
 
 **Audience:** Barangay administrators, office staff, field officials, and residents
 
-**Suggested session:** 45–50 minutes
+**Suggested session:** 50–55 minutes
 
 **Printable copy:** [Barangay demo and training flow (PDF)](barangay-demo-and-training-flow.pdf)
 
@@ -17,6 +17,7 @@ Use this guide to show people where to go, what to do, and what happens next. Fo
 - Prepare one accurate sample notice, activity, hotline, document request, and queue ticket. Verify names, dates, locations, and numbers before using them.
 - Do not create or delete records in a live barangay account unless the barangay has agreed that the item is demo data and approved its cleanup.
 - For older residents or first-time app users, allow extra time, increase phone text size if helpful, and teach one screen at a time.
+- Test `/kiosk` with a designated demo Barangay and synthetic details. Place the device in a supervised area and have the user-facing Filipino wording reviewed locally before inviting residents to use it.
 
 ## The story for the session
 
@@ -35,6 +36,7 @@ Explain that the system shares information and tracks work. Staff still make dec
 | 5 min | Resident + office staff | Submit and review an assistance or issue report |
 | 5 min | Administrator + resident | Notices, activities, hotlines, and FAQs |
 | 5 min | Resident on mobile | Main navigation, profile, and help |
+| 5 min | Administrator + resident | Admin notification bell, Filipino language choice, and public kiosk walk-in |
 | 4 min | Field official | Queue ticker, clearance check, and field reports |
 | 4–9 min | Everyone | Notification and password-reset fallbacks, questions, and practice |
 
@@ -128,9 +130,22 @@ For the web portal, point to the top navigation: **Documents**, **Queue**, **Bul
 
 Residents should never give a helper their password, one-time code, or reset link. A helper may read the screen aloud or help tap a button while the resident enters private information themselves.
 
+Residents can choose **Filipino (Tagalog)** from the language selector on the resident website or in the mobile app's sign-in/profile screens. The choice stays on that browser or device. Some Barangay-authored announcements, FAQs, and activity titles remain in the language entered by staff.
+
+## 8. Demonstrate the public kiosk and registration handoff
+
+1. Open `/kiosk` on a dedicated, supervised Barangay device and choose the demo Barangay.
+2. Show the English/Filipino selector and the privacy notice. Explain that the kiosk does not require an account and never asks for a password or identity-document upload.
+3. Submit one synthetic queue request, document request, and issue report. Point out the reference number, then open the staff queue, documents, and reports views to show where each request appears.
+4. Open the Admin notification bell and show the saved alerts for new queue, document, report, and resident-registration activity. Open an item and mark it read; notifications are scoped to the receiving Barangay Admin.
+5. Point to the QR code for registration. Scan it with a personal phone and explain that identity evidence and password entry continue on that device through the existing resident registration and verification process.
+6. Use **Clear form** or wait for the two-minute inactivity reset. Confirm personal form fields have cleared before leaving the kiosk.
+
+Explain that the kiosk limits one client IP to 20 submissions per hour as an application-level abuse control. It does not provide DDoS protection, and users sharing one network can share this limit. The Barangay must secure the device, browser, and network and approve its privacy notice, retention, and access process. Use the detailed [public kiosk operations guide](../features/public-kiosk.md) for setup and limitations.
+
 For a calendar event, open its details and tap **Add to Calendar**. The phone calendar opens for the resident to review and save the event. If no calendar app opens, use the date, time, and location shown in Schedule and add them manually.
 
-## 8. Show the field official's mobile tools
+## 9. Show the field official's mobile tools
 
 Sign in with a field-official account and open the **Field Operations** screen. Show its three tabs:
 
@@ -140,7 +155,7 @@ Sign in with a field-official account and open the **Field Operations** screen. 
 
 Explain that field access is limited to the assigned barangay. If a tab or action is unavailable, use the account role and permissions actually assigned; do not switch to another person's admin credentials.
 
-## 9. Explain notifications and what to do if one is missing
+## 10. Explain notifications and what to do if one is missing
 
 - A staff member can page a resident from the serving queue ticket. The backend saves an in-app resident alert, then separately attempts optional email and phone push according to account settings and device registration.
 - On mobile, open the resident's notification center from the dashboard to see saved alerts. A push banner depends on the resident's push preference, Android notification permission, network, and a valid registered device.
@@ -148,7 +163,7 @@ Explain that field access is limited to the assigned barangay. If a tab or actio
 - If no phone banner appears, open the app notification center and refresh; check Profile preferences and Android notification permission. Treat email and push as best-effort delivery, not guaranteed contact.
 - If the saved in-app alert is missing too, check the network and sign-in, refresh the screen, then use the barangay's normal desk or contact channel while the issue is investigated.
 
-## 10. Demonstrate password recovery
+## 11. Demonstrate password recovery
 
 1. Return to the sign-in page and select **Forgot password?**
 2. Enter the demo account's email and submit once. The page shows a generic success message for privacy; it does not prove that an email was sent.
@@ -157,7 +172,7 @@ Explain that field access is limited to the assigned barangay. If a tab or actio
 
 If the account is pending verification, password reset will not approve it. If a reset email does not arrive, check that the address belongs to exactly one account and wait before retrying if the service has rate-limited requests. A resident can continue to request in-person help through the barangay office.
 
-## 11. Practice and close
+## 12. Practice and close
 
 Invite one person from each group to perform one safe task using the demo account:
 

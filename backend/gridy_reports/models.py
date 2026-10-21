@@ -24,9 +24,21 @@ class IssueReport(models.Model):
 
     reporter = models.ForeignKey(
         settings.AUTH_USER_MODEL, 
-        on_delete=models.CASCADE, 
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
         related_name='issue_reports'
     )
+    barangay = models.ForeignKey(
+        'gridy_auth.Barangay',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='issue_reports',
+    )
+    walkin_name = models.CharField(max_length=255, blank=True, null=True)
+    privacy_notice_version = models.CharField(max_length=64, blank=True, null=True)
+    privacy_acknowledged_at = models.DateTimeField(blank=True, null=True)
     title = models.CharField(max_length=255)
     description = models.TextField()
     location = models.CharField(max_length=255, help_text="A brief description of where the issue is located.")

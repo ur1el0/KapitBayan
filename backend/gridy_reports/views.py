@@ -1,6 +1,7 @@
 from django.db import transaction
 from rest_framework import viewsets, permissions
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
+from django.db.models import Q
 from .models import IssueReport
 from .serializers import IssueReportSerializer
 from gridy_auth.permissions import IsBarangayOfficial, IsBarangayOfficialOrField, IsResident
@@ -32,7 +33,10 @@ class IssueReportViewSet(viewsets.ModelViewSet):
         if user.role in ["ADMIN", "FIELD_OFFICIAL"]:
             if user.barangay_id is None:
                 return IssueReport.objects.none()
-            return IssueReport.objects.filter(reporter__barangay_id=user.barangay_id).order_by('-created_at')
+            return IssueReport.objects.filter(
+                Q(barangay_id=user.barangay_id)
+                | Q(barangay__isnull=True, reporter__barangay_id=user.barangay_id)
+            ).order_by('-created_at')
         
         # Standard Residents only see their own reports (and we fixed the created_by typo)
         return IssueReport.objects.filter(reporter=user).order_by('-created_at')
@@ -41,6 +45,7 @@ class IssueReportViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(
             reporter=self.request.user,
+            barangay=self.request.user.barangay,
             status=IssueReport.Status.PENDING,
             urgency=IssueReport.Urgency.MINOR
         )

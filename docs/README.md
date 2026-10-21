@@ -27,6 +27,7 @@ Use this page to find current system guidance. Source code, migrations, generate
 - [Resident web portal](features/citizen_desktop_portal.md)
 - [Web frontend features](features/frontend_features.md)
 - [Walk-in clearances and treasury auditing](features/walkin_and_revenue_clearances.md)
+- [Public Barangay kiosk operations](features/public-kiosk.md)
 
 ## Developer walkthroughs
 
