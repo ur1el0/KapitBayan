@@ -1,10 +1,14 @@
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
+
 import '../core/network/api_client.dart';
 import '../core/localization/app_language.dart';
 import '../core/theme/app_colors.dart';
 import '../models/user_model.dart';
 import '../services/storage_service.dart';
+import 'admin_document_requests_screen.dart';
+import 'admin_residents_screen.dart';
 import 'field_official_screen.dart';
 import 'login_screen.dart';
 
@@ -129,6 +133,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       MaterialPageRoute(builder: (_) => const LoginScreen()),
       (route) => false,
     );
+  }
+
+  Future<void> _openWorkflow(Widget screen) async {
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute<void>(builder: (_) => screen));
+    if (mounted) await _loadExecutiveDashboard();
   }
 
   @override
@@ -292,6 +303,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           icon: Icons.people_alt_outlined,
                           iconColor: const Color(0xFF0284C7),
                           bgColor: const Color(0xFFF0F9FF),
+                          onTap: () =>
+                              _openWorkflow(const AdminResidentsScreen()),
                         ),
                         _buildMetricCard(
                           title: 'Pending Requests',
@@ -299,6 +312,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           icon: Icons.assignment_outlined,
                           iconColor: const Color(0xFFDC2626),
                           bgColor: const Color(0xFFFEF2F2),
+                          onTap: () => _openWorkflow(
+                            const AdminDocumentRequestsScreen(
+                              showActionNeededFirst: true,
+                            ),
+                          ),
                         ),
                         _buildMetricCard(
                           title: 'Active Issues (In Progress)',
@@ -306,6 +324,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           icon: Icons.hourglass_top_rounded,
                           iconColor: const Color(0xFFD97706),
                           bgColor: const Color(0xFFFFFBEB),
+                          onTap: () => _openWorkflow(
+                            const FieldOfficialScreen(initialTabIndex: 2),
+                          ),
                         ),
                         _buildMetricCard(
                           title: 'Clearance Collections',
@@ -313,6 +334,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           icon: Icons.account_balance_wallet_outlined,
                           iconColor: const Color(0xFF059669),
                           bgColor: const Color(0xFFECFDF5),
+                          onTap: () => _openWorkflow(
+                            const AdminDocumentRequestsScreen(
+                              showActionNeededFirst: false,
+                            ),
+                          ),
                         ),
                       ],
                     ),
@@ -338,14 +364,26 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       subtitle: context.tr(
                         'Advance queue ticker, verify clearance QR, triage incidents',
                       ),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const FieldOfficialScreen(),
-                          ),
-                        );
-                      },
+                      onTap: () => _openWorkflow(const FieldOfficialScreen()),
+                    ),
+                    const SizedBox(height: 10),
+                    _buildActionTile(
+                      icon: Icons.verified_user_outlined,
+                      iconBg: const Color(0xFF0369A1),
+                      title: 'Residents & Verification',
+                      subtitle: 'Review registrations and resident records',
+                      onTap: () => _openWorkflow(
+                        const AdminResidentsScreen(initialTabIndex: 1),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    _buildActionTile(
+                      icon: Icons.description_outlined,
+                      iconBg: const Color(0xFF047857),
+                      title: 'Document Requests',
+                      subtitle: 'Review requests, fees, and e-payment proofs',
+                      onTap: () =>
+                          _openWorkflow(const AdminDocumentRequestsScreen()),
                     ),
                   ],
                 ),
@@ -448,74 +486,83 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     required IconData icon,
     required Color iconColor,
     required Color bgColor,
+    VoidCallback? onTap,
   }) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFF1F5F9)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: bgColor,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(icon, color: iconColor, size: 20),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  value,
-                  maxLines: 1,
-                  style: const TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.w900,
-                    color: AppColors.primaryNavy,
-                  ),
-                ),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: const Color(0xFFF1F5F9)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 8,
+                offset: const Offset(0, 3),
               ),
-              const SizedBox(height: 2),
-              Text(
-                context.tr(title),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF64748B),
-                ),
-              ),
-              if (subtitle != null) ...[
-                const SizedBox(height: 2),
-                Text(
-                  context.tr(subtitle),
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: iconColor,
-                  ),
-                ),
-              ],
             ],
           ),
-        ],
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: bgColor,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, color: iconColor, size: 20),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      value,
+                      maxLines: 1,
+                      style: const TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.primaryNavy,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    context.tr(title),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF64748B),
+                    ),
+                  ),
+                  if (subtitle != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      context.tr(subtitle),
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: iconColor,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

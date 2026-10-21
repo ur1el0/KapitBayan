@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../core/localization/app_language.dart';
 import '../core/network/api_client.dart';
 import '../core/theme/app_colors.dart';
@@ -15,8 +16,13 @@ import 'login_screen.dart';
 
 class FieldOfficialScreen extends StatefulWidget {
   final FieldOfficialService? fieldOfficialService;
+  final int initialTabIndex;
 
-  const FieldOfficialScreen({super.key, this.fieldOfficialService});
+  const FieldOfficialScreen({
+    super.key,
+    this.fieldOfficialService,
+    this.initialTabIndex = 0,
+  });
 
   @override
   State<FieldOfficialScreen> createState() => _FieldOfficialScreenState();
@@ -55,7 +61,11 @@ class _FieldOfficialScreenState extends State<FieldOfficialScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(
+      length: 3,
+      vsync: this,
+      initialIndex: widget.initialTabIndex.clamp(0, 2).toInt(),
+    );
     _initializeService();
   }
 

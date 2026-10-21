@@ -22,24 +22,95 @@ class DocumentService {
         '/document-requests/',
         requiresAuth: true,
       );
-      final Map<String, dynamic> data = jsonDecode(
-        utf8.decode(response.bodyBytes),
-      );
+      final decoded = jsonDecode(utf8.decode(response.bodyBytes));
+      final List<DocumentRequestModel> items = [];
+      var page = 1;
+      dynamic current = decoded;
 
-      // Handle Django DRF PageNumberPagination by safely extracting the 'results' array
-      final List<dynamic> list = data.containsKey('results')
-          ? data['results']
-          : data.values.toList();
+      while (true) {
+        final rawItems = current is Map<String, dynamic>
+            ? current['results']
+            : current;
+        if (rawItems is! List) {
+          throw const FormatException('Document request list is invalid.');
+        }
+        items.addAll(
+          rawItems.map(
+            (item) => DocumentRequestModel.fromJson(
+              Map<String, dynamic>.from(item as Map),
+            ),
+          ),
+        );
 
-      return list
-          .map(
-            (item) =>
-                DocumentRequestModel.fromJson(item as Map<String, dynamic>),
-          )
-          .toList();
+        final hasNext =
+            current is Map<String, dynamic> && current['next'] != null;
+        if (!hasNext) break;
+        page++;
+        final nextResponse = await apiClient.get(
+          '/document-requests/',
+          queryParams: {'page': '$page'},
+          requiresAuth: true,
+        );
+        current = jsonDecode(utf8.decode(nextResponse.bodyBytes));
+      }
+
+      return items;
     } catch (e) {
       rethrow;
     }
+  }
+
+  /// Applies the existing barangay staff review transition for one request.
+  Future<DocumentRequestModel> reviewAdminDocumentRequest({
+    required int requestId,
+    required String status,
+    required String adminNotes,
+    required String orNumber,
+    required String? feeAmount,
+    required String paymentMethod,
+    String? feeWaiverReason,
+  }) async {
+    final body = <String, dynamic>{
+      'status': status,
+      'admin_notes': adminNotes.trim(),
+      'or_number': orNumber.trim(),
+      'payment_method': paymentMethod,
+    };
+    if (feeAmount != null) body['fee_amount'] = feeAmount.trim();
+    if (feeWaiverReason != null && feeWaiverReason.trim().isNotEmpty) {
+      body['fee_waiver_reason'] = feeWaiverReason.trim();
+    }
+
+    final response = await apiClient.patch(
+      '/document-requests/$requestId/validate/',
+      body: body,
+      requiresAuth: true,
+    );
+    return DocumentRequestModel.fromJson(
+      jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>,
+    );
+  }
+
+  /// Verifies or rejects a pending manual electronic transfer reference.
+  Future<DocumentRequestModel> reviewAdminPayment({
+    required int requestId,
+    required String status,
+    required String note,
+    String? orNumber,
+  }) async {
+    final response = await apiClient.patch(
+      '/document-requests/$requestId/payment-review/',
+      body: {
+        'status': status,
+        'note': note.trim(),
+        if (orNumber != null && orNumber.trim().isNotEmpty)
+          'or_number': orNumber.trim(),
+      },
+      requiresAuth: true,
+    );
+    return DocumentRequestModel.fromJson(
+      jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>,
+    );
   }
 
   /// Creates a new document request for the authenticated resident
@@ -140,6 +211,7 @@ class DocumentService {
   Future<Uint8List> fetchPaymentProof(int requestId) async {
     final response = await apiClient.get(
       '/document-requests/$requestId/payment-proof/',
+      headers: const {'Accept': '*/*'},
       requiresAuth: true,
     );
     return response.bodyBytes;
