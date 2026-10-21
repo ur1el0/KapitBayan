@@ -67,7 +67,7 @@ export const CitizenLayout: React.FC = () => {
                             <NavLink to="/portal/documents" aria-label={t('Documents & Clearances')} className={navLinkClass}>
                                 <FileText className="w-4 h-4" />
                                 <span aria-hidden="true">{t('Documents')}</span>
-                                <span className="sr-only">{t('Documents &amp; Clearances')}</span>
+                                <span className="sr-only">{t('Documents & Clearances')}</span>
                             </NavLink>
 
                             <NavLink to="/portal/queue" aria-label={t('Live Queue Ticker')} className={navLinkClass}>

@@ -226,7 +226,7 @@ export const PaymentReferenceForm: React.FC<PaymentReferenceFormProps> = ({
                         {t('Payment recipient')}
                         <select
                             required
-                            aria-label={`${t('Payment recipient')} ${requestId}`}
+                            aria-label={`${t('Payment recipient for request')} ${requestId}`}
                             value={activeRecipientId}
                             onChange={(event) => {
                                 const val = event.target.value;
@@ -346,7 +346,7 @@ export const PaymentReferenceForm: React.FC<PaymentReferenceFormProps> = ({
                                     <input
                                         type="file"
                                         accept="image/jpeg,image/png,image/webp"
-                                        aria-label={`${t('Payment proof screenshot')} ${requestId}`}
+                                        aria-label={`${t('Payment proof screenshot for request')} ${requestId}`}
                                         className="sr-only"
                                         onChange={(e) => handleFileChange(e.target.files?.[0] || null)}
                                     />

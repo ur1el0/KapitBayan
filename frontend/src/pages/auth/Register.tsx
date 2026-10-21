@@ -69,7 +69,7 @@ export const Register: React.FC = () => {
         } catch {
             if (requestId !== barangayRequestId.current) return;
             setBarangays([]);
-            setBarangayDirectoryError(t('We could not load the approved Barangay list. Try again.'));
+            setBarangayDirectoryError(t('Approved barangays could not be loaded. Please try again.'));
         } finally {
             if (requestId === barangayRequestId.current) {
                 setLoadingBarangays(false);
