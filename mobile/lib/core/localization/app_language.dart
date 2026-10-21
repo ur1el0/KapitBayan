@@ -67,6 +67,33 @@ extension AppLanguageText on BuildContext {
 }
 
 const Map<String, String> _filipino = {
+  'Official Sign In': 'Pag-sign in ng Kawani',
+  'BARANGAY PERSONNEL ACCESS': 'PAGPASOK NG KAWANI NG BARANGAY',
+  'Authorized officials, Tanod, and barangay administrators':
+      'Mga awtorisadong opisyal, tanod, at administrador ng barangay.',
+  'Barangay Personnel Official Mode Activated':
+      'Naka-on ang opisyal na mode para sa mga kawani ng barangay.',
+  'Official Email': 'Opisyal na Email',
+  'Please enter your official email address':
+      'Ilagay ang iyong opisyal na email address.',
+  'Authenticate Official': 'Mag-sign in bilang Kawani',
+  'Executive Console': 'Konsol ng Barangay',
+  'Barangay Captain': 'Punong Barangay',
+  'Logout': 'Mag-logout',
+  'Executive Mode Active': 'Aktibo ang Mode ng Administrasyon',
+  'OVERVIEW METRICS': 'MGA SUKAT NG PANGKALAHATANG-IDEYA',
+  'Total Residents': 'Kabuuang Residente',
+  'Pending Docs': 'Mga Nakabinbing Dokumento',
+  'Waiting Queue': 'Naghihintay sa Pila',
+  'Serving: {ticket}': 'Tinatawag: {ticket}',
+  'Active Reports': 'Mga Aktibong Ulat',
+  'EXECUTIVE OPERATIONS': 'MGA OPERASYON NG ADMINISTRASYON',
+  'Field Operations Desk': 'Tanggapan ng Operasyon sa Field',
+  'Advance queue ticker, verify clearance QR, triage incidents':
+      'I-update ang pila, beripikahin ang QR ng sertipikasyon, at suriin ang mga insidente.',
+  'Live Queue Desk': 'Tanggapan ng Live na Pila',
+  'Monitor tickets, manage priority lane':
+      'Subaybayan ang mga tiket at pamahalaan ang prayoridad.',
   'Welcome Back': 'Maligayang Pagbabalik',
   'Please enter your citizen credentials to continue':
       'Ilagay ang detalye ng iyong account upang magpatuloy.',
