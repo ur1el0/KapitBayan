@@ -78,22 +78,33 @@ const Map<String, String> _filipino = {
       'Ilagay ang iyong opisyal na email address.',
   'Authenticate Official': 'Mag-sign in bilang Kawani',
   'Executive Console': 'Konsol ng Barangay',
+  'Administrative Overview': 'Pangkalahatang-ideya ng Administrasyon',
+  'Service summary and community records.':
+      'Buod ng serbisyo at mga tala ng komunidad.',
   'Barangay Captain': 'Punong Barangay',
   'Logout': 'Mag-logout',
   'Executive Mode Active': 'Aktibo ang Mode ng Administrasyon',
   'OVERVIEW METRICS': 'MGA SUKAT NG PANGKALAHATANG-IDEYA',
   'Total Residents': 'Kabuuang Residente',
+  'Total Registered Residents': 'Kabuuang Rehistradong Residente',
   'Pending Docs': 'Mga Nakabinbing Dokumento',
+  'Pending Requests': 'Mga Nakabinbing Kahilingan',
   'Waiting Queue': 'Naghihintay sa Pila',
   'Serving: {ticket}': 'Tinatawag: {ticket}',
   'Active Reports': 'Mga Aktibong Ulat',
+  'Active Issues (In Progress)': 'Mga Aktibong Suliranin (Isinasagawa)',
+  'Clearance Collections': 'Koleksyon sa mga Sertipikasyon',
+  "We couldn't load dashboard summary.":
+      'Hindi ma-load ang buod ng dashboard.',
+  "We couldn't refresh dashboard summary.":
+      'Hindi ma-update ang buod ng dashboard.',
+  'Check your connection and try again.':
+      'Suriin ang iyong koneksyon at subukan muli.',
   'EXECUTIVE OPERATIONS': 'MGA OPERASYON NG ADMINISTRASYON',
   'Field Operations Desk': 'Tanggapan ng Operasyon sa Field',
+  'Return to Executive Console': 'Bumalik sa Konsol ng Barangay',
   'Advance queue ticker, verify clearance QR, triage incidents':
       'I-update ang pila, beripikahin ang QR ng sertipikasyon, at suriin ang mga insidente.',
-  'Live Queue Desk': 'Tanggapan ng Live na Pila',
-  'Monitor tickets, manage priority lane':
-      'Subaybayan ang mga tiket at pamahalaan ang prayoridad.',
   'Welcome Back': 'Maligayang Pagbabalik',
   'Please enter your citizen credentials to continue':
       'Ilagay ang detalye ng iyong account upang magpatuloy.',

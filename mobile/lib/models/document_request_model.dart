@@ -25,6 +25,10 @@ class DocumentRequestModel {
   final DateTime? feeAssessedAt;
   final String? feeWaiverReason;
   final bool isWalkin;
+  final String? requesterName;
+  final String? purok;
+  final String? walkinName;
+  final String? walkinPurok;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -52,6 +56,10 @@ class DocumentRequestModel {
     this.feeAssessedAt,
     this.feeWaiverReason,
     this.isWalkin = false,
+    this.requesterName,
+    this.purok,
+    this.walkinName,
+    this.walkinPurok,
     this.createdAt,
     this.updatedAt,
   });
@@ -96,6 +104,10 @@ class DocumentRequestModel {
           : null,
       feeWaiverReason: json['fee_waiver_reason'] as String?,
       isWalkin: json['is_walkin'] as bool? ?? false,
+      requesterName: json['requester_name'] as String?,
+      purok: json['purok']?.toString(),
+      walkinName: json['walkin_name'] as String?,
+      walkinPurok: json['walkin_purok'] as String?,
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'].toString())
           : null,
@@ -129,6 +141,10 @@ class DocumentRequestModel {
       'fee_assessed_at': feeAssessedAt?.toIso8601String(),
       'fee_waiver_reason': feeWaiverReason,
       'is_walkin': isWalkin,
+      'requester_name': requesterName,
+      'purok': purok,
+      'walkin_name': walkinName,
+      'walkin_purok': walkinPurok,
       'created_at': createdAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
     };
@@ -145,7 +161,10 @@ class DocumentRequestModel {
   bool get isFeeWaived => feeAssessmentStatus.toUpperCase() == 'WAIVED';
   bool get isStatutoryExempt =>
       feeAssessmentStatus.toUpperCase() == 'STATUTORY_EXEMPT' ||
-      {'certificate of indigency', 'first time job seeker certificate'}.contains(
+      {
+        'certificate of indigency',
+        'first time job seeker certificate',
+      }.contains(
         documentType.trim().replaceAll(RegExp(r'\s+'), ' ').toLowerCase(),
       );
   bool get isFeeExempt => isStatutoryExempt;

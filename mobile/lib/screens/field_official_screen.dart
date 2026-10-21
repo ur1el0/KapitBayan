@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../core/localization/app_language.dart';
 import '../core/network/api_client.dart';
 import '../core/theme/app_colors.dart';
 import '../models/document_request_model.dart';
@@ -14,8 +16,13 @@ import 'login_screen.dart';
 
 class FieldOfficialScreen extends StatefulWidget {
   final FieldOfficialService? fieldOfficialService;
+  final int initialTabIndex;
 
-  const FieldOfficialScreen({super.key, this.fieldOfficialService});
+  const FieldOfficialScreen({
+    super.key,
+    this.fieldOfficialService,
+    this.initialTabIndex = 0,
+  });
 
   @override
   State<FieldOfficialScreen> createState() => _FieldOfficialScreenState();
@@ -54,7 +61,11 @@ class _FieldOfficialScreenState extends State<FieldOfficialScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(
+      length: 3,
+      vsync: this,
+      initialIndex: widget.initialTabIndex.clamp(0, 2).toInt(),
+    );
     _initializeService();
   }
 
@@ -308,6 +319,15 @@ class _FieldOfficialScreenState extends State<FieldOfficialScreen>
           ],
         ),
         actions: [
+          if (_currentUser?.role.toUpperCase() == 'ADMIN')
+            IconButton(
+              tooltip: context.tr('Return to Executive Console'),
+              onPressed: () => Navigator.of(context).pop(),
+              icon: const Icon(
+                Icons.space_dashboard_rounded,
+                color: Colors.white,
+              ),
+            ),
           IconButton(
             tooltip: 'Log out',
             onPressed: _authService == null ? null : _logout,

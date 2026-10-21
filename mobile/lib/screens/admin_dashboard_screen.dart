@@ -1,13 +1,16 @@
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
+
 import '../core/network/api_client.dart';
 import '../core/localization/app_language.dart';
 import '../core/theme/app_colors.dart';
 import '../models/user_model.dart';
 import '../services/storage_service.dart';
+import 'admin_document_requests_screen.dart';
+import 'admin_residents_screen.dart';
 import 'field_official_screen.dart';
 import 'login_screen.dart';
-import 'queue_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -19,13 +22,15 @@ class AdminDashboardScreen extends StatefulWidget {
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   UserModel? _currentUser;
   bool _isLoading = true;
+  bool _hasLoadedSummary = false;
+  bool _summaryLoadError = false;
+  bool _isRetryingSummary = false;
 
-  // Executive Metrics from /dashboard/summary/
+  // Headline metrics aligned with the web Admin Dashboard.
   int _totalResidents = 0;
   int _pendingDocuments = 0;
-  int _waitingQueue = 0;
-  String? _servingNow;
-  int _pendingIssues = 0;
+  int _activeIssues = 0;
+  double _clearanceCollections = 0;
 
   @override
   void initState() {
@@ -33,40 +38,91 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     _loadExecutiveDashboard();
   }
 
-  Future<void> _loadExecutiveDashboard() async {
-    final storage = await StorageService.init();
-    _currentUser = storage.getUser();
-
-    final apiClient = ApiClient();
-    final token = storage.getAccessToken();
-    if (token != null) {
-      apiClient.setAuthCredentials(accessToken: token);
-    }
-
+  Future<void> _loadExecutiveDashboard({bool isRetry = false}) async {
+    if (isRetry && mounted) setState(() => _isRetryingSummary = true);
     try {
-      final response = await apiClient.get('/dashboard/summary/', requiresAuth: true);
-      if (response.statusCode == 200) {
-        final data = jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
-        setState(() {
-          _totalResidents = data['total_residents'] as int? ?? 0;
-          
-          final docs = data['document_requests'] as Map<String, dynamic>?;
-          _pendingDocuments = docs?['pending'] as int? ?? 0;
-
-          final queue = data['queue_activity'] as Map<String, dynamic>?;
-          _waitingQueue = queue?['waiting_count'] as int? ?? 0;
-          _servingNow = queue?['serving_now'] as String?;
-
-          final issues = data['issue_reports'] as Map<String, dynamic>?;
-          _pendingIssues = issues?['pending'] as int? ?? 0;
-          
-          _isLoading = false;
-        });
-        return;
+      final storage = await StorageService.init();
+      final currentUser = storage.getUser();
+      final token = storage.getAccessToken();
+      if (token == null || token.isEmpty) {
+        throw StateError('No active session is available.');
       }
-    } catch (_) {}
 
-    if (mounted) setState(() => _isLoading = false);
+      final apiClient = ApiClient();
+      apiClient.setAuthCredentials(accessToken: token);
+      final response = await apiClient.get(
+        '/dashboard/summary/',
+        requiresAuth: true,
+      );
+      if (response.statusCode != 200) {
+        throw StateError('Dashboard summary request failed.');
+      }
+
+      final decoded = jsonDecode(utf8.decode(response.bodyBytes));
+      if (decoded is! Map) {
+        throw const FormatException('Dashboard summary must be an object.');
+      }
+      final data = Map<String, dynamic>.from(decoded);
+      final documents = _asMap(data['document_requests']);
+      final issues = _asMap(data['issue_reports']);
+      final totalResidents = _readRequiredCount(
+        data['total_residents'],
+        'total_residents',
+      );
+      final pendingDocuments = _readRequiredCount(
+        documents['pending'],
+        'document_requests.pending',
+      );
+      final activeIssues = _readRequiredCount(
+        issues['in_progress'],
+        'issue_reports.in_progress',
+      );
+      final revenue = documents['total_revenue'];
+      if (revenue != null && (revenue is! num || !revenue.isFinite)) {
+        throw const FormatException('Invalid document_requests.total_revenue.');
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _currentUser = currentUser;
+        _totalResidents = totalResidents;
+        _pendingDocuments = pendingDocuments;
+        _activeIssues = activeIssues;
+        _clearanceCollections = revenue is num ? revenue.toDouble() : 0;
+        _hasLoadedSummary = true;
+        _summaryLoadError = false;
+        _isLoading = false;
+        _isRetryingSummary = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _summaryLoadError = true;
+        _isLoading = false;
+        _isRetryingSummary = false;
+      });
+    }
+  }
+
+  Map<String, dynamic> _asMap(Object? value) => value is Map
+      ? Map<String, dynamic>.from(value)
+      : const <String, dynamic>{};
+
+  int _readRequiredCount(Object? value, String field) {
+    if (value is! num || !value.isFinite) {
+      throw FormatException('Invalid $field in dashboard summary.');
+    }
+    return value.toInt();
+  }
+
+  String _formatCurrency(double value) {
+    final amount = value.toStringAsFixed(2);
+    final parts = amount.split('.');
+    final groupedWhole = parts.first.replaceAllMapped(
+      RegExp(r'\B(?=(\d{3})+(?!\d))'),
+      (_) => ',',
+    );
+    return '₱$groupedWhole.${parts.last}';
   }
 
   void _handleLogout() async {
@@ -77,6 +133,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       MaterialPageRoute(builder: (_) => const LoginScreen()),
       (route) => false,
     );
+  }
+
+  Future<void> _openWorkflow(Widget screen) async {
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute<void>(builder: (_) => screen));
+    if (mounted) await _loadExecutiveDashboard();
   }
 
   @override
@@ -92,11 +155,21 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           children: [
             Text(
               context.tr('Executive Console'),
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.white),
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w900,
+                color: Colors.white,
+              ),
             ),
             Text(
-              _currentUser?.fullName.isNotEmpty == true ? _currentUser!.fullName : context.tr('Barangay Captain'),
-              style: const TextStyle(fontSize: 12, color: Color(0xFF38BDF8), fontWeight: FontWeight.w600),
+              _currentUser?.fullName.isNotEmpty == true
+                  ? _currentUser!.fullName
+                  : context.tr('Barangay Captain'),
+              style: const TextStyle(
+                fontSize: 12,
+                color: Color(0xFF38BDF8),
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ],
         ),
@@ -106,14 +179,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             onSelected: (value) => language.setLanguage(value),
             itemBuilder: (context) => [
               PopupMenuItem(value: 'en', child: Text(context.tr('English'))),
-              PopupMenuItem(value: 'fil', child: Text(context.tr('Filipino (Tagalog)'))),
+              PopupMenuItem(
+                value: 'fil',
+                child: Text(context.tr('Filipino (Tagalog)')),
+              ),
             ],
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
               child: Center(
                 child: Text(
                   language.languageCode.toUpperCase(),
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ),
             ),
@@ -126,7 +205,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryNavy)))
+          ? const Center(
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  AppColors.primaryNavy,
+                ),
+              ),
+            )
+          : !_hasLoadedSummary
+          ? _buildSummaryErrorState()
           : RefreshIndicator(
               onRefresh: _loadExecutiveDashboard,
               color: AppColors.primaryNavy,
@@ -136,9 +223,33 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    if (_summaryLoadError) ...[
+                      _buildRefreshErrorBanner(),
+                      const SizedBox(height: 16),
+                    ],
+                    Text(
+                      context.tr('Administrative Overview'),
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      context.tr('Service summary and community records.'),
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF64748B),
+                      ),
+                    ),
+                    const SizedBox(height: 18),
                     // Show the current admin mode without offering resident-view switching.
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(16),
@@ -146,11 +257,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.admin_panel_settings_rounded, color: AppColors.primaryNavy, size: 20),
+                          Icon(
+                            Icons.admin_panel_settings_rounded,
+                            color: AppColors.primaryNavy,
+                            size: 20,
+                          ),
                           SizedBox(width: 8),
                           Text(
                             context.tr('Executive Mode Active'),
-                            style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: AppColors.textPrimary),
+                            style: TextStyle(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 13,
+                              color: AppColors.textPrimary,
+                            ),
                           ),
                         ],
                       ),
@@ -161,45 +280,65 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     // Executive Metric Cards (Aligned with Web Admin)
                     Text(
                       context.tr('OVERVIEW METRICS'),
-                      style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800, color: Color(0xFF64748B), letterSpacing: 1.2),
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF64748B),
+                        letterSpacing: 1.2,
+                      ),
                     ),
                     const SizedBox(height: 12),
 
                     GridView.count(
                       crossAxisCount: 2,
-                      crossAxisSpacing: 14,
-                      mainAxisSpacing: 14,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                      childAspectRatio: 0.94,
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
                       children: [
                         _buildMetricCard(
-                          title: 'Total Residents',
+                          title: 'Total Registered Residents',
                           value: '$_totalResidents',
                           icon: Icons.people_alt_outlined,
                           iconColor: const Color(0xFF0284C7),
                           bgColor: const Color(0xFFF0F9FF),
+                          onTap: () =>
+                              _openWorkflow(const AdminResidentsScreen()),
                         ),
                         _buildMetricCard(
-                          title: 'Pending Docs',
+                          title: 'Pending Requests',
                           value: '$_pendingDocuments',
                           icon: Icons.assignment_outlined,
-                          iconColor: const Color(0xFFF59E0B),
-                          bgColor: const Color(0xFFFFFBEB),
-                        ),
-                        _buildMetricCard(
-                          title: 'Waiting Queue',
-                          value: '$_waitingQueue',
-                          subtitle: _servingNow != null ? context.tr('Serving: {ticket}').replaceAll('{ticket}', _servingNow!) : null,
-                          icon: Icons.confirmation_number_outlined,
-                          iconColor: const Color(0xFF10B981),
-                          bgColor: const Color(0xFFECFDF5),
-                        ),
-                        _buildMetricCard(
-                          title: 'Active Reports',
-                          value: '$_pendingIssues',
-                          icon: Icons.warning_amber_rounded,
-                          iconColor: const Color(0xFFEF4444),
+                          iconColor: const Color(0xFFDC2626),
                           bgColor: const Color(0xFFFEF2F2),
+                          onTap: () => _openWorkflow(
+                            const AdminDocumentRequestsScreen(
+                              showActionNeededFirst: true,
+                            ),
+                          ),
+                        ),
+                        _buildMetricCard(
+                          title: 'Active Issues (In Progress)',
+                          value: '$_activeIssues',
+                          icon: Icons.hourglass_top_rounded,
+                          iconColor: const Color(0xFFD97706),
+                          bgColor: const Color(0xFFFFFBEB),
+                          onTap: () => _openWorkflow(
+                            const FieldOfficialScreen(initialTabIndex: 2),
+                          ),
+                        ),
+                        _buildMetricCard(
+                          title: 'Clearance Collections',
+                          value: _formatCurrency(_clearanceCollections),
+                          icon: Icons.account_balance_wallet_outlined,
+                          iconColor: const Color(0xFF059669),
+                          bgColor: const Color(0xFFECFDF5),
+                          onTap: () => _openWorkflow(
+                            const AdminDocumentRequestsScreen(
+                              showActionNeededFirst: false,
+                            ),
+                          ),
                         ),
                       ],
                     ),
@@ -209,7 +348,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     // Executive Management Actions
                     Text(
                       context.tr('EXECUTIVE OPERATIONS'),
-                      style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800, color: Color(0xFF64748B), letterSpacing: 1.2),
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF64748B),
+                        letterSpacing: 1.2,
+                      ),
                     ),
                     const SizedBox(height: 12),
 
@@ -217,33 +361,121 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       icon: Icons.shield_rounded,
                       iconBg: const Color(0xFF091B35),
                       title: context.tr('Field Operations Desk'),
-                      subtitle: context.tr('Advance queue ticker, verify clearance QR, triage incidents'),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const FieldOfficialScreen()),
-                        );
-                      },
+                      subtitle: context.tr(
+                        'Advance queue ticker, verify clearance QR, triage incidents',
+                      ),
+                      onTap: () => _openWorkflow(const FieldOfficialScreen()),
                     ),
-
                     const SizedBox(height: 10),
-
                     _buildActionTile(
-                      icon: Icons.confirmation_number_rounded,
-                      iconBg: const Color(0xFF0284C7),
-                      title: context.tr('Live Queue Desk'),
-                      subtitle: context.tr('Monitor tickets, manage priority lane'),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const QueueScreen()),
-                        );
-                      },
+                      icon: Icons.verified_user_outlined,
+                      iconBg: const Color(0xFF0369A1),
+                      title: 'Residents & Verification',
+                      subtitle: 'Review registrations and resident records',
+                      onTap: () => _openWorkflow(
+                        const AdminResidentsScreen(initialTabIndex: 1),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    _buildActionTile(
+                      icon: Icons.description_outlined,
+                      iconBg: const Color(0xFF047857),
+                      title: 'Document Requests',
+                      subtitle: 'Review requests, fees, and e-payment proofs',
+                      onTap: () =>
+                          _openWorkflow(const AdminDocumentRequestsScreen()),
                     ),
                   ],
                 ),
               ),
             ),
+    );
+  }
+
+  Widget _buildSummaryErrorState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.cloud_off_rounded,
+              size: 42,
+              color: Color(0xFFDC2626),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              context.tr("We couldn't load dashboard summary."),
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              context.tr('Check your connection and try again.'),
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+            ),
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              onPressed: _isRetryingSummary
+                  ? null
+                  : () => _loadExecutiveDashboard(isRetry: true),
+              icon: _isRetryingSummary
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.refresh_rounded),
+              label: Text(
+                context.tr(_isRetryingSummary ? 'Retrying…' : 'Retry'),
+              ),
+              style: FilledButton.styleFrom(
+                minimumSize: const Size(120, 48),
+                backgroundColor: AppColors.primaryNavy,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRefreshErrorBanner() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFEF2F2),
+        border: Border.all(color: const Color(0xFFFECACA)),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.error_outline_rounded,
+            color: Color(0xFFB91C1C),
+            size: 20,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              context.tr("We couldn't refresh dashboard summary."),
+              style: const TextStyle(fontSize: 12, color: Color(0xFF7F1D1D)),
+            ),
+          ),
+          TextButton(
+            onPressed: _isRetryingSummary
+                ? null
+                : () => _loadExecutiveDashboard(isRetry: true),
+            child: Text(context.tr(_isRetryingSummary ? 'Retrying…' : 'Retry')),
+          ),
+        ],
+      ),
     );
   }
 
@@ -254,52 +486,83 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     required IconData icon,
     required Color iconColor,
     required Color bgColor,
+    VoidCallback? onTap,
   }) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFF1F5F9)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(color: bgColor, borderRadius: BorderRadius.circular(10)),
-            child: Icon(icon, color: iconColor, size: 20),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                value,
-                style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: AppColors.primaryNavy),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: const Color(0xFFF1F5F9)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 8,
+                offset: const Offset(0, 3),
               ),
-              const SizedBox(height: 2),
-              Text(
-                context.tr(title),
-                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF64748B)),
-              ),
-              if (subtitle != null) ...[
-                const SizedBox(height: 2),
-                Text(
-                  context.tr(subtitle),
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: iconColor),
-                ),
-              ],
             ],
           ),
-        ],
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: bgColor,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, color: iconColor, size: 20),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      value,
+                      maxLines: 1,
+                      style: const TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.primaryNavy,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    context.tr(title),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF64748B),
+                    ),
+                  ),
+                  if (subtitle != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      context.tr(subtitle),
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: iconColor,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -325,7 +588,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           children: [
             Container(
               padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(color: iconBg, borderRadius: BorderRadius.circular(12)),
+              decoration: BoxDecoration(
+                color: iconBg,
+                borderRadius: BorderRadius.circular(12),
+              ),
               child: Icon(icon, color: Colors.white, size: 22),
             ),
             const SizedBox(width: 14),
@@ -333,13 +599,30 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(context.tr(title), style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, color: AppColors.textPrimary)),
+                  Text(
+                    context.tr(title),
+                    style: const TextStyle(
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
                   const SizedBox(height: 2),
-                  Text(context.tr(subtitle), style: const TextStyle(fontSize: 11.5, color: Color(0xFF64748B))),
+                  Text(
+                    context.tr(subtitle),
+                    style: const TextStyle(
+                      fontSize: 11.5,
+                      color: Color(0xFF64748B),
+                    ),
+                  ),
                 ],
               ),
             ),
-            const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFF94A3B8)),
+            const Icon(
+              Icons.arrow_forward_ios_rounded,
+              size: 14,
+              color: Color(0xFF94A3B8),
+            ),
           ],
         ),
       ),

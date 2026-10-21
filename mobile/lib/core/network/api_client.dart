@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+
 import '../config/app_config.dart';
 import 'api_exception.dart';
 
@@ -308,6 +310,7 @@ class ApiClient {
   /// Perform a DELETE request
   Future<http.Response> delete(
     String endpoint, {
+    Map<String, dynamic>? body,
     Map<String, String>? headers,
     bool requiresAuth = true,
   }) async {
@@ -315,6 +318,7 @@ class ApiClient {
       () => _client.delete(
         _buildUri(endpoint),
         headers: _buildHeaders(headers, requiresAuth: requiresAuth),
+        body: body != null ? jsonEncode(body) : null,
       ),
     );
   }
