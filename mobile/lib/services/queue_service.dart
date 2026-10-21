@@ -138,8 +138,8 @@ class QueueService {
       requiresAuth: true,
       body: {
         'service_type': serviceType,
-        if (notes != null) 'notes': notes,
-        if (documentRequestId != null) 'document_request_id': documentRequestId,
+        'notes': ?notes,
+        'document_request_id': ?documentRequestId,
       },
     );
 
