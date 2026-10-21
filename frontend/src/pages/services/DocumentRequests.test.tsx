@@ -93,6 +93,7 @@ describe('DocumentRequests', () => {
 
         fireEvent.click(screen.getByRole('button', { name: /request walk-in/i }));
         fireEvent.change(screen.getByLabelText('Resident Full Name *'), { target: { value: 'Lina Visitor' } });
+        fireEvent.change(screen.getByLabelText('Other document name *'), { target: { value: 'Barangay Clearance' } });
         fireEvent.change(screen.getByLabelText('Purpose Statement *'), { target: { value: 'Proof of employment' } });
         fireEvent.click(screen.getByRole('button', { name: 'Record Walk-in Request' }));
 
