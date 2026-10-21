@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/localization/app_language.dart';
 import '../core/network/api_client.dart';
 import '../core/theme/app_colors.dart';
 import '../models/document_request_model.dart';
@@ -308,6 +309,15 @@ class _FieldOfficialScreenState extends State<FieldOfficialScreen>
           ],
         ),
         actions: [
+          if (_currentUser?.role.toUpperCase() == 'ADMIN')
+            IconButton(
+              tooltip: context.tr('Return to Executive Console'),
+              onPressed: () => Navigator.of(context).pop(),
+              icon: const Icon(
+                Icons.space_dashboard_rounded,
+                color: Colors.white,
+              ),
+            ),
           IconButton(
             tooltip: 'Log out',
             onPressed: _authService == null ? null : _logout,
