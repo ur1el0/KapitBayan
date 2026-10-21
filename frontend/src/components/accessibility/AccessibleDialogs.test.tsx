@@ -39,7 +39,9 @@ describe('accessible modal names', () => {
             <NewDocumentRequestModal
                 documentType="Barangay Clearance"
                 purpose="Employment"
+                otherDocumentType=""
                 submitting={false}
+                onOtherDocumentTypeChange={vi.fn()}
                 onDocumentTypeChange={vi.fn()}
                 onPurposeChange={vi.fn()}
                 onClose={vi.fn()}
@@ -47,7 +49,7 @@ describe('accessible modal names', () => {
             />,
         );
 
-        expect(screen.getByRole('dialog', { name: 'Request Official Clearance' })).toBeInTheDocument();
+        expect(screen.getByRole('dialog', { name: 'Request a document' })).toBeInTheDocument();
     });
 
     it('names the document review dialog', () => {

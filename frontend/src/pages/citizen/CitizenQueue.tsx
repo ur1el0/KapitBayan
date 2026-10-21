@@ -27,6 +27,8 @@ interface UserTicket {
     ticket_id?: number;
     ticket_number: string;
     service_type: string;
+    document_request_id?: number | null;
+    document_request_type?: string | null;
     status: string;
     is_priority: boolean;
     created_at: string;
@@ -255,6 +257,11 @@ export const CitizenQueue: React.FC = () => {
                                 <p className="text-xs text-slate-500 mt-1">
                                     {t('Service')}: <span className="font-semibold text-slate-700 break-words">{t(activeTicket.service_type)}</span>
                                 </p>
+                                {activeTicket.document_request_id && (
+                                    <p className="text-xs text-blue-700 mt-1">
+                                        {t('Linked document request')} #{activeTicket.document_request_id}
+                                    </p>
+                                )}
                                 <p className="text-[11px] text-slate-400 mt-0.5">
                                     {t('Issued')}: {new Date(activeTicket.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                 </p>

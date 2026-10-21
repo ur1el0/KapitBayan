@@ -1,18 +1,103 @@
+from decimal import Decimal
+
 from rest_framework import serializers
 from gridy_auth.models import User
 from ..fee_policy import enforce_fee_policy
-from ..models import DocumentRequest
+from ..models import DocumentRequest, DocumentServiceOffering
+from ..fee_policy import STATUTORY_INDIGENCY_DOCUMENT_TYPES
 
 
 class FeePolicyValidationMixin:
     def validate(self, attrs):
         attrs = super().validate(attrs)
-        document_type = attrs.get("document_type")
+        offering = attrs.get("offering")
+        document_type = offering.document_type if offering else attrs.get("document_type")
 
         if document_type is None and self.instance is not None:
             document_type = self.instance.document_type
 
+        if offering:
+            attrs["document_type"] = offering.document_type
+
         return enforce_fee_policy(document_type, attrs)
+
+
+class DocumentServiceOfferingSerializer(serializers.ModelSerializer):
+    requirements = serializers.ListField(
+        child=serializers.CharField(max_length=250, allow_blank=False, trim_whitespace=True),
+        required=False,
+        allow_empty=True,
+        max_length=30,
+    )
+    published_fee_amount = serializers.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        required=False,
+        allow_null=True,
+        min_value=Decimal("0.00"),
+    )
+
+    class Meta:
+        model = DocumentServiceOffering
+        fields = [
+            "id",
+            "barangay",
+            "document_type",
+            "requirements",
+            "published_fee_amount",
+            "details",
+            "is_active",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["id", "barangay", "created_at", "updated_at"]
+
+    def validate_document_type(self, value):
+        value = " ".join(value.split())
+        if not value:
+            raise serializers.ValidationError("Enter a document name.")
+        return value
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        barangay_id = getattr(user, "barangay_id", None)
+        document_type = attrs.get(
+            "document_type",
+            self.instance.document_type if self.instance else None,
+        )
+        if not barangay_id:
+            raise serializers.ValidationError(
+                "A Barangay assignment is required to manage document services."
+            )
+
+        duplicate_types = DocumentServiceOffering.objects.filter(
+            barangay_id=barangay_id,
+            document_type__iexact=document_type,
+        )
+        if self.instance:
+            duplicate_types = duplicate_types.exclude(pk=self.instance.pk)
+        if duplicate_types.exists():
+            raise serializers.ValidationError({
+                "document_type": "This document service is already in your Barangay catalog."
+            })
+
+        fee_amount = attrs.get(
+            "published_fee_amount",
+            self.instance.published_fee_amount if self.instance else None,
+        )
+        normalized_type = " ".join((document_type or "").split()).casefold()
+        if (
+            normalized_type in STATUTORY_INDIGENCY_DOCUMENT_TYPES
+            and fee_amount not in (None, Decimal("0.00"))
+        ):
+            raise serializers.ValidationError({
+                "published_fee_amount": (
+                    "A Certificate of Indigency must not list a fee."
+                )
+            })
+        return attrs
 
 
 class DocumentRequestSerializer(FeePolicyValidationMixin, serializers.ModelSerializer):
@@ -26,6 +111,16 @@ class DocumentRequestSerializer(FeePolicyValidationMixin, serializers.ModelSeria
     payment_proof_url = serializers.SerializerMethodField()
     payment_transacted_at = serializers.DateTimeField(read_only=True)
     fee_assessed_by_name = serializers.SerializerMethodField()
+    offering_id = serializers.PrimaryKeyRelatedField(
+        source="offering",
+        queryset=DocumentServiceOffering.objects.all(),
+        required=False,
+        allow_null=True,
+    )
+    offering_details_snapshot = serializers.CharField(
+        source="details_snapshot",
+        read_only=True,
+    )
 
     class Meta:
         model = DocumentRequest
@@ -38,6 +133,10 @@ class DocumentRequestSerializer(FeePolicyValidationMixin, serializers.ModelSeria
             'walkin_name',
             'walkin_purok',
             'document_type',
+            'offering_id',
+            'requirements_snapshot',
+            'published_fee_amount_snapshot',
+            'offering_details_snapshot',
             'purpose',
             'urgency_tag',
             'status',
@@ -63,6 +162,9 @@ class DocumentRequestSerializer(FeePolicyValidationMixin, serializers.ModelSeria
         ]
         read_only_fields = [
             'is_walkin',
+            'requirements_snapshot',
+            'published_fee_amount_snapshot',
+            'offering_details_snapshot',
             'status',
             'admin_notes',
             'or_number',
@@ -84,6 +186,33 @@ class DocumentRequestSerializer(FeePolicyValidationMixin, serializers.ModelSeria
             'created_at',
             'updated_at',
         ]
+
+    def get_fields(self):
+        fields = super().get_fields()
+        if self.instance is not None:
+            fields['offering_id'].read_only = True
+        return fields
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        offering = attrs.get("offering")
+        if offering is None:
+            return attrs
+
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        if (
+            not user
+            or not user.is_authenticated
+            or user.barangay_id is None
+            or offering.barangay_id != user.barangay_id
+            or not offering.is_active
+        ):
+            raise serializers.ValidationError({
+                "offering_id": "Choose an active document service from your Barangay."
+            })
+        attrs["document_type"] = offering.document_type
+        return attrs
 
     def get_requester_name(self, obj) -> str:
         if obj.user:

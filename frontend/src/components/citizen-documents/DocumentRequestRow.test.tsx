@@ -45,9 +45,11 @@ describe('DocumentRequestRow', () => {
         submittingPayment: false,
         downloading: false,
         cancelling: false,
+        requestingCounterTicket: false,
         onSubmitPaymentReference: vi.fn(),
         onDownloadPdf: vi.fn(),
         onCancel: vi.fn(),
+        onGetCounterTicket: vi.fn(),
     };
 
     beforeEach(() => {

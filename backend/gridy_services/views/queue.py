@@ -6,7 +6,7 @@ from django.utils import timezone
 from drf_spectacular.utils import extend_schema
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
 
 from gridy_audit.models import AuditLog
@@ -60,6 +60,23 @@ class QueueTicketViewSet(viewsets.ModelViewSet):
 
         priority_reason = serializer.validated_data.get('priority_reason')
         with transaction.atomic():
+            document_request = serializer.validated_data.get('document_request')
+            if document_request is not None:
+                Barangay.objects.select_for_update().get(pk=user.barangay_id)
+                has_active_ticket = QueueTicket.objects.filter(
+                    document_request=document_request,
+                    status__in=(
+                        QueueTicket.Status.WAITING,
+                        QueueTicket.Status.SERVING,
+                    ),
+                ).exists()
+                if has_active_ticket:
+                    raise ValidationError({
+                        'document_request_id': (
+                            'An active queue ticket already exists for this request.'
+                        )
+                    })
+
             if user.role == User.Role.ADMIN:
                 ticket = serializer.save(user=None, barangay=user.barangay)
             elif user.role == User.Role.RESIDENT:

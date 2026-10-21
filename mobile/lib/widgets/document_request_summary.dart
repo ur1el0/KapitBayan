@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/localization/app_language.dart';
 import '../core/theme/app_colors.dart';
 import '../models/document_request_model.dart';
 
@@ -23,19 +24,79 @@ class DocumentRequestSummary extends StatelessWidget {
       children: [
         // Details List
         _DetailRow(
-          label: 'Current Status',
+          label: context.tr('Current Status'),
           value: req.statusDisplay,
           valueColor: req.statusBadgeTextColor,
         ),
         const SizedBox(height: 12),
         _DetailRow(
-          label: 'Urgency Priority',
+          label: context.tr('Urgency Priority'),
           value: req.urgencyTag.toUpperCase() == 'URGENT'
               ? 'Urgent / Priority'
               : 'Regular',
         ),
         const SizedBox(height: 12),
-        _DetailRow(label: 'Submission Date', value: req.formattedRequestedDate),
+        _DetailRow(
+          label: context.tr('Submission Date'),
+          value: req.formattedRequestedDate,
+        ),
+
+        if (req.hasOfferingSnapshot) ...[
+          const SizedBox(height: 12),
+          _DetailRow(
+            label: context.tr('Published fee'),
+            value: req.publishedFeeAmountSnapshot == null
+                ? context.tr('Confirm with Barangay staff')
+                : req.publishedFeeAmountSnapshot == 0
+                ? context.tr('No fee')
+                : '₱${req.publishedFeeAmountSnapshot!.toStringAsFixed(2)}',
+          ),
+          const SizedBox(height: 8),
+          Text(
+            context.tr('Requirements'),
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textLabel,
+            ),
+          ),
+          const SizedBox(height: 4),
+          if (req.requirementsSnapshot.isEmpty)
+            Text(
+              context.tr('No requirements were listed.'),
+              style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+            )
+          else
+            ...req.requirementsSnapshot.map(
+              (requirement) => Padding(
+                padding: const EdgeInsets.only(bottom: 3),
+                child: Text(
+                  '• ${context.tr(requirement)}',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ),
+            ),
+          if (req.offeringDetailsSnapshot.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(
+              context.tr(req.offeringDetailsSnapshot),
+              style: const TextStyle(
+                fontSize: 12,
+                color: AppColors.textPrimary,
+              ),
+            ),
+          ],
+          const SizedBox(height: 4),
+          Text(
+            context.tr(
+              'Final fees are confirmed by Barangay staff during processing.',
+            ),
+            style: const TextStyle(fontSize: 11, color: AppColors.textMuted),
+          ),
+        ],
 
         if (req.orNumber != null && req.orNumber!.isNotEmpty) ...[
           const SizedBox(height: 12),

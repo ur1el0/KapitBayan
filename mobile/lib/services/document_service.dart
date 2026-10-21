@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 
 import '../core/network/api_client.dart';
 import '../models/document_request_model.dart';
+import '../models/document_offering_model.dart';
 import '../models/payment_recipient_model.dart';
 import 'storage_service.dart';
 
@@ -58,6 +59,69 @@ class DocumentService {
     } catch (e) {
       rethrow;
     }
+  }
+
+  Future<List<DocumentOfferingModel>> fetchDocumentOfferings() async {
+    final response = await apiClient.get(
+      '/document-catalog/',
+      requiresAuth: true,
+    );
+    final decoded = jsonDecode(utf8.decode(response.bodyBytes));
+    final rawItems = decoded is Map<String, dynamic>
+        ? decoded['results']
+        : decoded;
+    if (rawItems is! List) {
+      throw const FormatException('Document service catalog is invalid.');
+    }
+    return rawItems
+        .map(
+          (item) => DocumentOfferingModel.fromJson(
+            Map<String, dynamic>.from(item as Map),
+          ),
+        )
+        .toList();
+  }
+
+  Future<DocumentOfferingModel> saveDocumentOffering({
+    int? offeringId,
+    required String documentType,
+    required List<String> requirements,
+    required double? publishedFeeAmount,
+    required String details,
+    required bool isActive,
+  }) async {
+    final body = <String, dynamic>{
+      'document_type': documentType.trim(),
+      'requirements': requirements,
+      'published_fee_amount': publishedFeeAmount,
+      'details': details.trim(),
+      'is_active': isActive,
+    };
+    final response = offeringId == null
+        ? await apiClient.post(
+            '/document-catalog/',
+            body: body,
+            requiresAuth: true,
+          )
+        : await apiClient.patch(
+            '/document-catalog/$offeringId/',
+            body: body,
+            requiresAuth: true,
+          );
+    return DocumentOfferingModel.fromJson(
+      jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>,
+    );
+  }
+
+  Future<void> setDocumentOfferingActive({
+    required int offeringId,
+    required bool isActive,
+  }) async {
+    await apiClient.patch(
+      '/document-catalog/$offeringId/',
+      body: {'is_active': isActive},
+      requiresAuth: true,
+    );
   }
 
   /// Applies the existing barangay staff review transition for one request.
@@ -119,11 +183,39 @@ class DocumentService {
     String urgencyTag = 'REGULAR',
     String? purpose,
   }) async {
+    return _createDocumentRequest(
+      documentType: documentType,
+      urgencyTag: urgencyTag,
+      purpose: purpose,
+    );
+  }
+
+  Future<DocumentRequestModel> createDocumentRequestFromOffering({
+    required int offeringId,
+    required String documentType,
+    String urgencyTag = 'REGULAR',
+    String? purpose,
+  }) async {
+    return _createDocumentRequest(
+      documentType: documentType,
+      offeringId: offeringId,
+      urgencyTag: urgencyTag,
+      purpose: purpose,
+    );
+  }
+
+  Future<DocumentRequestModel> _createDocumentRequest({
+    required String documentType,
+    int? offeringId,
+    required String urgencyTag,
+    String? purpose,
+  }) async {
     try {
       final response = await apiClient.post(
         '/document-requests/',
         body: {
           'document_type': documentType,
+          'offering_id': ?offeringId,
           'urgency_tag': urgencyTag.toUpperCase(),
           'purpose': ?purpose,
         },

@@ -7,10 +7,12 @@ from .views import (
     DashboardSummaryView,
     PublicQueueStatusView,
     PaymentRecipientViewSet,
+    DocumentServiceOfferingViewSet,
 )
 
 router = DefaultRouter()
 router.register(r'document-requests', DocumentRequestViewSet, basename='document-request')
+router.register(r'document-catalog', DocumentServiceOfferingViewSet, basename='document-catalog')
 router.register(r'aid-requests', AidRequestViewSet, basename='aid-request')
 router.register(r'tickets', QueueTicketViewSet, basename='ticket')
 router.register(r'payment-recipients', PaymentRecipientViewSet, basename='payment-recipient')

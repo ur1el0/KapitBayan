@@ -8,6 +8,7 @@ import '../models/document_request_model.dart';
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
 import '../services/document_service.dart';
+import '../services/queue_service.dart';
 import '../services/storage_service.dart';
 import '../widgets/custom_bottom_nav.dart';
 import '../widgets/document_details_dialog.dart';
@@ -36,6 +37,7 @@ class DocumentsScreen extends StatefulWidget {
 
 class _DocumentsScreenState extends State<DocumentsScreen> {
   DocumentService? _documentService;
+  QueueService? _queueService;
   AuthService? _authService;
   UserModel? _currentUser;
   List<DocumentRequestModel> _requests = [];
@@ -43,6 +45,7 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
   bool _hasLoadedDocuments = false;
   bool _isRetrying = false;
   String? _loadErrorMessage;
+  int? _requestingCounterTicketId;
   final int _selectedNavIndex = 2;
 
   final TextEditingController _searchController = TextEditingController();
@@ -70,6 +73,10 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
     final apiClient = ApiClient();
     _authService ??= AuthService(apiClient: apiClient, storageService: storage);
     _documentService ??= DocumentService(
+      apiClient: apiClient,
+      storageService: storage,
+    );
+    _queueService ??= QueueService(
       apiClient: apiClient,
       storageService: storage,
     );
@@ -136,8 +143,44 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
         request: req,
         documentService: _documentService,
         onRequestUpdated: _loadDocumentsData,
+        onGetCounterTicket: () => _getCounterTicket(req),
       ),
     );
+  }
+
+  Future<void> _getCounterTicket(DocumentRequestModel request) async {
+    final service = _queueService;
+    if (service == null || _requestingCounterTicketId != null) return;
+
+    setState(() => _requestingCounterTicketId = request.id);
+    try {
+      final ticket = await service.requestTicket(
+        serviceType: request.documentType,
+        documentRequestId: request.id,
+      );
+      if (!mounted) return;
+
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Counter ticket generated: ${ticket.ticketNumber}'),
+        ),
+      );
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) =>
+              QueueScreen(queueService: service, authService: _authService),
+        ),
+      );
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not get a counter ticket: $error')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _requestingCounterTicketId = null);
+    }
   }
 
   void _navigateToProfile() {

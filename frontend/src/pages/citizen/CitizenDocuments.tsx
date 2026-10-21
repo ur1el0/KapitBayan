@@ -4,7 +4,7 @@ import { axiosPrivate } from '../../api/axios';
 import { getSafeApiErrorMessage } from '../../api/error-message';
 import { InlineErrorState } from '../../components/ui/InlineErrorState';
 import { NewDocumentRequestModal } from '../../components/citizen-documents/NewDocumentRequestModal';
-import { DOCUMENT_TYPES } from '../../components/citizen-documents/documentTypes';
+import { type DocumentServiceOffering } from '../../components/documents/documentCatalog';
 import { DocumentRequestRow } from '../../components/citizen-documents/DocumentRequestRow';
 import type { DocumentRequest, PaymentRecipient } from '../../components/citizen-documents/types';
 import { useLanguage } from '../../context/language-context';
@@ -17,6 +17,9 @@ import {
 export const CitizenDocuments: React.FC = () => {
     const { t } = useLanguage();
     const [requests, setRequests] = useState<DocumentRequest[]>([]);
+    const [offerings, setOfferings] = useState<DocumentServiceOffering[]>([]);
+    const [offeringsLoadError, setOfferingsLoadError] = useState(false);
+    const [offeringsLoaded, setOfferingsLoaded] = useState(false);
     const [loading, setLoading] = useState(true);
     const [loadError, setLoadError] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -29,9 +32,11 @@ export const CitizenDocuments: React.FC = () => {
     const [paymentRecipientsLoading, setPaymentRecipientsLoading] = useState(true);
     const [paymentRecipientsLoadError, setPaymentRecipientsLoadError] = useState(false);
     const [submittingPaymentId, setSubmittingPaymentId] = useState<number | null>(null);
+    const [requestingCounterTicketId, setRequestingCounterTicketId] = useState<number | null>(null);
 
     // Form State
-    const [documentType, setDocumentType] = useState(DOCUMENT_TYPES[0]);
+    const [offeringId, setOfferingId] = useState<number | null>(null);
+    const [otherDocumentType, setOtherDocumentType] = useState('');
     const [purpose, setPurpose] = useState('');
 
     const fetchRequests = async () => {
@@ -65,6 +70,34 @@ export const CitizenDocuments: React.FC = () => {
         }
     };
 
+    const fetchOfferings = async () => {
+        try {
+            const response = await axiosPrivate.get('/document-catalog/');
+            const data = response.data.results || response.data;
+            setOfferings(Array.isArray(data) ? data : []);
+            setOfferingsLoadError(false);
+            const active = Array.isArray(data)
+                ? data.filter((offering: DocumentServiceOffering) => offering.is_active)
+                : [];
+            setOfferingId((current) =>
+                current && active.some((offering: DocumentServiceOffering) => offering.id === current)
+                    ? current
+                    : active[0]?.id ?? null,
+            );
+        } catch {
+            setOfferings([]);
+            setOfferingsLoadError(true);
+        } finally {
+            setOfferingsLoaded(true);
+        }
+    };
+
+    const openNewRequest = () => {
+        if (!offeringsLoaded) void fetchOfferings();
+        setOfferingId((current) => current ?? offerings.find((offering) => offering.is_active)?.id ?? null);
+        setIsModalOpen(true);
+    };
+
     useEffect(() => {
         fetchRequests();
         void fetchPaymentRecipients();
@@ -72,20 +105,31 @@ export const CitizenDocuments: React.FC = () => {
 
     const handleCreateRequest = async (e: React.SubmitEvent<HTMLElement>) => {
         e.preventDefault();
+        const selectedOffering = offerings.find((offering) => offering.id === offeringId);
+        const requestedDocumentType = selectedOffering
+            ? selectedOffering.document_type
+            : otherDocumentType.trim();
         if (!purpose.trim()) {
             toast.error(t('Please specify a valid purpose for this certificate.'));
+            return;
+        }
+        if (!requestedDocumentType || requestedDocumentType.length > 100) {
+            toast.error(t('Enter a document name between 1 and 100 characters.'));
             return;
         }
 
         try {
             setSubmitting(true);
             await axiosPrivate.post('/document-requests/', {
-                document_type: documentType,
+                document_type: requestedDocumentType,
+                ...(selectedOffering ? { offering_id: selectedOffering.id } : {}),
                 purpose: purpose.trim(),
             });
             toast.success(t('Document request filed successfully!'));
             setIsModalOpen(false);
             setPurpose('');
+            setOtherDocumentType('');
+            setOfferingId(null);
             fetchRequests();
         } catch (err) {
             toast.error(getSafeApiErrorMessage(
@@ -94,6 +138,25 @@ export const CitizenDocuments: React.FC = () => {
             ));
         } finally {
             setSubmitting(false);
+        }
+    };
+
+    const handleGetCounterTicket = async (request: DocumentRequest) => {
+        try {
+            setRequestingCounterTicketId(request.id);
+            const response = await axiosPrivate.post('/tickets/', {
+                service_type: request.document_type,
+                document_request_id: request.id,
+            });
+            toast.success(`${t('Counter ticket generated:')} ${response.data.ticket_number}`);
+            window.location.assign('/portal/queue');
+        } catch (err) {
+            toast.error(getSafeApiErrorMessage(
+                err,
+                t("We couldn't create a counter ticket for this request. Check your connection and try again."),
+            ));
+        } finally {
+            setRequestingCounterTicketId(null);
         }
     };
 
@@ -175,7 +238,7 @@ export const CitizenDocuments: React.FC = () => {
                     </p>
                 </div>
                 <button
-                    onClick={() => setIsModalOpen(true)}
+                    onClick={openNewRequest}
                     className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-primary-foreground text-sm font-semibold shadow-xs transition-all cursor-pointer shrink-0"
                 >
                     <Plus className="w-4 h-4" />
@@ -238,6 +301,7 @@ export const CitizenDocuments: React.FC = () => {
                                         submittingPayment={submittingPaymentId === request.id}
                                         downloading={downloadingId === request.id}
                                         cancelling={cancellingId === request.id}
+                                        requestingCounterTicket={requestingCounterTicketId === request.id}
                                         onRecipientChange={(value) =>
                                             setSelectedRecipientId((current) => ({
                                                 ...current,
@@ -253,6 +317,7 @@ export const CitizenDocuments: React.FC = () => {
                                         onSubmitPaymentReference={(formData) => handleSubmitPaymentReference(request.id, formData)}
                                         onDownloadPdf={() => handleDownloadPdf(request.id, request.document_type)}
                                         onCancel={() => handleCancelRequest(request.id)}
+                                        onGetCounterTicket={() => void handleGetCounterTicket(request)}
                                     />
                                 ))}
                             </tbody>
@@ -263,10 +328,14 @@ export const CitizenDocuments: React.FC = () => {
 
             {isModalOpen && (
                 <NewDocumentRequestModal
-                    documentType={documentType}
+                    offerings={offerings}
+                    offeringId={offeringId}
+                    offeringsLoadError={offeringsLoadError}
                     purpose={purpose}
+                    otherDocumentType={otherDocumentType}
                     submitting={submitting}
-                    onDocumentTypeChange={setDocumentType}
+                    onOfferingChange={setOfferingId}
+                    onOtherDocumentTypeChange={setOtherDocumentType}
                     onPurposeChange={setPurpose}
                     onClose={() => setIsModalOpen(false)}
                     onSubmit={handleCreateRequest}

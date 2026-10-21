@@ -21,7 +21,14 @@ describe('CitizenDocuments', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         vi.mocked(axiosPrivate.get).mockImplementation(async (url: string) => ({
-            data: url === '/payment-recipients/' ? [{
+            data: url === '/document-catalog/' ? [{
+                id: 42,
+                document_type: 'Certificate of Residency',
+                requirements: ['Government ID or proof of residency'],
+                published_fee_amount: '50.00',
+                details: '',
+                is_active: true,
+            }] : url === '/payment-recipients/' ? [{
                 id: 7,
                 provider: 'MAYA',
                 provider_label: 'Maya',
@@ -181,7 +188,7 @@ describe('CitizenDocuments', () => {
         render(<CitizenDocuments />);
         fireEvent.click(screen.getByRole('button', { name: 'Request New Clearance' }));
         fireEvent.change(await screen.findByLabelText('Document Type'), {
-            target: { value: 'Certificate of Residency' },
+            target: { value: '42' },
         });
         fireEvent.change(screen.getByLabelText('Purpose Statement'), {
             target: { value: '  Postal ID  ' },
@@ -190,10 +197,10 @@ describe('CitizenDocuments', () => {
 
         await waitFor(() => expect(axiosPrivate.post).toHaveBeenCalledWith(
             '/document-requests/',
-            { document_type: 'Certificate of Residency', purpose: 'Postal ID' },
+            { document_type: 'Certificate of Residency', offering_id: 42, purpose: 'Postal ID' },
         ));
         await waitFor(() => expect(
-            screen.queryByRole('heading', { name: 'Request Official Clearance' }),
+            screen.queryByRole('heading', { name: 'Request a document' }),
         ).not.toBeInTheDocument());
     });
 

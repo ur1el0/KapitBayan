@@ -10,6 +10,7 @@ import '../models/document_request_model.dart';
 import '../services/auth_service.dart';
 import '../services/document_service.dart';
 import '../services/storage_service.dart';
+import 'admin_document_catalog_screen.dart';
 
 class AdminDocumentRequestsScreen extends StatefulWidget {
   final bool showActionNeededFirst;
@@ -108,6 +109,18 @@ class _AdminDocumentRequestsScreenState
         foregroundColor: Colors.white,
         title: Text(context.tr('Document Requests')),
         actions: [
+          IconButton(
+            tooltip: context.tr('Manage document services'),
+            onPressed: _service == null
+                ? null
+                : () => Navigator.of(context).push<void>(
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          AdminDocumentCatalogScreen(service: _service!),
+                    ),
+                  ),
+            icon: const Icon(Icons.fact_check_outlined),
+          ),
           IconButton(
             tooltip: 'Refresh document requests',
             onPressed: _isInitializing ? null : _loadRequests,
@@ -994,6 +1007,48 @@ class _AdminDocumentRequestDetailsScreenState
               ],
             ),
           ),
+          if (_request.hasOfferingSnapshot)
+            _sectionCard(
+              title: context.tr('Published requirements and fee'),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _detail(
+                    context.tr('Published fee'),
+                    _request.publishedFeeAmountSnapshot == null
+                        ? context.tr('Confirm with Barangay staff')
+                        : _request.publishedFeeAmountSnapshot == 0
+                        ? context.tr('No fee')
+                        : '₱${_request.publishedFeeAmountSnapshot!.toStringAsFixed(2)}',
+                  ),
+                  if (_request.requirementsSnapshot.isEmpty)
+                    _detail(
+                      context.tr('Requirements'),
+                      context.tr('No requirements were listed.'),
+                    )
+                  else
+                    _detail(
+                      context.tr('Requirements'),
+                      _request.requirementsSnapshot
+                          .map((requirement) => '• ${context.tr(requirement)}')
+                          .join('\n'),
+                    ),
+                  _detail(
+                    context.tr('Additional details'),
+                    _request.offeringDetailsSnapshot,
+                  ),
+                  Text(
+                    context.tr(
+                      'These are the published details saved when the request was filed. The fee assessment below records the final amount.',
+                    ),
+                    style: const TextStyle(
+                      color: Color(0xFF64748B),
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           _paymentProofCard(),
           _paymentReviewActions(),
           _reviewForm(),

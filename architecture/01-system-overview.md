@@ -26,7 +26,7 @@ Tenant scope is derived and enforced by the backend. A client-supplied barangay 
 ## Core capabilities
 
 - Resident registration, identity evidence review, account sessions, and profile lifecycle.
-- Document requests, explicit fee assessment, statutory waivers, manual payment evidence review, and official-receipt controls.
+- Barangay-managed document-service catalogs with per-document requirements and published details, request snapshots, explicit fee assessment, statutory waivers, manual payment evidence review, and official-receipt controls.
 - Digital and in-person queue workflows.
 - Announcements, activities, FAQs, emergency hotlines, and notifications.
 - Assistance requests, incident reports, resident directories, and scoped analytics.

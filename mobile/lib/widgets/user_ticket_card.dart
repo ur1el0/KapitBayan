@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../core/localization/app_language.dart';
 import '../core/theme/app_colors.dart';
 import '../models/queue_ticket_model.dart';
@@ -66,7 +67,8 @@ class UserTicketCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    errorMessage ?? context.tr('Tap retry to check ticket status'),
+                    errorMessage ??
+                        context.tr('Tap retry to check ticket status'),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
@@ -92,7 +94,8 @@ class UserTicketCard extends StatelessWidget {
       );
     }
 
-    final bool hasTicket = ticket != null && !ticket!.isCompleted && !ticket!.isCancelled;
+    final bool hasTicket =
+        ticket != null && !ticket!.isCompleted && !ticket!.isCancelled;
 
     return Container(
       width: double.infinity,
@@ -126,9 +129,13 @@ class UserTicketCard extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                hasTicket ? ticket!.ticketNumber : context.tr('No Active Ticket'),
+                hasTicket
+                    ? ticket!.ticketNumber
+                    : context.tr('No Active Ticket'),
                 style: TextStyle(
-                  color: hasTicket ? AppColors.primaryNavy : const Color(0xFF94A3B8),
+                  color: hasTicket
+                      ? AppColors.primaryNavy
+                      : const Color(0xFF94A3B8),
                   fontSize: hasTicket ? 28 : 20,
                   fontWeight: FontWeight.w800,
                   letterSpacing: -0.5,
@@ -143,6 +150,19 @@ class UserTicketCard extends StatelessWidget {
                     fontSize: 12.5,
                     fontWeight: FontWeight.w500,
                   ),
+                ),
+              ],
+              if (hasTicket && ticket!.documentRequestId != null) ...[
+                const SizedBox(height: 2),
+                Text(
+                  '${context.tr('Document request')} #${ticket!.documentRequestId}',
+                  style: const TextStyle(
+                    color: Color(0xFF2563EB),
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ],

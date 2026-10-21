@@ -117,10 +117,11 @@ void main() {
     expect(find.text('Standard residency proof'), findsOneWidget);
     expect(find.text('Certificate of\nIndigency'), findsOneWidget);
     expect(find.text('For social service aid'), findsOneWidget);
-    expect(find.text('Residency\nCertificate'), findsOneWidget);
+    expect(find.text('Certificate of\nResidency'), findsOneWidget);
     expect(find.text('Address verification'), findsOneWidget);
-    expect(find.text('Business Permit'), findsWidgets); // in grid and requests
-    expect(find.text('Local trade registration'), findsOneWidget);
+    expect(find.text('Barangay Business\nClearance'), findsOneWidget);
+    expect(find.text('Local business clearance'), findsOneWidget);
+    expect(find.text('Business Permit'), findsOneWidget); // Existing request fixture
 
     // 4. "My Document Requests" Section & Cards
     expect(find.text('My Document Requests'), findsOneWidget);
