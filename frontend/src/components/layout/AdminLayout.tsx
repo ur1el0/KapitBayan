@@ -10,9 +10,12 @@ import {
 import { Sidebar } from './Sidebar';
 import { axiosPrivate } from '../../api/axios';
 import { getMediaUrl } from '../../utils/media-url';
+import { useLanguage } from '../../context/language-context';
+import { LanguageSwitcher } from '../language/LanguageSwitcher';
 
 export const AdminLayout: React.FC = () => {
     const { user } = useAuth();
+    const { t } = useLanguage();
     const navigate = useNavigate();
     const [isMobileNavigationOpen, setIsMobileNavigationOpen] = useState(false);
     const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
@@ -67,7 +70,7 @@ export const AdminLayout: React.FC = () => {
                         <button
                             type="button"
                             onClick={() => setIsMobileNavigationOpen((open) => !open)}
-                            aria-label={isMobileNavigationOpen ? 'Close navigation menu' : 'Open navigation menu'}
+                            aria-label={t(isMobileNavigationOpen ? 'Close navigation menu' : 'Open navigation menu')}
                             aria-expanded={isMobileNavigationOpen}
                             aria-controls="admin-mobile-navigation"
                             className="md:hidden inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-xs transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-admin/40"
@@ -75,13 +78,16 @@ export const AdminLayout: React.FC = () => {
                             {isMobileNavigationOpen ? <X className="h-5 w-5" aria-hidden="true" /> : <Menu className="h-5 w-5" aria-hidden="true" />}
                         </button>
                         <span className="truncate text-sm font-semibold text-slate-700 sm:text-base">
-                            KapitBayan administration
+                            {t('KapitBayan administration')}
                         </span>
                     </div>
 
                     {/* Right Header Controls */}
                     <div className="flex shrink-0 items-center gap-2 sm:gap-4">
-                        <button type="button" onClick={() => navigate('/notifications')} className="relative rounded-full p-2 text-primary-text transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-admin/40" aria-label={unreadNotificationCount ? `Notifications, ${unreadNotificationCount} unread` : 'Notifications'}>
+                        <div className="hidden md:block">
+                            <LanguageSwitcher compact />
+                        </div>
+                        <button type="button" onClick={() => navigate('/notifications')} className="relative rounded-full p-2 text-primary-text transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-admin/40" aria-label={unreadNotificationCount ? `${t('Notifications')}, ${unreadNotificationCount} ${t('unread')}` : t('Notifications')}>
                             <Bell className="w-5 h-5" aria-hidden="true" />
                             {unreadNotificationCount > 0 && (
                                 <span aria-hidden="true" className="absolute -right-1 -top-1 min-w-5 rounded-full bg-rose-600 px-1 text-center text-[10px] font-extrabold leading-5 text-white">
@@ -90,11 +96,11 @@ export const AdminLayout: React.FC = () => {
                             )}
                         </button>
                         
-                        <button type="button" onClick={() => navigate('/faqs')} className="rounded-full p-2 text-primary-text transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-admin/40" aria-label="Help and information">
+                        <button type="button" onClick={() => navigate('/faqs')} className="rounded-full p-2 text-primary-text transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-admin/40" aria-label={t('Help and information')}>
                             <HelpCircle className="w-5 h-5" aria-hidden="true" />
                         </button>
 
-                        <button type="button" onClick={() => navigate('/profile')} aria-label={`Open profile for ${userName}`} className="flex items-center gap-2 rounded-xl pl-1 sm:gap-3 sm:pl-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-admin/40">
+                        <button type="button" onClick={() => navigate('/profile')} aria-label={`${t('Open profile for')} ${userName}`} className="flex items-center gap-2 rounded-xl pl-1 sm:gap-3 sm:pl-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-admin/40">
                             <span className="hidden max-w-40 truncate text-sm font-bold text-slate-800 sm:block">{userName}</span>
                             <div className="w-9 h-9 overflow-hidden rounded-xl bg-slate-300 text-slate-700 font-bold flex items-center justify-center text-sm shadow-xs border border-slate-200">
                                 {profilePictureUrl ? (
@@ -121,7 +127,7 @@ export const AdminLayout: React.FC = () => {
 
                     {/* Footer */}
                     <footer className="pt-8 text-xs text-slate-600 font-medium">
-                        © 2026 KapitBayan Admin
+                        {t('© 2026 KapitBayan Admin')}
                     </footer>
                 </main>
             </div>
