@@ -56,7 +56,7 @@ export const Notifications: React.FC = () => {
             }
         };
 
-        const interval = window.setInterval(refreshWhenVisible, 30_000);
+        const interval = window.setInterval(refreshWhenVisible, 5_000);
         document.addEventListener('visibilitychange', refreshWhenVisible);
 
         return () => {
