@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Bell, CheckCircle, Clock, AlertTriangle, FileText, Users, UserRoundPlus, Flag, Trash2, CheckSquare, Square, Check, Loader2, ArrowUpRight } from 'lucide-react';
 import { axiosPrivate } from '../../api/axios';
 import { InlineErrorState } from '../../components/ui/InlineErrorState';
@@ -30,7 +30,7 @@ export const Notifications: React.FC = () => {
     const [retrying, setRetrying] = useState(false);
 
     // 1. Fetch notifications from backend
-    const fetchNotifications = async (isRetry = false) => {
+    const fetchNotifications = useCallback(async (isRetry = false) => {
         if (isRetry) setRetrying(true);
 
         try {
@@ -45,11 +45,25 @@ export const Notifications: React.FC = () => {
             setLoading(false);
             setRetrying(false);
         }
-    };
+    }, []);
 
     useEffect(() => {
         void fetchNotifications();
-    }, []);
+
+        const refreshWhenVisible = () => {
+            if (document.visibilityState === 'visible') {
+                void fetchNotifications();
+            }
+        };
+
+        const interval = window.setInterval(refreshWhenVisible, 5_000);
+        document.addEventListener('visibilitychange', refreshWhenVisible);
+
+        return () => {
+            window.clearInterval(interval);
+            document.removeEventListener('visibilitychange', refreshWhenVisible);
+        };
+    }, [fetchNotifications]);
 
     // Selection Logic
     const handleSelectAll = () => {

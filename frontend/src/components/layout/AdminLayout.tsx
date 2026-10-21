@@ -38,7 +38,7 @@ export const AdminLayout: React.FC = () => {
         };
 
         void loadUnreadCount();
-        const interval = window.setInterval(() => void loadUnreadCount(), 30_000);
+        const interval = window.setInterval(() => void loadUnreadCount(), 5_000);
         window.addEventListener('gridy:admin-notifications-changed', loadUnreadCount);
         document.addEventListener('visibilitychange', handleVisibility);
 
