@@ -46,6 +46,40 @@ class PaymentRecipient(models.Model):
         return f"{self.get_provider_display()} — {self.display_name}"
 
 
+class DocumentServiceOffering(models.Model):
+    """A Barangay-published document service and its current requirements."""
+
+    barangay = models.ForeignKey(
+        Barangay,
+        on_delete=models.CASCADE,
+        related_name="document_offerings",
+    )
+    document_type = models.CharField(max_length=100)
+    requirements = models.JSONField(default=list, blank=True)
+    published_fee_amount = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        null=True,
+        blank=True,
+    )
+    details = models.TextField(blank=True, max_length=2000)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["document_type", "id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["barangay", "document_type"],
+                name="unique_document_offering_per_barangay",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.document_type} — {self.barangay.name}"
+
+
 class DocumentRequest(models.Model):
     class Status(models.TextChoices):
         PENDING = 'PENDING', 'Pending'
@@ -78,6 +112,21 @@ class DocumentRequest(models.Model):
     walkin_purok = models.CharField(max_length=100, blank=True, null=True)
 
     document_type = models.CharField(max_length=100)
+    offering = models.ForeignKey(
+        DocumentServiceOffering,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="requests",
+    )
+    requirements_snapshot = models.JSONField(default=list, blank=True)
+    published_fee_amount_snapshot = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        null=True,
+        blank=True,
+    )
+    details_snapshot = models.TextField(blank=True, max_length=2000)
     purpose = models.TextField(blank=True, null=True)
     urgency_tag = models.CharField(
         max_length=20,
@@ -267,6 +316,14 @@ class QueueTicket(models.Model):
         related_name='queue_tickets'
     )
 
+    document_request = models.ForeignKey(
+        DocumentRequest,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='queue_tickets',
+    )
+
     barangay = models.ForeignKey(
         Barangay,
         on_delete=models.CASCADE,
@@ -343,5 +400,15 @@ class QueueTicket(models.Model):
             models.Index(fields=['status', 'created_at']),
             models.Index(fields=['created_at']),
             models.Index(fields=['barangay', 'called_at'], name='gridy_queue_call_idx'),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=['document_request'],
+                condition=models.Q(
+                    document_request__isnull=False,
+                    status__in=['WAITING', 'SERVING'],
+                ),
+                name='one_active_queue_ticket_per_document_request',
+            ),
         ]
             

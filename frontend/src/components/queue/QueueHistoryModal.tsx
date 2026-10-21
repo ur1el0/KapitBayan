@@ -66,6 +66,11 @@ export const QueueHistoryModal: React.FC<QueueHistoryModalProps> = ({
                                         <td className="py-2.5 px-3">
                                             <div className="font-semibold text-slate-900">{t.resident_name || 'Walk-in'}</div>
                                             <div className="text-xs text-slate-500">{t.service_type}</div>
+                                            {t.document_request_id && (
+                                                <div className="text-xs text-blue-700 font-semibold mt-1">
+                                                    Document request #{t.document_request_id}
+                                                </div>
+                                            )}
                                         </td>
                                         <td className="py-2.5 px-3">
                                             <span

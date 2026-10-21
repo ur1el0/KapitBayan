@@ -1,11 +1,22 @@
 from rest_framework import serializers
 from gridy_auth.models import User
-from ..models import QueueTicket
+from ..models import DocumentRequest, QueueTicket
 
 
 class QueueTicketSerializer(serializers.ModelSerializer):
     ticket_id = serializers.IntegerField(source='id', read_only=True)
     resident_name = serializers.SerializerMethodField()
+    document_request_id = serializers.PrimaryKeyRelatedField(
+        source='document_request',
+        queryset=DocumentRequest.objects.select_related('user').all(),
+        required=False,
+        allow_null=True,
+    )
+    document_request_type = serializers.CharField(
+        source='document_request.document_type',
+        read_only=True,
+        allow_null=True,
+    )
     priority_reason = serializers.CharField(
         write_only=True,
         required=False,
@@ -21,6 +32,8 @@ class QueueTicketSerializer(serializers.ModelSerializer):
             'resident_name',
             'walkin_name',
             'service_type',
+            'document_request_id',
+            'document_request_type',
             'priority_status',
             'is_priority',
             'priority_reason',
@@ -44,6 +57,38 @@ class QueueTicketSerializer(serializers.ModelSerializer):
                     'Use the dedicated priority endpoint to change a ticket priority.'
                 )
             })
+
+        document_request = attrs.get('document_request')
+        if document_request is not None:
+            user = getattr(request, 'user', None)
+            user_barangay_id = getattr(user, 'barangay_id', None)
+            document_barangay_id = document_request.barangay_id
+            if document_barangay_id is None and document_request.user_id:
+                document_barangay_id = document_request.user.barangay_id
+
+            if (
+                not user
+                or not user.is_authenticated
+                or user_barangay_id is None
+                or document_barangay_id != user_barangay_id
+            ):
+                raise serializers.ValidationError({
+                    'document_request_id': (
+                        'Choose a document request from your assigned Barangay.'
+                    )
+                })
+
+            if (
+                user.role == User.Role.RESIDENT
+                and document_request.user_id != user.id
+            ):
+                raise serializers.ValidationError({
+                    'document_request_id': (
+                        'You can only create a queue ticket for your own document request.'
+                    )
+                })
+
+            attrs['service_type'] = document_request.document_type
 
         if self.instance is None and action == 'create':
             status_supplied = 'priority_status' in submitted

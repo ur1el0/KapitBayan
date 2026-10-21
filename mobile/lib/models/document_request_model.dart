@@ -4,6 +4,10 @@ import 'package:flutter/material.dart';
 class DocumentRequestModel {
   final int id;
   final String documentType;
+  final int? offeringId;
+  final List<String> requirementsSnapshot;
+  final double? publishedFeeAmountSnapshot;
+  final String offeringDetailsSnapshot;
   final String? purpose;
   final String urgencyTag;
   final String status;
@@ -35,6 +39,10 @@ class DocumentRequestModel {
   const DocumentRequestModel({
     required this.id,
     required this.documentType,
+    this.offeringId,
+    this.requirementsSnapshot = const [],
+    this.publishedFeeAmountSnapshot,
+    this.offeringDetailsSnapshot = '',
     this.purpose,
     this.urgencyTag = 'REGULAR',
     this.status = 'PENDING',
@@ -73,6 +81,19 @@ class DocumentRequestModel {
                 ) ??
                 0,
       documentType: json['document_type'] as String? ?? 'Document Request',
+      offeringId: (json['offering_id'] as num?)?.toInt(),
+      requirementsSnapshot: json['requirements_snapshot'] is List
+          ? (json['requirements_snapshot'] as List)
+                .map((item) => item.toString())
+                .toList(growable: false)
+          : const [],
+      publishedFeeAmountSnapshot: json['published_fee_amount_snapshot'] is num
+          ? (json['published_fee_amount_snapshot'] as num).toDouble()
+          : double.tryParse(
+              json['published_fee_amount_snapshot']?.toString() ?? '',
+            ),
+      offeringDetailsSnapshot:
+          json['offering_details_snapshot'] as String? ?? '',
       purpose: json['purpose'] as String?,
       urgencyTag: json['urgency_tag'] as String? ?? 'REGULAR',
       status: json['status'] as String? ?? 'PENDING',
@@ -121,6 +142,10 @@ class DocumentRequestModel {
     return {
       'id': id,
       'document_type': documentType,
+      'offering_id': offeringId,
+      'requirements_snapshot': requirementsSnapshot,
+      'published_fee_amount_snapshot': publishedFeeAmountSnapshot,
+      'offering_details_snapshot': offeringDetailsSnapshot,
       'urgency_tag': urgencyTag,
       'status': status,
       'admin_notes': adminNotes,
@@ -168,6 +193,11 @@ class DocumentRequestModel {
         documentType.trim().replaceAll(RegExp(r'\s+'), ' ').toLowerCase(),
       );
   bool get isFeeExempt => isStatutoryExempt;
+  bool get hasOfferingSnapshot =>
+      offeringId != null ||
+      requirementsSnapshot.isNotEmpty ||
+      publishedFeeAmountSnapshot != null ||
+      offeringDetailsSnapshot.isNotEmpty;
 
   /// Formatted fee string in Philippine Pesos (e.g. "₱50.00")
   String? get formattedFee =>

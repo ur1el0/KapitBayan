@@ -5,10 +5,17 @@ import { getSafeApiErrorMessage } from '../../api/error-message';
 import { DocumentTable } from '../../components/documents/DocumentTable';
 import { ReviewDocumentModal } from '../../components/documents/ReviewDocumentModal';
 import { WalkinRequestModal } from '../../components/documents/WalkinRequestModal';
+import { DocumentCatalogManagerModal } from '../../components/documents/DocumentCatalogManagerModal';
+import { type DocumentServiceOffering } from '../../components/documents/documentCatalog';
 import { isFeeExemptDocumentType } from '../../utils/documentFees';
+import { useLanguage } from '../../context/language-context';
 
 export interface DocumentRequest {
     id: number;
+    offering_id?: number | null;
+    requirements_snapshot?: string[];
+    published_fee_amount_snapshot?: string | null;
+    offering_details_snapshot?: string;
     request_id?: number;
     requester_name?: string;
     purok?: string;
@@ -61,7 +68,10 @@ const TableSkeleton = () => (
 );
 
 export const DocumentRequests: React.FC = () => {
+    const { t } = useLanguage();
     const [requests, setRequests] = useState<DocumentRequest[]>([]);
+    const [offerings, setOfferings] = useState<DocumentServiceOffering[]>([]);
+    const [offeringsLoadError, setOfferingsLoadError] = useState(false);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [retrying, setRetrying] = useState(false);
@@ -75,8 +85,10 @@ export const DocumentRequests: React.FC = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [walkinName, setWalkinName] = useState('');
     const [walkinPurok, setWalkinPurok] = useState('');
-    const [newDocType, setNewDocType] = useState('Barangay Clearance');
+    const [newDocType, setNewDocType] = useState('');
+    const [selectedOfferingId, setSelectedOfferingId] = useState<number | null>(null);
     const [newPurpose, setNewPurpose] = useState('');
+    const [isCatalogModalOpen, setIsCatalogModalOpen] = useState(false);
 
     const fetchRequests = useCallback(async (isRetry = false) => {
         if (isRetry) setRetrying(true);
@@ -94,9 +106,25 @@ export const DocumentRequests: React.FC = () => {
         }
     }, []);
 
+    const fetchOfferings = useCallback(async () => {
+        try {
+            const response = await axiosPrivate.get('/document-catalog/');
+            const data = response.data.results || response.data;
+            setOfferings(Array.isArray(data) ? data : []);
+            setOfferingsLoadError(false);
+        } catch (err) {
+            setOfferingsLoadError(true);
+            toast.error(getSafeApiErrorMessage(
+                err,
+                "We couldn't load your Barangay's document service catalog.",
+            ));
+        }
+    }, []);
+
     useEffect(() => {
         void fetchRequests();
-    }, [fetchRequests]);
+        void fetchOfferings();
+    }, [fetchRequests, fetchOfferings]);
 
     const getStatusBadge = (status: string) => {
         switch (status.toLowerCase()) {
@@ -255,12 +283,20 @@ export const DocumentRequests: React.FC = () => {
             return;
         }
 
+        const selectedOffering = offerings.find((offering) => offering.id === selectedOfferingId && offering.is_active);
+        const requestedDocumentType = selectedOffering?.document_type ?? newDocType.trim();
+        if (!requestedDocumentType || requestedDocumentType.length > 100) {
+            toast.error('Enter a document name between 1 and 100 characters.');
+            return;
+        }
+
         setIsSubmitting(true);
         try {
             await axiosPrivate.post('/document-requests/', {
                 walkin_name: walkinName.trim(),
                 walkin_purok: walkinPurok.trim(),
-                document_type: newDocType,
+                document_type: requestedDocumentType,
+                ...(selectedOffering ? { offering_id: selectedOffering.id } : {}),
                 purpose: newPurpose.trim(),
             });
 
@@ -271,6 +307,8 @@ export const DocumentRequests: React.FC = () => {
             setWalkinName('');
             setWalkinPurok('');
             setNewPurpose('');
+            setNewDocType('');
+            setSelectedOfferingId(null);
         } catch (err) {
             toast.error(getSafeApiErrorMessage(
                 err,
@@ -281,6 +319,11 @@ export const DocumentRequests: React.FC = () => {
         }
     };
 
+    const openWalkinRequest = () => {
+        setSelectedOfferingId(offerings.find((offering) => offering.is_active)?.id ?? null);
+        setIsCreateModalOpen(true);
+    };
+
     if (loading) return <div className="p-4 md:p-8"><TableSkeleton /></div>;
 
     return (
@@ -288,16 +331,36 @@ export const DocumentRequests: React.FC = () => {
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                    <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Clearance Desk & Document Requests</h2>
-                    <p className="text-sm text-slate-500 mt-1">Manage online applications and issue walk-in certifications.</p>
+                    <h2 className="text-2xl font-bold text-slate-900 tracking-tight">{t('Document Services & Requests')}</h2>
+                    <p className="text-sm text-slate-500 mt-1">{t('Manage resident document requests and set your Barangay requirements, published fees, and details.')}</p>
                 </div>
-                <button 
-                    onClick={() => setIsCreateModalOpen(true)}
-                    className="bg-primary hover:bg-primary-hover active:bg-primary-hover text-primary-foreground px-5 py-2.5 rounded-xl text-sm font-bold shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
-                >
-                    <span>+</span> Request Walk-in 
-                </button>
+                <div className="flex flex-wrap gap-2">
+                    <button
+                        type="button"
+                        onClick={() => setIsCatalogModalOpen(true)}
+                        className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition-all hover:bg-slate-50"
+                    >
+                        {t('Manage document services')}
+                    </button>
+                    <button
+                        onClick={openWalkinRequest}
+                        className="bg-primary hover:bg-primary-hover active:bg-primary-hover text-primary-foreground px-5 py-2.5 rounded-xl text-sm font-bold shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                        <span>+</span> {t('Request Walk-in')}
+                    </button>
+                </div>
             </div>
+
+            {offeringsLoadError ? (
+                <div role="alert" className="flex flex-col gap-3 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900 sm:flex-row sm:items-center sm:justify-between">
+                    <span>{t("We couldn't load your document service catalog. Residents may not see current requirements until it is available.")}</span>
+                    <button type="button" onClick={() => void fetchOfferings()} className="shrink-0 rounded-lg border border-rose-300 bg-white px-3 py-2 font-semibold">{t('Retry catalog')}</button>
+                </div>
+            ) : !offerings.some((offering) => offering.is_active) ? (
+                <div role="status" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+                    {t('No active document services are published. Add each document your Barangay offers, then save it to show its requirements and fee to residents.')}
+                </div>
+            ) : null}
 
             <DocumentTable
                 requests={requests}
@@ -333,11 +396,21 @@ export const DocumentRequests: React.FC = () => {
                     setWalkinName={setWalkinName}
                     walkinPurok={walkinPurok}
                     setWalkinPurok={setWalkinPurok}
+                    offerings={offerings.filter((offering) => offering.is_active)}
+                    selectedOfferingId={selectedOfferingId}
+                    setSelectedOfferingId={setSelectedOfferingId}
                     newDocType={newDocType}
                     setNewDocType={setNewDocType}
                     newPurpose={newPurpose}
                     setNewPurpose={setNewPurpose}
                     isSubmitting={isSubmitting}
+                />
+            )}
+            {isCatalogModalOpen && (
+                <DocumentCatalogManagerModal
+                    offerings={offerings}
+                    onClose={() => setIsCatalogModalOpen(false)}
+                    onSaved={fetchOfferings}
                 />
             )}
         </div>

@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import type { DocumentRequest } from '../../pages/services/DocumentRequests';
 import { isFeeExemptDocumentType } from '../../utils/documentFees';
+import { formatPublishedFee } from './documentCatalog';
 import { useModalFocus } from '../../hooks/useModalFocus';
 import { usePrivateMediaUrl } from '../../hooks/usePrivateMediaUrl';
 
@@ -326,6 +327,23 @@ export const ReviewDocumentModal = ({
                             <div>
                                 <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Document Type</h4>
                                 <p className="mt-1 text-sm font-semibold text-slate-900">{selectedRequest.document_type}</p>
+                                {(selectedRequest.offering_id
+                                    || selectedRequest.requirements_snapshot?.length
+                                    || (selectedRequest.published_fee_amount_snapshot !== null && selectedRequest.published_fee_amount_snapshot !== undefined)
+                                    || selectedRequest.offering_details_snapshot) && (
+                                    <div className="mt-2 rounded-lg border border-blue-100 bg-blue-50/70 p-3 text-xs text-slate-700 space-y-1.5">
+                                        <p className="font-semibold">Published fee: {formatPublishedFee(selectedRequest.published_fee_amount_snapshot)}</p>
+                                        {selectedRequest.requirements_snapshot?.length ? (
+                                            <ul className="list-disc space-y-0.5 pl-5">
+                                                {selectedRequest.requirements_snapshot.map((requirement, index) => (
+                                                    <li key={`${index}-${requirement}`}>{requirement}</li>
+                                                ))}
+                                            </ul>
+                                        ) : <p>No requirements were listed.</p>}
+                                        {selectedRequest.offering_details_snapshot && <p>{selectedRequest.offering_details_snapshot}</p>}
+                                        <p className="text-slate-500">These are the published details saved when the request was filed. The fee assessment below records the final amount.</p>
+                                    </div>
+                                )}
                             </div>
 
                             <div>

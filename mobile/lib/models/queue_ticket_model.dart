@@ -7,6 +7,8 @@ class QueueTicketModel {
   final String ticketNumber;
   final String residentName;
   final String serviceType;
+  final int? documentRequestId;
+  final String? documentRequestType;
   final String status;
   final bool isPriority;
   final String priorityStatus;
@@ -19,6 +21,8 @@ class QueueTicketModel {
     required this.ticketNumber,
     this.residentName = '',
     this.serviceType = 'General Service',
+    this.documentRequestId,
+    this.documentRequestType,
     this.status = 'WAITING',
     this.isPriority = false,
     this.priorityStatus = 'regular',
@@ -54,6 +58,8 @@ class QueueTicketModel {
       ticketNumber: json['ticket_number'] as String? ?? '---',
       residentName: json['resident_name'] as String? ?? '',
       serviceType: json['service_type'] as String? ?? 'General Service',
+      documentRequestId: json['document_request_id'] as int?,
+      documentRequestType: json['document_request_type'] as String?,
       status: json['status'] as String? ?? 'WAITING',
       isPriority: json['is_priority'] as bool? ?? false,
       priorityStatus: json['priority_status'] as String? ?? 'regular',
@@ -73,6 +79,9 @@ class QueueTicketModel {
       'ticket_number': ticketNumber,
       'resident_name': residentName,
       'service_type': serviceType,
+      if (documentRequestId != null) 'document_request_id': documentRequestId,
+      if (documentRequestType != null)
+        'document_request_type': documentRequestType,
       'status': status,
       'is_priority': isPriority,
       'priority_status': priorityStatus,

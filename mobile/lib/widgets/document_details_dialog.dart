@@ -17,12 +17,14 @@ class DocumentDetailsDialog extends StatefulWidget {
   final DocumentRequestModel request;
   final DocumentService? documentService;
   final VoidCallback? onRequestUpdated;
+  final Future<void> Function()? onGetCounterTicket;
 
   const DocumentDetailsDialog({
     super.key,
     required this.request,
     this.documentService,
     this.onRequestUpdated,
+    this.onGetCounterTicket,
   });
 
   @override
@@ -31,6 +33,7 @@ class DocumentDetailsDialog extends StatefulWidget {
 
 class _DocumentDetailsDialogState extends State<DocumentDetailsDialog> {
   bool _isDownloading = false;
+  bool _isRequestingCounterTicket = false;
   bool _isSubmittingPayment = false;
   bool _isLoadingPaymentRecipients = false;
   String? _paymentRecipientError;
@@ -52,7 +55,8 @@ class _DocumentDetailsDialogState extends State<DocumentDetailsDialog> {
     _paymentMethod = widget.request.paymentMethod;
     _paymentReviewNote = widget.request.paymentReviewNote;
     _selectedRecipientId = widget.request.paymentRecipientId;
-    _selectedTransactedAt = widget.request.paymentTransactedAt ?? DateTime.now();
+    _selectedTransactedAt =
+        widget.request.paymentTransactedAt ?? DateTime.now();
     if (widget.request.isReadyForPickup &&
         (widget.request.feeAmount ?? 0) > 0 &&
         widget.documentService != null) {
@@ -151,10 +155,20 @@ class _DocumentDetailsDialogState extends State<DocumentDetailsDialog> {
     }
   }
 
+  Future<void> _handleGetCounterTicket() async {
+    final callback = widget.onGetCounterTicket;
+    if (callback == null || _isRequestingCounterTicket) return;
+    setState(() => _isRequestingCounterTicket = true);
+    try {
+      await callback();
+    } finally {
+      if (mounted) setState(() => _isRequestingCounterTicket = false);
+    }
+  }
+
   void _showPaymentSubmissionMessage(String message) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   void _handleViewProof() {
@@ -443,6 +457,31 @@ class _DocumentDetailsDialogState extends State<DocumentDetailsDialog> {
               ),
 
               const SizedBox(height: 24),
+
+              if (widget.onGetCounterTicket != null) ...[
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: OutlinedButton.icon(
+                    onPressed: _isRequestingCounterTicket
+                        ? null
+                        : _handleGetCounterTicket,
+                    icon: _isRequestingCounterTicket
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.confirmation_number_outlined),
+                    label: Text(
+                      _isRequestingCounterTicket
+                          ? 'Getting counter ticket...'
+                          : 'Get counter queue ticket',
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+              ],
 
               // Action Button if PDF can be generated or Close
               if (canDownload) ...[

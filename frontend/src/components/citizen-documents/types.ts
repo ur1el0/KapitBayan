@@ -10,7 +10,11 @@ export interface PaymentRecipient {
 
 export interface DocumentRequest {
     id: number;
+    offering_id?: number | null;
     document_type: string;
+    requirements_snapshot?: string[];
+    published_fee_amount_snapshot?: string | null;
+    offering_details_snapshot?: string;
     purpose: string;
     status: string;
     fee_amount?: number | string | null;

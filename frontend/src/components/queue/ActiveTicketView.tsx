@@ -40,6 +40,11 @@ export const ActiveTicketView: React.FC<ActiveTicketViewProps> = ({ servingTicke
                     <div className="text-sm font-bold text-neutral-primary truncate mt-0.5">
                         {servingTicket ? (servingTicket.resident_name || 'Walk-in Resident') : 'No resident currently being served'}
                     </div>
+                    {servingTicket?.document_request_id && (
+                        <div className="text-xs text-blue-700 font-semibold mt-1">
+                            Document request #{servingTicket.document_request_id}
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

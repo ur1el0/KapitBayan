@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../core/localization/app_language.dart';
 import '../core/theme/app_colors.dart';
 
@@ -48,15 +49,15 @@ class RequestDocumentGrid extends StatelessWidget {
       iconColor: Color(0xFFEA580C),
     ),
     RequestDocumentItem(
-      title: 'Residency\nCertificate',
+      title: 'Certificate of\nResidency',
       subtitle: 'Address verification',
       icon: Icons.location_on_outlined,
       iconBgColor: Color(0xFFF1F5F9),
       iconColor: Color(0xFF475569),
     ),
     RequestDocumentItem(
-      title: 'Business Permit',
-      subtitle: 'Local trade registration',
+      title: 'Barangay Business\nClearance',
+      subtitle: 'Local business clearance',
       icon: Icons.storefront_outlined,
       iconBgColor: Color(0xFFEDE9FE),
       iconColor: Color(0xFF4338CA),
@@ -157,10 +158,7 @@ class _RequestCard extends StatelessWidget {
   final RequestDocumentItem item;
   final VoidCallback onTap;
 
-  const _RequestCard({
-    required this.item,
-    required this.onTap,
-  });
+  const _RequestCard({required this.item, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -175,10 +173,7 @@ class _RequestCard extends StatelessWidget {
             offset: const Offset(0, 3),
           ),
         ],
-        border: Border.all(
-          color: const Color(0xFFF1F5F9),
-          width: 1.2,
-        ),
+        border: Border.all(color: const Color(0xFFF1F5F9), width: 1.2),
       ),
       child: Material(
         color: Colors.transparent,
@@ -201,11 +196,7 @@ class _RequestCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Center(
-                    child: Icon(
-                      item.icon,
-                      color: item.iconColor,
-                      size: 22,
-                    ),
+                    child: Icon(item.icon, color: item.iconColor, size: 22),
                   ),
                 ),
 

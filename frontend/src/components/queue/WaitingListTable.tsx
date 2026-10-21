@@ -136,6 +136,11 @@ export const WaitingListTable: React.FC<WaitingListTableProps> = ({
                                                     </td>
                                                     <td className="py-3.5 px-4 text-neutral-secondary font-medium whitespace-nowrap">
                                                         {ticket.service_type}
+                                                        {ticket.document_request_id && (
+                                                            <div className="text-xs text-blue-700 font-semibold mt-1">
+                                                                Document request #{ticket.document_request_id}
+                                                            </div>
+                                                        )}
                                                     </td>
                                                     <td className="py-3.5 px-4 whitespace-nowrap">
                                                         <span className="px-3 py-1 rounded-pill text-xs font-semibold bg-surface-waiting text-neutral-muted inline-block">

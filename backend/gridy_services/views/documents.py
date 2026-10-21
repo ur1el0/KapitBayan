@@ -75,15 +75,25 @@ class DocumentRequestViewSet(viewsets.ModelViewSet):
                     is_walkin=False,
                     user__barangay_id=user.barangay_id,
                 )
-            ).order_by('-created_at')
+            ).select_related("offering").order_by('-created_at')
 
         # Residents see only their own requests
-        return DocumentRequest.objects.filter(user=user).order_by('-created_at')
+        return DocumentRequest.objects.filter(user=user).select_related(
+            "offering"
+        ).order_by('-created_at')
 
     @transaction.atomic
     def perform_create(self, serializer):
         user = self.request.user
         data = serializer.validated_data
+        offering = data.get("offering")
+        offering_snapshot = {}
+        if offering:
+            offering_snapshot = {
+                "requirements_snapshot": list(offering.requirements),
+                "published_fee_amount_snapshot": offering.published_fee_amount,
+                "details_snapshot": offering.details,
+            }
 
         if user.role == User.Role.ADMIN:
             if not user.barangay_id:
@@ -119,6 +129,7 @@ class DocumentRequestViewSet(viewsets.ModelViewSet):
                 fee_waiver_reason="",
                 status=DocumentRequest.Status.PENDING,
                 admin_notes="",
+                **offering_snapshot,
             )
 
             log_action(
@@ -164,6 +175,7 @@ class DocumentRequestViewSet(viewsets.ModelViewSet):
             fee_waiver_reason="",
             status=DocumentRequest.Status.PENDING,
             admin_notes="",
+            **offering_snapshot,
         )
         notify_barangay_admins(
             barangay_id=user.barangay_id,

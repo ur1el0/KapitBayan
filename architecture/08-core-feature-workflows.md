@@ -16,9 +16,15 @@ An official submits a public application with the Barangay locality, official co
 
 See [ADR 007](decisions/007-revenue-and-official-receipt-auditing.md), [ADR 017](decisions/017-manual-epayment-evidence-and-verification.md), and [ADR 018](decisions/018-explicit-document-fee-assessment-and-waiver-provenance.md).
 
+Residents may optionally get a counter queue ticket from one of their document requests when they need an in-person Barangay visit. The ticket records the related request so staff can identify the visit's purpose; the ticket can be completed independently and does not approve, pay, or release the document. A document request can proceed without a queue ticket, and tickets for other services remain independent. A request can have only one waiting or serving linked ticket at a time; a later visit can get a new ticket after the earlier one is completed or cancelled.
+
+Each Barangay Admin manages that Barangay's document-service catalog from the Admin web document-request page or the mobile Admin document-request screen. For every offered document, the Admin can save and later edit its name, requirements, published amount, and additional details, or deactivate it. Saving an active service makes its current information available in resident web and mobile request forms. Catalog entries are tenant-scoped; residents only see active offerings for their own Barangay. There are no assumed universal requirements or fees.
+
+When a resident submits a request from a catalog entry, KapitBayan stores a snapshot of the published requirements, amount, and details with the request. Later catalog edits apply to future requests and do not change what an existing request showed when it was filed. “Other / Not listed” remains available for services that are not yet in the catalog; staff must confirm their requirements and fee. The published amount is informational; staff still assess and record the final request fee through the existing treasury workflow.
+
 ## Queue workflow
 
-Residents and walk-in visitors can receive tickets under the applicable service rules. Staff advances tickets within their barangay. Resident and public displays refresh from HTTP endpoints; the documented queue path is polling, not WebSocket delivery. Queue ticket ownership and live desk status are separate data concerns and clients handle partial failures independently.
+Residents and walk-in visitors can receive tickets under the applicable service rules. A resident may create a ticket from a document request to record a planned counter visit; general tickets remain available for other services. Staff can see the linked request reference in the queue list. Staff advances tickets within their barangay. Queue ticket status and document processing/payment status remain separate. Resident and public displays refresh from HTTP endpoints; the documented queue path is polling, not WebSocket delivery. Queue ticket ownership and live desk status are separate data concerns and clients handle partial failures independently.
 
 ## Communications and announcements
 

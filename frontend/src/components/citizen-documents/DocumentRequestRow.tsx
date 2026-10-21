@@ -8,6 +8,7 @@ import {
     ImageIcon,
     Loader2,
     Trash2,
+    Ticket,
     X,
 } from 'lucide-react';
 import { PaymentReferenceForm } from './PaymentReferenceForm';
@@ -15,6 +16,7 @@ import type { DocumentRequest, PaymentRecipient } from './types';
 import { usePrivateMediaUrl } from '../../hooks/usePrivateMediaUrl';
 import { isFeeExemptDocumentType } from '../../utils/documentFees';
 import { useLanguage } from '../../context/language-context';
+import { formatPublishedFee } from '../documents/documentCatalog';
 
 interface DocumentRequestRowProps {
     request: DocumentRequest;
@@ -27,11 +29,13 @@ interface DocumentRequestRowProps {
     submittingPayment: boolean;
     downloading: boolean;
     cancelling: boolean;
+    requestingCounterTicket: boolean;
     onRecipientChange?: (value: string) => void;
     onPaymentReferenceChange?: (value: string) => void;
     onSubmitPaymentReference: (formData: FormData) => void;
     onDownloadPdf: () => void;
     onCancel: () => void;
+    onGetCounterTicket: () => void;
 }
 
 const RequestStatusBadge: React.FC<{ status: string }> = ({ status }) => {
@@ -164,11 +168,13 @@ export const DocumentRequestRow: React.FC<DocumentRequestRowProps> = ({
     submittingPayment,
     downloading,
     cancelling,
+    requestingCounterTicket,
     onRecipientChange,
     onPaymentReferenceChange,
     onSubmitPaymentReference,
     onDownloadPdf,
     onCancel,
+    onGetCounterTicket,
 }) => {
     const { t } = useLanguage();
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
@@ -183,6 +189,12 @@ export const DocumentRequestRow: React.FC<DocumentRequestRowProps> = ({
     const isPaymentNotRequired = isStatutoryFeeExempt || isStaffWaived || Number(request.fee_amount ?? 0) <= 0;
 
     const isCash = request.payment_method === 'CASH';
+    const hasOfferingSnapshot = Boolean(
+        request.offering_id
+        || request.requirements_snapshot?.length
+        || (request.published_fee_amount_snapshot !== null && request.published_fee_amount_snapshot !== undefined)
+        || request.offering_details_snapshot,
+    );
 
     const formatDateTime = (isoString?: string | null) => {
         if (!isoString) return '';
@@ -206,7 +218,26 @@ export const DocumentRequestRow: React.FC<DocumentRequestRowProps> = ({
             <tr className="hover:bg-slate-50/70 transition-colors">
                 <td className="py-4 px-6 font-semibold text-slate-900 flex items-center gap-2">
                     <FileText className="w-4 h-4 text-primary-text" />
-                    {request.document_type}
+                    <div>
+                        <div>{t(request.document_type)}</div>
+                        {hasOfferingSnapshot && (
+                            <div className="mt-1 max-w-xs space-y-1 text-left text-[11px] font-normal text-slate-600">
+                                <p className="font-semibold text-slate-700">
+                                    {t('Published fee')}: {t(formatPublishedFee(request.published_fee_amount_snapshot))}
+                                </p>
+                                {request.requirements_snapshot?.length ? (
+                                    <p>
+                                        {t('Requirements')}: {request.requirements_snapshot.map(t).join(' · ')}
+                                    </p>
+                                ) : (
+                                    <p>{t('No requirements were listed.')}</p>
+                                )}
+                                {request.offering_details_snapshot && (
+                                    <p>{t(request.offering_details_snapshot)}</p>
+                                )}
+                            </div>
+                        )}
+                    </div>
                 </td>
                 <td className="py-4 px-6 text-slate-600">
                     {request.purpose || '—'}
@@ -377,26 +408,39 @@ export const DocumentRequestRow: React.FC<DocumentRequestRowProps> = ({
                     )}
                 </td>
                 <td className="py-4 px-6 text-right">
-                    {isAvailableForDownload ? (
-                        <div className="flex flex-col items-end gap-2">
-                            {request.status.toUpperCase() === 'READY_FOR_PICKUP' &&
-                                request.payment_status === 'PENDING_VERIFICATION' && (
-                                    <span className="text-xs font-medium text-amber-700">{t('Waiting for payment verification')}</span>
-                                )}
-                            <button
-                                onClick={onDownloadPdf}
-                                disabled={downloading}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-xs font-bold border border-emerald-200 transition-all cursor-pointer"
-                            >
-                                {downloading ? (
-                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                ) : (
-                                    <Download className="w-3.5 h-3.5" />
-                                )}
-                                <span>{t('Download PDF')}</span>
-                            </button>
-                        </div>
-                    ) : request.status.toUpperCase() === 'PENDING' ? (
+                    <div className="flex flex-col items-end gap-2">
+                        <button
+                            type="button"
+                            onClick={onGetCounterTicket}
+                            disabled={requestingCounterTicket}
+                            aria-label={`${t('Get counter ticket for document request')} #${request.id}`}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-800 hover:bg-blue-100 text-xs font-bold border border-blue-200 transition-all cursor-pointer disabled:opacity-60"
+                        >
+                            {requestingCounterTicket
+                                ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                : <Ticket className="w-3.5 h-3.5" />}
+                            <span>{t('Get counter ticket')}</span>
+                        </button>
+                        {isAvailableForDownload ? (
+                            <>
+                                {request.status.toUpperCase() === 'READY_FOR_PICKUP' &&
+                                    request.payment_status === 'PENDING_VERIFICATION' && (
+                                        <span className="text-xs font-medium text-amber-700">{t('Waiting for payment verification')}</span>
+                                    )}
+                                <button
+                                    onClick={onDownloadPdf}
+                                    disabled={downloading}
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-xs font-bold border border-emerald-200 transition-all cursor-pointer"
+                                >
+                                    {downloading ? (
+                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                    ) : (
+                                        <Download className="w-3.5 h-3.5" />
+                                    )}
+                                    <span>{t('Download PDF')}</span>
+                                </button>
+                            </>
+                        ) : request.status.toUpperCase() === 'PENDING' ? (
                         <button
                             onClick={onCancel}
                             disabled={cancelling}
@@ -410,9 +454,10 @@ export const DocumentRequestRow: React.FC<DocumentRequestRowProps> = ({
                             )}
                             <span>{t('Cancel')}</span>
                         </button>
-                    ) : (
-                        <span className="text-xs text-slate-400">{t('Available after approval')}</span>
-                    )}
+                        ) : (
+                            <span className="text-xs text-slate-400">{t('Available after approval')}</span>
+                        )}
+                    </div>
                 </td>
             </tr>
 
