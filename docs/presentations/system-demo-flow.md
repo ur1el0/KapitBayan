@@ -7,6 +7,8 @@
 
 For hands-on barangay training, see the [barangay demo and user-training flow](barangay-demo-and-training-flow.md) ([PDF](barangay-demo-and-training-flow.pdf)).
 
+For a concise read-aloud presentation, use the [four-role demo voice-over scripts](demo-voiceover-scripts.md).
+
 This guide gives a role-by-role route through the web and mobile system, then shows how to explain account recovery and notification fallbacks. It describes the current implementation and its limits; it is not a claim that every external provider will deliver every message.
 
 ## Before the demo
