@@ -39,7 +39,9 @@ describe('accessible modal names', () => {
             <NewDocumentRequestModal
                 documentType="Barangay Clearance"
                 purpose="Employment"
+                otherDocumentType=""
                 submitting={false}
+                onOtherDocumentTypeChange={vi.fn()}
                 onDocumentTypeChange={vi.fn()}
                 onPurposeChange={vi.fn()}
                 onClose={vi.fn()}
