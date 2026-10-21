@@ -4,7 +4,7 @@ import { axiosPrivate } from '../../api/axios';
 import { getSafeApiErrorMessage } from '../../api/error-message';
 import { InlineErrorState } from '../../components/ui/InlineErrorState';
 import { NewDocumentRequestModal } from '../../components/citizen-documents/NewDocumentRequestModal';
-import { OTHER_DOCUMENT_TYPE, type DocumentServiceOffering } from '../../components/documents/documentCatalog';
+import { type DocumentServiceOffering } from '../../components/documents/documentCatalog';
 import { DocumentRequestRow } from '../../components/citizen-documents/DocumentRequestRow';
 import type { DocumentRequest, PaymentRecipient } from '../../components/citizen-documents/types';
 import { useLanguage } from '../../context/language-context';
