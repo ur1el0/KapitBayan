@@ -70,13 +70,15 @@ export default function ResidentVerification() {
     useEffect(() => {
         const refreshWhenVisible = () => {
             if (document.visibilityState === 'visible') {
-                void fetchPendingResidents(true);
+                void fetchPendingResidents();
             }
         };
+        const intervalId = window.setInterval(refreshWhenVisible, 3000);
 
         window.addEventListener('focus', refreshWhenVisible);
         document.addEventListener('visibilitychange', refreshWhenVisible);
         return () => {
+            window.clearInterval(intervalId);
             window.removeEventListener('focus', refreshWhenVisible);
             document.removeEventListener('visibilitychange', refreshWhenVisible);
         };
