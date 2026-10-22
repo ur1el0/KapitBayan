@@ -149,3 +149,31 @@ class PlatformAccountSupportTests(IsolatedAuthAPITestCase):
         self.assertEqual(self.client.post(self.list_url, {}, format="json").status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
         detail_url = reverse("platform-account-support-detail", kwargs={"pk": self.resident.pk})
         self.assertEqual(self.client.delete(detail_url).status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    def test_operator_can_erase_eligible_account_with_exact_username(self):
+        self.client.force_authenticate(self.operator)
+        url = reverse("platform-account-support-erase-account", kwargs={"pk": self.resident.pk})
+        payload = {
+            "reason": "ACCOUNT_HOLDER_REQUEST",
+            "confirm_username": self.resident.username,
+        }
+        invalid = self.client.post(url, {**payload, "confirm_username": "wrong"}, format="json")
+        self.assertEqual(invalid.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertTrue(User.objects.filter(pk=self.resident.pk).exists())
+
+        response = self.client.post(url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(User.objects.filter(pk=self.resident.pk).exists())
+        self.assertTrue(User.objects.filter(pk=self.operator.pk).exists())
+
+    def test_operator_cannot_erase_last_active_admin(self):
+        self.other_admin.is_active = False
+        self.other_admin.save(update_fields=["is_active"])
+        self.client.force_authenticate(self.operator)
+        url = reverse("platform-account-support-erase-account", kwargs={"pk": self.admin.pk})
+        response = self.client.post(url, {
+            "reason": "DUPLICATE_ACCOUNT",
+            "confirm_username": self.admin.username,
+        }, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertTrue(User.objects.filter(pk=self.admin.pk).exists())

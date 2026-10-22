@@ -423,6 +423,110 @@ class BarangayOnboardingTests(TestCase):
         self.assertFalse(os.path.exists(file_path))
         self.assertEqual(PrivateMediaCleanup.objects.count(), 0)
 
+    def test_operator_erases_pending_application_and_linked_inactive_account(self):
+        application = self.create_application(email="pending-erase@example.test")
+        application_id = application.pk
+        applicant_id = application.applicant_user_id
+        proof_path = application.proof_of_authority.path
+        erase_url = f"/api/v1/auth/platform/barangay-applications/{application_id}/erase/"
+        payload = {
+            "reason": "Duplicate application submitted in error.",
+            "confirm_reference": f"KB-{application_id}",
+        }
+
+        self.assertEqual(self.client.post(erase_url, payload, format="json").status_code, status.HTTP_401_UNAUTHORIZED)
+        reviewer = User.objects.create_user(
+            username="pending_erase_operator", role=User.Role.BARANGAY_OPERATOR,
+            password="test-password", is_active=True,
+        )
+        self.client.force_authenticate(user=reviewer)
+        invalid = self.client.post(
+            erase_url,
+            {**payload, "confirm_reference": "KB-wrong"},
+            format="json",
+        )
+        self.assertEqual(invalid.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertTrue(BarangayApplication.objects.filter(pk=application_id).exists())
+        self.assertTrue(User.objects.filter(pk=applicant_id).exists())
+
+        with self.captureOnCommitCallbacks(execute=True):
+            erased = self.client.post(erase_url, payload, format="json")
+        self.assertEqual(erased.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(BarangayApplication.objects.filter(pk=application_id).exists())
+        self.assertFalse(User.objects.filter(pk=applicant_id).exists())
+        self.assertFalse(os.path.exists(proof_path))
+        self.assertTrue(User.objects.filter(pk=reviewer.pk).exists())
+
+    def test_operator_erases_rejected_application_without_linked_account(self):
+        application = BarangayApplication.objects.create(
+            name="Rejected historical application",
+            municipality="Tayabas City",
+            province="Quezon",
+            applicant_name="Past Applicant",
+            applicant_position="Official",
+            applicant_email="rejected-erase@example.test",
+            applicant_phone="09123456789",
+            status=BarangayApplication.Status.REJECTED,
+            review_note="Previous review rejected the application.",
+        )
+        reviewer = User.objects.create_user(
+            username="rejected_erase_operator", role=User.Role.BARANGAY_OPERATOR,
+            password="test-password", is_active=True,
+        )
+        self.client.force_authenticate(user=reviewer)
+        erased = self.client.post(
+            f"/api/v1/auth/platform/barangay-applications/{application.pk}/erase/",
+            {"reason": "Applicant requested removal.", "confirm_reference": f"KB-{application.pk}"},
+            format="json",
+        )
+        self.assertEqual(erased.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(BarangayApplication.objects.filter(pk=application.pk).exists())
+        self.assertTrue(User.objects.filter(pk=reviewer.pk).exists())
+
+    def test_approved_application_erasure_protects_last_active_admin(self):
+        barangay = Barangay.objects.create(
+            name="Approved erase Barangay", municipality="Tayabas City", province="Quezon"
+        )
+        first_admin = User.objects.create_user(
+            username="approved_erase_admin", role=User.Role.ADMIN,
+            password="test-password", barangay=barangay, is_active=True,
+        )
+        application = BarangayApplication.objects.create(
+            name=barangay.name,
+            municipality=barangay.municipality,
+            province=barangay.province,
+            applicant_name="Approved Applicant",
+            applicant_position="Official",
+            applicant_email="approved-erase@example.test",
+            applicant_phone="09123456789",
+            status=BarangayApplication.Status.APPROVED,
+            created_barangay=barangay,
+            created_admin=first_admin,
+            applicant_user=first_admin,
+        )
+        reviewer = User.objects.create_user(
+            username="approved_erase_operator", role=User.Role.BARANGAY_OPERATOR,
+            password="test-password", is_active=True,
+        )
+        self.client.force_authenticate(user=reviewer)
+        erase_url = f"/api/v1/auth/platform/barangay-applications/{application.pk}/erase/"
+        payload = {"reason": "Applicant requested removal.", "confirm_reference": f"KB-{application.pk}"}
+
+        blocked = self.client.post(erase_url, payload, format="json")
+        self.assertEqual(blocked.status_code, status.HTTP_409_CONFLICT)
+        self.assertTrue(BarangayApplication.objects.filter(pk=application.pk).exists())
+        self.assertTrue(User.objects.filter(pk=first_admin.pk).exists())
+
+        User.objects.create_user(
+            username="approved_erase_other_admin", role=User.Role.ADMIN,
+            password="test-password", barangay=barangay, is_active=True,
+        )
+        erased = self.client.post(erase_url, payload, format="json")
+        self.assertEqual(erased.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(BarangayApplication.objects.filter(pk=application.pk).exists())
+        self.assertFalse(User.objects.filter(pk=first_admin.pk).exists())
+        self.assertTrue(Barangay.objects.filter(pk=barangay.pk).exists())
+
     def test_legacy_application_rows_are_preserved_and_read_only_to_superusers(self):
         application = BarangayApplication.objects.create(
             name=self.barangay.name,

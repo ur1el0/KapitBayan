@@ -7,7 +7,7 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from django.conf import settings
 from django.db import transaction
-from django.db.models import F
+from django.db.models import F, Q
 from django.utils import timezone
 
 from gridy_audit.models import AuditLog
@@ -23,6 +23,7 @@ RESIDENT_PRIVATE_MEDIA_FIELDS = (
 PRIVATE_MEDIA_STORAGE_MODELS = {
     "gridy_auth.Resident": RESIDENT_PRIVATE_MEDIA_FIELDS,
     "gridy_auth.BarangayApplication": ("proof_of_authority",),
+    "gridy_auth.User": ("profile_picture",),
 }
 
 
@@ -93,7 +94,7 @@ def _record_private_media_retry(cleanup, error):
 
 def attempt_private_media_cleanup(cleanup_id):
     """Delete one queued private file; retain a retry record after any failure."""
-    from gridy_auth.models import BarangayApplication, PrivateMediaCleanup, Resident
+    from gridy_auth.models import BarangayApplication, PrivateMediaCleanup, Resident, User
 
     cleanup = PrivateMediaCleanup.objects.filter(pk=cleanup_id).first()
     if cleanup is None:
@@ -111,6 +112,7 @@ def attempt_private_media_cleanup(cleanup_id):
         model = {
             "gridy_auth.Resident": Resident,
             "gridy_auth.BarangayApplication": BarangayApplication,
+            "gridy_auth.User": User,
         }[cleanup.storage_model]
         storage = model._meta.get_field(cleanup.field_name).storage
         if storage.exists(file_name):
@@ -152,7 +154,7 @@ def erase_user_account(user, reason, request=None, actor=None):
        and aid assistance history by dissociating the user foreign keys and snapshotting names.
     5. Deletes the User record.
     """
-    from gridy_auth.models import PrivateMediaCleanup, RefreshSession
+    from gridy_auth.models import BarangayApplication, PrivateMediaCleanup, RefreshSession, User
     from gridy_services.models import DocumentRequest, AidRequest
 
     effective_actor = actor or user
@@ -162,6 +164,18 @@ def erase_user_account(user, reason, request=None, actor=None):
     )
 
     with transaction.atomic():
+        if user.role == User.Role.ADMIN:
+            # User deletion sets these application links to NULL. Lock linked
+            # application rows first and in a stable order to serialize with
+            # onboarding erasure and account-support deletion.
+            list(
+                BarangayApplication.objects.filter(
+                    Q(applicant_user_id=user.pk) | Q(created_admin_id=user.pk)
+                )
+                .order_by("pk")
+                .select_for_update(of=("self",))
+            )
+
         # Record accountability before destruction.
         log_action(
             user=effective_actor,
@@ -175,9 +189,15 @@ def erase_user_account(user, reason, request=None, actor=None):
 
         profile_picture = user.profile_picture.name if user.profile_picture else None
         if profile_picture:
-            profile_picture_storage = user.profile_picture.storage
+            cleanup = queue_private_media_cleanup(
+                "gridy_auth.User",
+                "profile_picture",
+                profile_picture,
+            )
             transaction.on_commit(
-                lambda: profile_picture_storage.delete(profile_picture)
+                lambda cleanup_id=cleanup.pk: attempt_private_media_cleanup_safely(
+                    cleanup_id
+                )
             )
 
         # Store only encrypted file names, with no foreign key to the account being deleted.

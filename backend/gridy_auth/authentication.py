@@ -97,7 +97,7 @@ class ProductionSafeJWTAuthentication(JWTAuthentication):
             )
             is_account_detail_route = bool(re.fullmatch(rf"{re.escape(account_base)}/\d+", path))
             is_account_action_route = bool(re.fullmatch(
-                rf"{re.escape(account_base)}/\d+/(send-password-link|set-active)", path
+                rf"{re.escape(account_base)}/\d+/(send-password-link|set-active|erase)", path
             ))
             allowed = (
                 (path in self._OPERATOR_READ_PATHS and method in {"GET", "HEAD", "OPTIONS"})

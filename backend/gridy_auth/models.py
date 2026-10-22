@@ -286,13 +286,14 @@ class RefreshSession(models.Model):
 class PrivateMediaCleanup(models.Model):
     """Durable, non-user-linked work item for deleting private evidence."""
 
-    class ResidentField(models.TextChoices):
+    class MediaField(models.TextChoices):
         PHILSYS_ID_PHOTO = "philsys_id_photo", "PhilSys ID photo"
         SECONDARY_ID_PHOTO = "secondary_id_photo", "Secondary ID photo"
         UTILITY_BILLING_PHOTO = "utility_billing_photo", "Utility billing photo"
         PROOF_OF_AUTHORITY = "proof_of_authority", "Barangay authority proof"
+        PROFILE_PICTURE = "profile_picture", "Account profile picture"
 
-    field_name = models.CharField(max_length=32, choices=ResidentField.choices)
+    field_name = models.CharField(max_length=32, choices=MediaField.choices)
     storage_model = models.CharField(
         max_length=64,
         default="gridy_auth.Resident",
