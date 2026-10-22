@@ -2,6 +2,8 @@ from pathlib import PurePosixPath
 from uuid import uuid4
 
 import cloudinary
+import cloudinary.api
+from cloudinary.exceptions import NotFound
 from cloudinary_storage.storage import MediaCloudinaryStorage
 from django.core.exceptions import ImproperlyConfigured
 
@@ -44,13 +46,28 @@ class ResidentAwareCloudinaryStorage(MediaCloudinaryStorage):
             options["folder"] = folder
         return cloudinary.uploader.upload(content, **options)
 
-    def open_private_media(self, name, mode="rb"):
+    def get_private_media_format(self, name):
+        """Resolve the original format when Cloudinary stores an extensionless public ID."""
+        try:
+            metadata = cloudinary.api.resource(
+                self._prepend_prefix(name),
+                resource_type=self._get_resource_type(name),
+                type="authenticated",
+            )
+        except NotFound as exc:
+            raise FileNotFoundError("Private media not found.") from exc
+        return str(metadata.get("format") or "").lower()
+
+    def open_private_media(self, name, mode="rb", *, asset_format=None):
         resource = cloudinary.CloudinaryResource(
             self._prepend_prefix(name),
             type="authenticated",
             default_resource_type=self._get_resource_type(name),
         )
-        return self._download(resource.build_url(sign_url=True, secure=True), name, mode)
+        options = {"sign_url": True, "secure": True}
+        if asset_format:
+            options["format"] = asset_format
+        return self._download(resource.build_url(**options), name, mode)
 
     def open_private_resident_media(self, name, mode="rb"):
         return self.open_private_media(name, mode)

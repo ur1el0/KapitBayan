@@ -253,14 +253,23 @@ class PlatformBarangayApplicationProofView(APIView):
         file_name = proof.name
         extension = file_name.rsplit(".", 1)[-1].lower() if "." in file_name else ""
         content_types = {"pdf": "application/pdf", "jpg": "image/jpeg", "png": "image/png"}
-        content_type = content_types.get(extension)
-        if content_type is None:
-            raise Http404("Private application proof not found.")
 
         try:
             storage = proof.storage
+            extensionless = not extension
+            if extensionless and hasattr(storage, "get_private_media_format"):
+                extension = storage.get_private_media_format(file_name)
+            content_type = content_types.get(extension)
+            if content_type is None:
+                raise Http404("Private application proof not found.")
+
             if hasattr(storage, "open_private_media"):
-                file_handle = storage.open_private_media(file_name, "rb")
+                if extensionless:
+                    file_handle = storage.open_private_media(
+                        file_name, "rb", asset_format=extension
+                    )
+                else:
+                    file_handle = storage.open_private_media(file_name, "rb")
             elif hasattr(storage, "open_private_resident_media"):
                 file_handle = storage.open_private_resident_media(file_name, "rb")
             else:

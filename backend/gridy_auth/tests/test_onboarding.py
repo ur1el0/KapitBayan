@@ -2,9 +2,10 @@ import secrets
 import os
 from datetime import timedelta
 from tempfile import TemporaryDirectory
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from django.contrib import admin
+from django.core.files.base import ContentFile
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import RequestFactory, TestCase
 from django.test.utils import override_settings
@@ -356,6 +357,72 @@ class BarangayOnboardingTests(TestCase):
         self.assertIn("attachment", response["Content-Disposition"])
         self.assertEqual(b"".join(response.streaming_content), VALID_PDF)
         self.assertTrue(os.path.exists(proof_path))
+
+    def test_reviewer_can_download_extensionless_cloudinary_proof(self):
+        application = BarangayApplication.objects.create(
+            name="Barangay Proof Review",
+            municipality="Tayabas City",
+            province="Quezon",
+            applicant_name="Applicant Example",
+            applicant_position="Barangay Official",
+            applicant_email="proof-review@example.test",
+            applicant_phone="09123456789",
+            proof_of_authority="barangay_onboarding/opaque-asset-id",
+            status=BarangayApplication.Status.PENDING,
+        )
+        reviewer = User.objects.create_user(
+            username="cloudinary-proof-reviewer", password="test-password",
+            role=User.Role.BARANGAY_OPERATOR, is_active=True,
+        )
+        self.client.force_authenticate(user=reviewer)
+        proof_url = f"/api/v1/auth/platform/barangay-applications/{application.pk}/proof/"
+        storage = Mock()
+        storage.get_private_media_format.return_value = "pdf"
+        storage.open_private_media.return_value = ContentFile(VALID_PDF)
+
+        field = BarangayApplication._meta.get_field("proof_of_authority")
+        with patch.object(field, "storage", storage):
+            response = self.client.get(proof_url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response["Content-Type"], "application/pdf")
+        self.assertEqual(response["Cache-Control"], "private, no-store, max-age=0")
+        self.assertEqual(b"".join(response.streaming_content), VALID_PDF)
+        storage.get_private_media_format.assert_called_once_with(
+            "barangay_onboarding/opaque-asset-id"
+        )
+        storage.open_private_media.assert_called_once_with(
+            "barangay_onboarding/opaque-asset-id", "rb", asset_format="pdf"
+        )
+
+    def test_extensionless_proof_rejects_unsupported_cloudinary_format(self):
+        application = BarangayApplication.objects.create(
+            name="Barangay Unsupported Proof",
+            municipality="Tayabas City",
+            province="Quezon",
+            applicant_name="Applicant Example",
+            applicant_position="Barangay Official",
+            applicant_email="unsupported-proof@example.test",
+            applicant_phone="09123456789",
+            proof_of_authority="barangay_onboarding/opaque-asset-id",
+            status=BarangayApplication.Status.PENDING,
+        )
+        reviewer = User.objects.create_user(
+            username="unsupported-proof-reviewer", password="test-password",
+            role=User.Role.BARANGAY_OPERATOR, is_active=True,
+        )
+        self.client.force_authenticate(user=reviewer)
+        storage = Mock()
+        storage.get_private_media_format.return_value = "gif"
+        field = BarangayApplication._meta.get_field("proof_of_authority")
+
+        with patch.object(field, "storage", storage):
+            response = self.client.get(
+                f"/api/v1/auth/platform/barangay-applications/{application.pk}/proof/"
+            )
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        storage.open_private_media.assert_not_called()
 
     def test_approval_requires_verified_email_and_reviewed_proof_then_cleans_proof(self):
         application = self.create_application()
