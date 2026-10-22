@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/default_document_requirements.dart';
 import '../core/document_types.dart';
 import '../core/localization/app_language.dart';
 import '../core/theme/app_colors.dart';
@@ -37,7 +38,18 @@ class _RequestDocumentDialogState extends State<RequestDocumentDialog> {
   @override
   void initState() {
     super.initState();
-    _selectedType = otherDocumentRequestType;
+    final initial = widget.initialDocumentType?.trim();
+    if (initial != null && initial.isNotEmpty) {
+      _otherTypeController.text = initial;
+      if (DefaultDocumentRequirements.hasDefaults(initial)) {
+        _selectedType =
+            'default:${DefaultDocumentRequirements.find(initial)!.documentType}';
+      } else {
+        _selectedType = otherDocumentRequestType;
+      }
+    } else {
+      _selectedType = otherDocumentRequestType;
+    }
     _loadOfferings();
   }
 
@@ -54,18 +66,34 @@ class _RequestDocumentDialogState extends State<RequestDocumentDialog> {
     try {
       final offerings = await widget.documentService.fetchDocumentOfferings();
       if (!mounted) return;
+      final normalizedInitial = DefaultDocumentRequirements.normalize(
+        widget.initialDocumentType ?? '',
+      );
       final initialOffering = offerings.where(
-        (offering) => offering.documentType == widget.initialDocumentType,
+        (offering) =>
+            DefaultDocumentRequirements.normalize(offering.documentType) ==
+            normalizedInitial,
       );
       setState(() {
         _offerings = offerings;
         if (initialOffering.isNotEmpty) {
           _selectedType = 'offering:${initialOffering.first.id}';
-        } else if (widget.initialDocumentType != null) {
-          _selectedType = otherDocumentRequestType;
-          _otherTypeController.text = widget.initialDocumentType!;
+        } else if (widget.initialDocumentType != null &&
+            widget.initialDocumentType!.trim().isNotEmpty) {
+          final initial = widget.initialDocumentType!.trim();
+          if (offerings.isEmpty &&
+              DefaultDocumentRequirements.hasDefaults(initial)) {
+            _selectedType =
+                'default:${DefaultDocumentRequirements.find(initial)!.documentType}';
+          } else {
+            _selectedType = otherDocumentRequestType;
+          }
+          _otherTypeController.text = initial;
         } else if (offerings.isNotEmpty) {
           _selectedType = 'offering:${offerings.first.id}';
+        } else if (DefaultDocumentRequirements.defaults.isNotEmpty) {
+          _selectedType =
+              'default:${DefaultDocumentRequirements.defaults.first.documentType}';
         }
       });
     } catch (_) {
@@ -83,6 +111,53 @@ class _RequestDocumentDialogState extends State<RequestDocumentDialog> {
   final TextEditingController _purposeController = TextEditingController();
   final TextEditingController _otherTypeController = TextEditingController();
 
+  String get _currentDocumentType {
+    final selectedOffering = _selectedOffering;
+    if (selectedOffering != null) {
+      return selectedOffering.documentType;
+    }
+    if (_selectedType.startsWith('default:')) {
+      return _selectedType.substring('default:'.length);
+    }
+    if (_selectedType == otherDocumentRequestType) {
+      final typed = _otherTypeController.text.trim();
+      if (typed.isNotEmpty) return typed;
+      if (widget.initialDocumentType != null &&
+          widget.initialDocumentType!.trim().isNotEmpty) {
+        return widget.initialDocumentType!.trim();
+      }
+    }
+    return '';
+  }
+
+  List<String> get _effectiveRequirements {
+    final selectedOffering = _selectedOffering;
+    if (selectedOffering != null) {
+      return selectedOffering.requirements;
+    }
+    return DefaultDocumentRequirements.getRequirements(_currentDocumentType);
+  }
+
+  double? get _effectivePublishedFee {
+    final selectedOffering = _selectedOffering;
+    if (selectedOffering != null) {
+      return selectedOffering.publishedFeeAmount;
+    }
+    return DefaultDocumentRequirements.getPublishedFee(_currentDocumentType);
+  }
+
+  String get _effectiveDetails {
+    final selectedOffering = _selectedOffering;
+    if (selectedOffering != null) {
+      return selectedOffering.details;
+    }
+    return DefaultDocumentRequirements.getDetails(_currentDocumentType);
+  }
+
+  bool get _hasRequirementsOrDetails =>
+      _selectedOffering != null ||
+      DefaultDocumentRequirements.hasDefaults(_currentDocumentType);
+
   @override
   void dispose() {
     _purposeController.dispose();
@@ -92,11 +167,7 @@ class _RequestDocumentDialogState extends State<RequestDocumentDialog> {
 
   Future<void> _submitRequest() async {
     final selectedOffering = _selectedOffering;
-    final documentType =
-        selectedOffering?.documentType ??
-        (_selectedType == otherDocumentRequestType
-            ? _otherTypeController.text.trim()
-            : '');
+    final documentType = _currentDocumentType;
     if (documentType.isEmpty || documentType.length > 100) {
       setState(
         () => _errorMessage = 'Enter a document name up to 100 characters.',
@@ -151,7 +222,6 @@ class _RequestDocumentDialogState extends State<RequestDocumentDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final selectedOffering = _selectedOffering;
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,
@@ -240,6 +310,22 @@ class _RequestDocumentDialogState extends State<RequestDocumentDialog> {
                       ),
                     ),
                   ),
+                  if (_offerings.isEmpty)
+                    ...DefaultDocumentRequirements.defaults.map(
+                      (def) => DropdownMenuItem<String>(
+                        value: 'default:${def.documentType}',
+                        child: Text(
+                          context.tr(def.documentType),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                      ),
+                    ),
                   DropdownMenuItem<String>(
                     value: otherDocumentRequestType,
                     child: Text(
@@ -278,7 +364,7 @@ class _RequestDocumentDialogState extends State<RequestDocumentDialog> {
           if (_offerings.isEmpty && !_isLoadingOfferings) ...[
             Text(
               context.tr(
-                'Your Barangay has not published its document services yet. The request will need staff confirmation.',
+                'Your Barangay has not published its custom document services yet. Standard statutory requirements apply.',
               ),
               style: const TextStyle(color: Color(0xFFB45309), fontSize: 12),
             ),
@@ -290,9 +376,9 @@ class _RequestDocumentDialogState extends State<RequestDocumentDialog> {
               maxLength: 100,
               textCapitalization: TextCapitalization.words,
               onChanged: (_) {
-                if (_errorMessage != null) {
-                  setState(() => _errorMessage = null);
-                }
+                setState(() {
+                  _errorMessage = null;
+                });
               },
               decoration: InputDecoration(
                 labelText: context.tr('Document name'),
@@ -304,7 +390,7 @@ class _RequestDocumentDialogState extends State<RequestDocumentDialog> {
               ),
             ),
           ],
-          if (selectedOffering != null) ...[
+          if (_hasRequirementsOrDetails) ...[
             const SizedBox(height: 12),
             Container(
               width: double.infinity,
@@ -318,18 +404,18 @@ class _RequestDocumentDialogState extends State<RequestDocumentDialog> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '${context.tr('Published fee')}: ${selectedOffering.publishedFeeAmount == null
+                    '${context.tr('Published fee')}: ${_effectivePublishedFee == null
                         ? context.tr('Confirm with Barangay staff')
-                        : selectedOffering.publishedFeeAmount == 0
+                        : _effectivePublishedFee == 0
                         ? context.tr('No fee')
-                        : '₱${selectedOffering.publishedFeeAmount!.toStringAsFixed(2)}'}',
+                        : '₱${_effectivePublishedFee!.toStringAsFixed(2)}'}',
                     style: const TextStyle(
                       fontWeight: FontWeight.w700,
                       fontSize: 12,
                     ),
                   ),
                   const SizedBox(height: 6),
-                  if (selectedOffering.requirements.isNotEmpty) ...[
+                  if (_effectiveRequirements.isNotEmpty) ...[
                     Text(
                       context.tr('Bring these requirements:'),
                       style: const TextStyle(
@@ -338,7 +424,7 @@ class _RequestDocumentDialogState extends State<RequestDocumentDialog> {
                       ),
                     ),
                     const SizedBox(height: 3),
-                    ...selectedOffering.requirements.map(
+                    ..._effectiveRequirements.map(
                       (item) => Padding(
                         padding: const EdgeInsets.only(bottom: 2),
                         child: Text(
@@ -354,10 +440,10 @@ class _RequestDocumentDialogState extends State<RequestDocumentDialog> {
                       ),
                       style: const TextStyle(fontSize: 12),
                     ),
-                  if (selectedOffering.details.isNotEmpty) ...[
+                  if (_effectiveDetails.isNotEmpty) ...[
                     const SizedBox(height: 5),
                     Text(
-                      context.tr(selectedOffering.details),
+                      context.tr(_effectiveDetails),
                       style: const TextStyle(fontSize: 12),
                     ),
                   ],

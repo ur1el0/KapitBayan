@@ -1,9 +1,10 @@
+from decimal import Decimal
 from unittest.mock import patch
 from django.urls import reverse
 from rest_framework import status
 from gridy_audit.models import AuditLog
 from gridy_auth.models import Barangay, Resident, User
-from gridy_services.models import DocumentRequest
+from gridy_services.models import DocumentRequest, DocumentServiceOffering
 from .base import ServiceAPIBaseTestCase
 
 
@@ -439,3 +440,55 @@ class DocumentRequestAPITests(ServiceAPIBaseTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         document_request.refresh_from_db()
         self.assertEqual(str(document_request.fee_amount), "0.00")
+
+    def test_resident_clearance_request_auto_snapshots_canonical_requirements(self):
+        self._assign_shared_barangay()
+        self.client.force_login(self.resident)
+        url = reverse("document-request-list")
+
+        response = self.client.post(
+            url,
+            {
+                "document_type": "Barangay Clearance",
+                "urgency_tag": "REGULAR",
+                "purpose": "Employment requirement",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        created_request = DocumentRequest.objects.get(pk=response.data["id"])
+        self.assertIn("Government ID or proof of residency", created_request.requirements_snapshot)
+        self.assertIn("Community Tax Certificate (Cedula)", created_request.requirements_snapshot)
+        self.assertEqual(created_request.published_fee_amount_snapshot, Decimal("50.00"))
+
+    def test_resident_request_auto_links_active_offering(self):
+        barangay = self._assign_shared_barangay()
+        custom_offering = DocumentServiceOffering.objects.create(
+            barangay=barangay,
+            document_type="Barangay Clearance",
+            requirements=["Barangay Voter Certification", "Latest Cedula 2026"],
+            published_fee_amount=Decimal("75.00"),
+            details="Custom local requirements for Ibabang Dupay.",
+            is_active=True,
+        )
+
+        self.client.force_login(self.resident)
+        url = reverse("document-request-list")
+
+        response = self.client.post(
+            url,
+            {
+                "document_type": "Barangay Clearance",
+                "urgency_tag": "REGULAR",
+                "purpose": "Local ID",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        created_request = DocumentRequest.objects.get(pk=response.data["id"])
+        self.assertEqual(created_request.offering, custom_offering)
+        self.assertEqual(created_request.requirements_snapshot, ["Barangay Voter Certification", "Latest Cedula 2026"])
+        self.assertEqual(created_request.published_fee_amount_snapshot, Decimal("75.00"))
+        self.assertEqual(created_request.details_snapshot, "Custom local requirements for Ibabang Dupay.")
