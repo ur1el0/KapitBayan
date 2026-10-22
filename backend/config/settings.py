@@ -180,7 +180,8 @@ DATABASES['default']['CONN_MAX_AGE'] = 60
 DATABASES['default']['CONN_HEALTH_CHECKS'] = True
 
 
-# Password validation
+# Password policy: eight-character minimum, common-password and user-similarity
+# checks; uppercase letters, symbols, and digit classes are optional.
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
 
 AUTH_PASSWORD_VALIDATORS = [
@@ -192,9 +193,6 @@ AUTH_PASSWORD_VALIDATORS = [
     },
     {
         'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]
 
