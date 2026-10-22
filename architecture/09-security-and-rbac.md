@@ -6,6 +6,8 @@ Security decisions are enforced by the Django API. Frontend route guards and mob
 
 The API uses JWT access credentials and server-managed refresh sessions/cookies according to [ADR 002](decisions/002-httponly-jwt-cookie-auth.md) and [ADR 005](decisions/005-session-revocation.md). Logout and account lifecycle operations revoke sessions as defined by their backend contracts. Do not assume every historical token-blacklist description applies to current session handling; consult the auth code and OpenAPI schema.
 
+Passwords are case-sensitive. They must be at least eight characters and must not be a commonly used password or too similar to the user's account attributes. Uppercase letters, symbols, and digit classes are optional; the server does not impose character-composition requirements.
+
 ## Role and tenant controls
 
 - `RESIDENT`: access to the authenticated resident's own profile and service records.
