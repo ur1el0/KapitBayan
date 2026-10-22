@@ -15,6 +15,7 @@ export const ResidentsHub: React.FC = () => {
     const [pendingCountStatus, setPendingCountStatus] = useState<'loading' | 'error' | 'success'>('loading');
     const [retryingPendingCount, setRetryingPendingCount] = useState(false);
     const pendingCountRequestId = useRef(0);
+    const pendingCountFetchInProgress = useRef(false);
 
     // Sync tab state when URL search param changes
     useEffect(() => {
@@ -26,6 +27,8 @@ export const ResidentsHub: React.FC = () => {
     }, [tabParam]);
 
     const fetchPendingCount = useCallback(async (isRetry = false) => {
+        if (pendingCountFetchInProgress.current) return;
+        pendingCountFetchInProgress.current = true;
         const requestId = ++pendingCountRequestId.current;
         if (isRetry) {
             setRetryingPendingCount(true);
@@ -48,6 +51,7 @@ export const ResidentsHub: React.FC = () => {
             console.error('Failed to fetch pending verifications count:', err);
             setPendingCountStatus('error');
         } finally {
+            pendingCountFetchInProgress.current = false;
             if (requestId === pendingCountRequestId.current) {
                 setRetryingPendingCount(false);
             }
@@ -56,7 +60,19 @@ export const ResidentsHub: React.FC = () => {
 
     useEffect(() => {
         void fetchPendingCount();
+        const refreshWhenVisible = () => {
+            if (document.visibilityState === 'visible') {
+                void fetchPendingCount();
+            }
+        };
+        const intervalId = window.setInterval(refreshWhenVisible, 3000);
+        document.addEventListener('visibilitychange', refreshWhenVisible);
+        window.addEventListener('focus', refreshWhenVisible);
+
         return () => {
+            window.clearInterval(intervalId);
+            document.removeEventListener('visibilitychange', refreshWhenVisible);
+            window.removeEventListener('focus', refreshWhenVisible);
             pendingCountRequestId.current += 1;
         };
     }, [activeTab, fetchPendingCount]);

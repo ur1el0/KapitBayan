@@ -1,5 +1,5 @@
 import toast from 'react-hot-toast';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { axiosPrivate } from '../../api/axios';
 import { getSafeApiErrorMessage } from '../../api/error-message';
 import { DocumentTable } from '../../components/documents/DocumentTable';
@@ -76,6 +76,7 @@ export const DocumentRequests: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [retrying, setRetrying] = useState(false);
+    const requestsFetchInProgress = useRef(false);
 
     const [selectedRequest, setSelectedRequest] = useState<DocumentRequest | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -92,6 +93,8 @@ export const DocumentRequests: React.FC = () => {
     const [isCatalogModalOpen, setIsCatalogModalOpen] = useState(false);
 
     const fetchRequests = useCallback(async (isRetry = false) => {
+        if (requestsFetchInProgress.current) return;
+        requestsFetchInProgress.current = true;
         if (isRetry) setRetrying(true);
 
         try {
@@ -102,6 +105,7 @@ export const DocumentRequests: React.FC = () => {
             setError('Failed to load document requests.');
             console.error(err);
         } finally {
+            requestsFetchInProgress.current = false;
             setLoading(false);
             setRetrying(false);
         }
@@ -126,6 +130,20 @@ export const DocumentRequests: React.FC = () => {
 
     useEffect(() => {
         void fetchRequests();
+        const refreshWhenVisible = () => {
+            if (document.visibilityState === 'visible') {
+                void fetchRequests();
+            }
+        };
+        const intervalId = window.setInterval(refreshWhenVisible, 3000);
+        document.addEventListener('visibilitychange', refreshWhenVisible);
+        window.addEventListener('focus', refreshWhenVisible);
+
+        return () => {
+            window.clearInterval(intervalId);
+            document.removeEventListener('visibilitychange', refreshWhenVisible);
+            window.removeEventListener('focus', refreshWhenVisible);
+        };
     }, [fetchRequests]);
 
     const getStatusBadge = (status: string) => {

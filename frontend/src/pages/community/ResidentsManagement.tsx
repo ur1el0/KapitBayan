@@ -1,5 +1,5 @@
 import toast from 'react-hot-toast';
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { axiosPrivate } from "../../api/axios";
 import { getSafeApiErrorMessage } from "../../api/error-message";
 import { Search, Upload } from "lucide-react";
@@ -18,6 +18,7 @@ export const ResidentsManagement: React.FC = () => {
     const [loadError, setLoadError] = useState(false);
     const [retrying, setRetrying] = useState(false);
     const [search, setSearch] = useState('');
+    const residentsFetchInProgress = useRef(false);
 
     // Detail Modal State
     const [selectedResident, setSelectedResident] = useState<Resident | null>(null);
@@ -31,6 +32,8 @@ export const ResidentsManagement: React.FC = () => {
     const [importSummary, setImportSummary] = useState<ImportSummary | null>(null);
 
     const fetchResidents = useCallback(async (isRetry = false) => {
+        if (residentsFetchInProgress.current) return;
+        residentsFetchInProgress.current = true;
         if (isRetry) setRetrying(true);
         try {
             const response = await axiosPrivate.get('/auth/resident/');
@@ -40,6 +43,7 @@ export const ResidentsManagement: React.FC = () => {
             console.error("Failed to fetch directory:", err);
             setLoadError(true);
         } finally {
+            residentsFetchInProgress.current = false;
             setLoading(false);
             setRetrying(false);
         }
@@ -47,6 +51,20 @@ export const ResidentsManagement: React.FC = () => {
 
     useEffect(() => {
         void fetchResidents();
+        const refreshWhenVisible = () => {
+            if (document.visibilityState === 'visible') {
+                void fetchResidents();
+            }
+        };
+        const intervalId = window.setInterval(refreshWhenVisible, 3000);
+        document.addEventListener('visibilitychange', refreshWhenVisible);
+        window.addEventListener('focus', refreshWhenVisible);
+
+        return () => {
+            window.clearInterval(intervalId);
+            document.removeEventListener('visibilitychange', refreshWhenVisible);
+            window.removeEventListener('focus', refreshWhenVisible);
+        };
     }, [fetchResidents]);
 
     const handleDelete = async (id: number) => {
