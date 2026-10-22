@@ -53,6 +53,28 @@ class ResidentAwareCloudinaryStorageTests(TestCase):
         self.assertIn("/image/authenticated/", url)
         self.assertIn("/s--", url)
 
+    def test_extensionless_private_proof_uses_original_cloudinary_format(self):
+        with patch(
+            "config.private_media_storage.cloudinary.api.resource",
+            return_value={"format": "pdf"},
+        ) as metadata, patch.object(
+            self.storage, "_download", return_value=ContentFile(b"%PDF-1.4")
+        ) as download:
+            asset_format = self.storage.get_private_media_format(
+                "barangay_onboarding/opaque-asset-id"
+            )
+            self.storage.open_private_media(
+                "barangay_onboarding/opaque-asset-id", asset_format=asset_format
+            )
+
+        self.assertEqual(asset_format, "pdf")
+        self.assertEqual(metadata.call_args.kwargs["type"], "authenticated")
+        self.assertEqual(metadata.call_args.kwargs["resource_type"], "image")
+        url = download.call_args.args[0]
+        self.assertIn("/image/authenticated/", url)
+        self.assertIn("/s--", url)
+        self.assertIn("opaque-asset-id.pdf", url)
+
     def test_storage_does_not_expose_private_cloudinary_urls(self):
         with self.assertRaisesMessage(
             ImproperlyConfigured,
