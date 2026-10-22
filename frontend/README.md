@@ -15,6 +15,10 @@ npm run dev
 
 `VITE_API_BASE_URL` controls the development API base URL. Production builds use the same-origin `/api/v1` route configured by the deployment, regardless of that development setting. Never place secrets in `VITE_*` variables; Vite embeds them in client-side assets.
 
+## Admin list freshness
+
+Admin Documents and Residents views refresh automatically. The [Web Frontend Features guide](../docs/features/frontend_features.md#admin-list-refresh) lists the covered data, cadence, and focus behavior.
+
 ## Checks
 
 ```bash

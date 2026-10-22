@@ -10,6 +10,10 @@ Resident self-service routes use the resident layout and `RESIDENT` guard. Staff
 
 Depending on role and barangay assignment, staff can process documents and fees, advance queues, manage announcements and activities, maintain residents and verification records, triage reports, and review authorized analytics. Barangay `ADMIN` users can also manage Field Official accounts from `/settings`, including allowed profile edits and activation status; account setup is sent through an expiring email link. Field Officials use their email to sign in to the Flutter client. Only Residents choose usernames. Exact visibility is defined in the route tree and backend permission classes.
 
+## Admin list refresh
+
+The Admin web Documents list, Residents directory, Resident Verifications list, and its pending-count badge refresh from the API every three seconds while the browser tab is visible. They refresh immediately when the tab becomes visible or the window regains focus. An in-flight request is not duplicated. These pages use HTTP polling; no manual page reload is needed to see new list data during normal operation.
+
 ## Resident capabilities
 
 Residents can use the portal to request documents, follow queue tickets, read community bulletins, and submit assistance requests. Available pages and paths are listed in [Resident Web Portal](citizen_desktop_portal.md).

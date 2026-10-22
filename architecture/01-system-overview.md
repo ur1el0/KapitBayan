@@ -12,7 +12,7 @@ Flutter app ──────┘          ├────────── pri
                              └────────── Email provider (HTTPS; SMTP locally)
 ```
 
-The web client uses the API through the configured same-origin proxy in the intended production topology. The Flutter app connects to the configured API URL. Hosting details and checks that remain unverified are recorded in [Deployment](11-deployment-and-ci-cd.md); this diagram describes components, not a claim that every external integration is live.
+The web client uses the API through the configured same-origin proxy in the intended production topology. The Flutter app connects to the configured API URL. Hosting details and checks that remain unverified are recorded in [Deployment](11-deployment-and-ci-cd.md); this diagram describes components, not a claim that every external integration is live. Admin web lists use client-side refresh through the API; see the [web frontend guide](../docs/features/frontend_features.md#admin-list-refresh) for the affected screens and cadence.
 
 ## Roles and tenancy
 

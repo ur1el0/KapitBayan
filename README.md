@@ -23,6 +23,8 @@ The platform supports resident document requests, manual fee assessment and trea
 
 The web client is configured for a same-origin API proxy, while mobile clients call the configured API URL. Private identity and payment evidence is served through authenticated backend views; never construct public evidence URLs. Provider selection describes the current deployment configuration; check provider dashboards for live service health and environment values.
 
+Admin web Documents and Residents lists refresh automatically while their pages are open. See the [web frontend guide](docs/features/frontend_features.md#admin-list-refresh) for the covered lists, cadence, and focus behavior.
+
 ## Documentation
 
 Start at the [documentation index](docs/README.md) for current architecture, decision records, feature guides, and walkthroughs. The [system presentation flow](docs/presentations/system-demo-flow.md) gives a short product overview; the [barangay demo and training flow](docs/presentations/barangay-demo-and-training-flow.md) walks admins, staff, field officials, and residents through actual tasks. The [barangay training flow PDF](docs/presentations/barangay-demo-and-training-flow.pdf) is available to print. The system overview PDF is an older export; use its current [Markdown source](docs/presentations/system-demo-flow.md) for the updated Barangay onboarding steps. The [Brevo email setup guide](docs/walkthrough/brevo-email-setup.md) covers deployed SMTP configuration and delivery checks. The [ADR index](architecture/decisions/README.md) records the accepted architectural decisions. Use the generated OpenAPI schema for exact request/response details.
