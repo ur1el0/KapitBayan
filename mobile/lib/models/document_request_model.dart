@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../core/default_document_requirements.dart';
+
 /// Model representing a resident's document request (e.g. Barangay Clearance, Certificate of Residency, Business Permit).
 class DocumentRequestModel {
   final int id;
@@ -198,6 +200,25 @@ class DocumentRequestModel {
       requirementsSnapshot.isNotEmpty ||
       publishedFeeAmountSnapshot != null ||
       offeringDetailsSnapshot.isNotEmpty;
+
+  bool get hasRequirementsOrOffering =>
+      hasOfferingSnapshot ||
+      DefaultDocumentRequirements.hasDefaults(documentType);
+
+  List<String> get effectiveRequirements {
+    if (hasOfferingSnapshot) return requirementsSnapshot;
+    return DefaultDocumentRequirements.getRequirements(documentType);
+  }
+
+  double? get effectivePublishedFee {
+    if (hasOfferingSnapshot) return publishedFeeAmountSnapshot;
+    return DefaultDocumentRequirements.getPublishedFee(documentType);
+  }
+
+  String get effectiveDetails {
+    if (hasOfferingSnapshot) return offeringDetailsSnapshot;
+    return DefaultDocumentRequirements.getDetails(documentType);
+  }
 
   /// Formatted fee string in Philippine Pesos (e.g. "₱50.00")
   String? get formattedFee =>

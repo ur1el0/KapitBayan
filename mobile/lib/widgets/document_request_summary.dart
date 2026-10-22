@@ -41,15 +41,15 @@ class DocumentRequestSummary extends StatelessWidget {
           value: req.formattedRequestedDate,
         ),
 
-        if (req.hasOfferingSnapshot) ...[
+        if (req.hasRequirementsOrOffering) ...[
           const SizedBox(height: 12),
           _DetailRow(
             label: context.tr('Published fee'),
-            value: req.publishedFeeAmountSnapshot == null
+            value: req.effectivePublishedFee == null
                 ? context.tr('Confirm with Barangay staff')
-                : req.publishedFeeAmountSnapshot == 0
+                : req.effectivePublishedFee == 0
                 ? context.tr('No fee')
-                : '₱${req.publishedFeeAmountSnapshot!.toStringAsFixed(2)}',
+                : '₱${req.effectivePublishedFee!.toStringAsFixed(2)}',
           ),
           const SizedBox(height: 8),
           Text(
@@ -61,13 +61,13 @@ class DocumentRequestSummary extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 4),
-          if (req.requirementsSnapshot.isEmpty)
+          if (req.effectiveRequirements.isEmpty)
             Text(
               context.tr('No requirements were listed.'),
               style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
             )
           else
-            ...req.requirementsSnapshot.map(
+            ...req.effectiveRequirements.map(
               (requirement) => Padding(
                 padding: const EdgeInsets.only(bottom: 3),
                 child: Text(
@@ -79,10 +79,10 @@ class DocumentRequestSummary extends StatelessWidget {
                 ),
               ),
             ),
-          if (req.offeringDetailsSnapshot.isNotEmpty) ...[
+          if (req.effectiveDetails.isNotEmpty) ...[
             const SizedBox(height: 6),
             Text(
-              context.tr(req.offeringDetailsSnapshot),
+              context.tr(req.effectiveDetails),
               style: const TextStyle(
                 fontSize: 12,
                 color: AppColors.textPrimary,

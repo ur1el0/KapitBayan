@@ -1007,7 +1007,7 @@ class _AdminDocumentRequestDetailsScreenState
               ],
             ),
           ),
-          if (_request.hasOfferingSnapshot)
+          if (_request.hasRequirementsOrOffering)
             _sectionCard(
               title: context.tr('Published requirements and fee'),
               child: Column(
@@ -1015,13 +1015,13 @@ class _AdminDocumentRequestDetailsScreenState
                 children: [
                   _detail(
                     context.tr('Published fee'),
-                    _request.publishedFeeAmountSnapshot == null
+                    _request.effectivePublishedFee == null
                         ? context.tr('Confirm with Barangay staff')
-                        : _request.publishedFeeAmountSnapshot == 0
+                        : _request.effectivePublishedFee == 0
                         ? context.tr('No fee')
-                        : '₱${_request.publishedFeeAmountSnapshot!.toStringAsFixed(2)}',
+                        : '₱${_request.effectivePublishedFee!.toStringAsFixed(2)}',
                   ),
-                  if (_request.requirementsSnapshot.isEmpty)
+                  if (_request.effectiveRequirements.isEmpty)
                     _detail(
                       context.tr('Requirements'),
                       context.tr('No requirements were listed.'),
@@ -1029,13 +1029,13 @@ class _AdminDocumentRequestDetailsScreenState
                   else
                     _detail(
                       context.tr('Requirements'),
-                      _request.requirementsSnapshot
+                      _request.effectiveRequirements
                           .map((requirement) => '• ${context.tr(requirement)}')
                           .join('\n'),
                     ),
                   _detail(
                     context.tr('Additional details'),
-                    _request.offeringDetailsSnapshot,
+                    _request.effectiveDetails,
                   ),
                   Text(
                     context.tr(

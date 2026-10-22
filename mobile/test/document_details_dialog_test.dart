@@ -80,6 +80,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Current Status'), findsOneWidget);
+    expect(find.text('Requirements'), findsOneWidget);
+    expect(find.text('• Government ID or proof of residency'), findsOneWidget);
+    expect(find.text('• Community Tax Certificate (Cedula)'), findsOneWidget);
     expect(
       find.text(
         'Choose the official recipient configured by your barangay. Staff will verify the transfer reference manually before release.',

@@ -251,6 +251,43 @@ void main() {
     expect(find.text('Regular'), findsOneWidget);
     expect(find.text('Urgent'), findsOneWidget);
     expect(find.text('Submit Request'), findsOneWidget);
+    expect(find.text('Bring these requirements:'), findsOneWidget);
+    expect(find.text('• Government ID or proof of residency'), findsOneWidget);
+    expect(find.text('• Proof of indigent status or declaration of low income'), findsOneWidget);
+    expect(find.text('Published fee: No fee'), findsOneWidget);
+  });
+
+  testWidgets('Tapping Barangay Clearance catalog card shows statutory requirements and fee', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 2.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    final prefs = await SharedPreferences.getInstance();
+    final storage = StorageService(prefs);
+    final mockService = MockDocumentService(storage: storage);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.lightTheme,
+        home: DocumentsScreen(documentService: mockService),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    // Tap on Barangay Clearance catalog card
+    await tester.tap(find.text('Barangay\nClearance'));
+    await tester.pumpAndSettle();
+
+    // Modal opens with canonical Barangay Clearance requirements
+    expect(find.text('New Document Request'), findsOneWidget);
+    expect(find.text('Bring these requirements:'), findsOneWidget);
+    expect(find.text('• Government ID or proof of residency'), findsOneWidget);
+    expect(find.text('• Community Tax Certificate (Cedula)'), findsOneWidget);
+    expect(find.text('Published fee: ₱50.00'), findsOneWidget);
   });
 
   testWidgets('failed document load shows a retryable error instead of an empty state', (WidgetTester tester) async {
