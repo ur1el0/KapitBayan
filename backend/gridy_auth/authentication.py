@@ -92,8 +92,8 @@ class ProductionSafeJWTAuthentication(JWTAuthentication):
             is_application_proof_route = bool(
                 re.fullmatch(rf"{re.escape(application_base)}/[0-9]+/proof", path)
             )
-            is_application_decision_route = bool(
-                re.fullmatch(rf"{re.escape(application_base)}/[0-9]+/(approve|reject)", path)
+            is_application_action_route = bool(
+                re.fullmatch(rf"{re.escape(application_base)}/[0-9]+/(approve|reject|erase)", path)
             )
             is_account_detail_route = bool(re.fullmatch(rf"{re.escape(account_base)}/\d+", path))
             is_account_action_route = bool(re.fullmatch(
@@ -104,7 +104,7 @@ class ProductionSafeJWTAuthentication(JWTAuthentication):
                 or (path in self._OPERATOR_POST_PATHS and method == "POST")
                 or (is_application_detail_route and method in {"GET", "HEAD", "OPTIONS"})
                 or (is_application_proof_route and method in {"GET", "HEAD", "OPTIONS"})
-                or (is_application_decision_route and method in {"POST", "OPTIONS"})
+                or (is_application_action_route and method in {"POST", "OPTIONS"})
                 or (is_account_detail_route and method in {"GET", "HEAD", "OPTIONS", "PATCH"})
                 or (is_account_action_route and method in {"POST", "OPTIONS"})
             )
