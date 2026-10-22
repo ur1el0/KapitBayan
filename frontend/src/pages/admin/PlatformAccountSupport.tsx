@@ -1,18 +1,26 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
-import { AlertTriangle, KeyRound, LogOut, Search, ShieldCheck, UserRoundCog } from 'lucide-react';
+import { AlertTriangle, KeyRound, LogOut, Search, ShieldCheck, Trash2, UserRoundCog } from 'lucide-react';
 import { InlineErrorState } from '../../components/ui/InlineErrorState';
 import { useAuth } from '../../context/auth-context';
 import {
     correctPlatformAccountEmail,
+    erasePlatformAccount,
     fetchPlatformAccounts,
     sendPlatformAccountRecoveryLink,
     setPlatformAccountActive,
+    type AccountErasureReason,
     type AccountSupportReason,
     type PlatformAccount,
 } from '../../api/platformAccountSupport';
 
 const PAGE_SIZE = 50;
+const ERASURE_REASONS: { value: AccountErasureReason; label: string }[] = [
+    { value: 'ACCOUNT_HOLDER_REQUEST', label: 'Account holder request' },
+    { value: 'DUPLICATE_ACCOUNT', label: 'Duplicate account' },
+    { value: 'SECURITY_OR_FRAUD', label: 'Security or fraud concern' },
+    { value: 'OTHER_APPROVED_REASON', label: 'Other approved reason' },
+];
 const REASONS: { value: AccountSupportReason; label: string }[] = [
     { value: 'INCORRECT_CONTACT', label: 'Incorrect contact details' },
     { value: 'LOCKED_OUT', label: 'Account holder is locked out' },
@@ -27,7 +35,7 @@ function apiErrorMessage(error: unknown, fallback: string) {
     const data = response.response?.data;
     if (!data || typeof data !== 'object') return fallback;
     if (typeof data.detail === 'string') return data.detail;
-    for (const key of ['email', 'contact_verified', 'reason', 'is_active']) {
+    for (const key of ['email', 'contact_verified', 'reason', 'is_active', 'account', 'confirm_username']) {
         const value = data[key];
         if (typeof value === 'string') return value;
         if (Array.isArray(value) && typeof value[0] === 'string') return value[0];
@@ -84,6 +92,8 @@ export function PlatformAccountSupport() {
     const [emailVerified, setEmailVerified] = useState(false);
     const [statusReason, setStatusReason] = useState<AccountSupportReason>('STATUS_CORRECTION');
     const [statusConfirmed, setStatusConfirmed] = useState(false);
+    const [erasureReason, setErasureReason] = useState<AccountErasureReason>('ACCOUNT_HOLDER_REQUEST');
+    const [usernameConfirmation, setUsernameConfirmation] = useState('');
     const [busyAction, setBusyAction] = useState<string | null>(null);
     const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -127,6 +137,8 @@ export function PlatformAccountSupport() {
         setEmailDraft(account.email);
         setEmailVerified(false);
         setStatusConfirmed(false);
+        setErasureReason('ACCOUNT_HOLDER_REQUEST');
+        setUsernameConfirmation('');
         setMessage(null);
     };
 
@@ -195,6 +207,31 @@ export function PlatformAccountSupport() {
         }
     };
 
+    const eraseAccount = async (account: PlatformAccount) => {
+        if (usernameConfirmation !== account.username) return;
+        setBusyAction(`erase-${account.id}`);
+        setMessage(null);
+        try {
+            await erasePlatformAccount(account.id, {
+                reason: erasureReason,
+                confirm_username: usernameConfirmation,
+            });
+            setAccounts((current) => current.filter((item) => item.id !== account.id));
+            setCount((current) => Math.max(0, current - 1));
+            setSelectedId(null);
+            setUsernameConfirmation('');
+            setMessage({
+                type: 'success',
+                text: 'Account permanently deleted. Retained statutory document and aid history remain available under retention rules.',
+            });
+            if (accounts.length === 1 && page > 1) setPage((current) => Math.max(1, current - 1));
+        } catch (error) {
+            setMessage({ type: 'error', text: apiErrorMessage(error, 'Could not permanently delete the account.') });
+        } finally {
+            setBusyAction(null);
+        }
+    };
+
     const totalPages = Math.max(1, Math.ceil(count / PAGE_SIZE));
 
     return (
@@ -207,7 +244,7 @@ export function PlatformAccountSupport() {
                     Barangay Operator account support
                 </h1>
                 <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-                    Find barangay accounts, including legacy unassigned accounts, correct a verified contact address, send a private setup/reset link, or suspend access. These actions are audited.
+                    Find eligible barangay accounts, correct a verified contact address, send a private setup/reset link, change access, or permanently erase an account. These actions are audited.
                 </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -327,6 +364,32 @@ export function PlatformAccountSupport() {
                                                     {busyAction === `status-${account.id}` ? 'Updating…' : account.is_active ? 'Deactivate account' : 'Reactivate account'}
                                                 </button>
                                                 {account.role === 'ADMIN' && account.is_active && <p className="text-xs text-slate-600">The final active administrator for a barangay is protected from deactivation.</p>}
+                                            </section>
+
+                                            <section aria-labelledby={`erase-heading-${account.id}`} className="space-y-4 rounded-lg border border-rose-200 bg-rose-50 p-4 lg:col-span-2">
+                                                <div className="flex items-start gap-3">
+                                                    <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-rose-700" aria-hidden="true" />
+                                                    <div>
+                                                        <h3 id={`erase-heading-${account.id}`} className="font-bold text-rose-950">Permanently delete account</h3>
+                                                        <p className="mt-1 text-sm leading-5 text-rose-900">This removes the sign-in account, resident profile, private identity files, and sessions. Statutory document and aid history is retained under the applicable retention rules. This action cannot be undone.</p>
+                                                    </div>
+                                                </div>
+                                                <div className="grid gap-3 sm:grid-cols-2">
+                                                    <div>
+                                                        <label htmlFor={`erase-reason-${account.id}`} className="block text-sm font-semibold text-slate-700">Reason for deletion</label>
+                                                        <select id={`erase-reason-${account.id}`} value={erasureReason} onChange={(event) => setErasureReason(event.target.value as AccountErasureReason)} className="mt-1 min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary md:text-sm">
+                                                            {ERASURE_REASONS.map((reason) => <option key={reason.value} value={reason.value}>{reason.label}</option>)}
+                                                        </select>
+                                                    </div>
+                                                    <div>
+                                                        <label htmlFor={`erase-username-${account.id}`} className="block text-sm font-semibold text-slate-700">Type <span className="font-mono">{account.username}</span> to confirm</label>
+                                                        <input id={`erase-username-${account.id}`} value={usernameConfirmation} onChange={(event) => setUsernameConfirmation(event.target.value)} autoComplete="off" maxLength={150} className="mt-1 min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 font-mono text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary md:text-sm" />
+                                                    </div>
+                                                </div>
+                                                <button type="button" disabled={usernameConfirmation !== account.username || busyAction !== null} onClick={() => void eraseAccount(account)} className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-rose-700 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-700 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+                                                    <Trash2 className="h-4 w-4" aria-hidden="true" /> {busyAction === `erase-${account.id}` ? 'Deleting account…' : 'Permanently delete account'}
+                                                </button>
+                                                {account.role === 'ADMIN' && account.is_active && <p className="text-xs text-rose-900">The final active Barangay Admin cannot be deleted.</p>}
                                             </section>
                                         </div>
                                     )}

@@ -13,6 +13,9 @@ class KapitBayanCommunicationsConfig(AppConfig):
     name = 'gridy_communications'
 
     def ready(self):
+        if getattr(settings, 'ACCOUNT_RESET_RUNTIME', False):
+            return
+
         if not firebase_admin._apps:
             key_path = settings.FIREBASE_SERVICE_ACCOUNT_JSON_PATH
             if not key_path or not Path(key_path).is_file():

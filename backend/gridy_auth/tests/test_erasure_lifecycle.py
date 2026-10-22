@@ -1,5 +1,6 @@
 from decimal import Decimal
 from io import BytesIO
+from unittest.mock import patch
 
 from django.core.files.storage import default_storage
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -10,7 +11,7 @@ from PIL import Image
 from rest_framework import status
 
 from gridy_audit.models import AuditLog
-from gridy_auth.models import Barangay, RefreshSession, Resident, User
+from gridy_auth.models import Barangay, PrivateMediaCleanup, RefreshSession, Resident, User
 from gridy_auth.lifecycle import erase_user_account
 from gridy_services.models import AidRequest, DocumentRequest
 from .base import IsolatedAuthAPITestCase
@@ -204,6 +205,24 @@ class AccountErasureLifecycleTests(IsolatedAuthAPITestCase):
 
         self.assertFalse(default_storage.exists(philsys_file_name))
         self.assertFalse(default_storage.exists(billing_file_name))
+
+    def test_profile_picture_cleanup_failure_keeps_retry_without_failing_erasure(self):
+        self.resident_user.profile_picture = create_dummy_image("maria-profile.png")
+        self.resident_user.save(update_fields=["profile_picture"])
+        account_id = self.resident_user.pk
+        self.client.force_authenticate(user=self.resident_user)
+
+        with patch.object(default_storage, "exists", side_effect=OSError("storage unavailable")):
+            with self.captureOnCommitCallbacks(execute=True):
+                response = self.client.delete(reverse("auth_me"))
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(User.objects.filter(pk=account_id).exists())
+        self.assertTrue(PrivateMediaCleanup.objects.filter(
+            storage_model="gridy_auth.User",
+            field_name="profile_picture",
+            attempt_count=1,
+        ).exists())
 
     def test_database_rollback_preserves_identity_files_and_account(self):
         resident_user_id = self.resident_user.pk

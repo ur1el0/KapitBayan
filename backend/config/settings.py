@@ -311,6 +311,18 @@ CLOUDINARY_CLOUD_NAME = env('CLOUDINARY_CLOUD_NAME', default='')
 CLOUDINARY_API_KEY = env('CLOUDINARY_API_KEY', default='')
 CLOUDINARY_API_SECRET = env('CLOUDINARY_API_SECRET', default='')
 MIGRATION_ONLY_RUNTIME = env.bool('KAPITBAYAN_MIGRATION_ONLY', default=False)
+ACCOUNT_RESET_RUNTIME = env.bool('KAPITBAYAN_ACCOUNT_RESET_RUNTIME', default=False)
+
+if ACCOUNT_RESET_RUNTIME and (
+    DEBUG
+    or len(sys.argv) < 2
+    or sys.argv[1] != 'reset_production_accounts'
+    or MIGRATION_ONLY_RUNTIME
+):
+    raise ImproperlyConfigured(
+        'KAPITBAYAN_ACCOUNT_RESET_RUNTIME is reserved for the production '
+        'reset_production_accounts command with DEBUG=False.'
+    )
 
 if MIGRATION_ONLY_RUNTIME and (
     os.environ.get('GITHUB_ACTIONS', '').casefold() != 'true'
@@ -461,7 +473,7 @@ if not DEBUG and not IS_TESTING:
             f'Production database engine must be PostgreSQL, but resolved to {db_engine}.'
         )
 
-    if not MIGRATION_ONLY_RUNTIME:
+    if not MIGRATION_ONLY_RUNTIME and not ACCOUNT_RESET_RUNTIME:
         from urllib.parse import urlparse
         parsed_frontend_url = urlparse(FRONTEND_URL)
         if (

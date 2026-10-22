@@ -7,6 +7,12 @@ export type AccountSupportReason =
     | 'STATUS_CORRECTION'
     | 'OTHER_VERIFIED_SUPPORT';
 
+export type AccountErasureReason =
+    | 'ACCOUNT_HOLDER_REQUEST'
+    | 'DUPLICATE_ACCOUNT'
+    | 'SECURITY_OR_FRAUD'
+    | 'OTHER_APPROVED_REASON';
+
 export interface PlatformAccount {
     id: number;
     username: string;
@@ -69,4 +75,11 @@ export async function setPlatformAccountActive(
 ): Promise<PlatformAccount> {
     const response = await axiosPrivate.post(`/auth/platform/accounts/${accountId}/set-active/`, payload);
     return response.data;
+}
+
+export async function erasePlatformAccount(
+    accountId: number,
+    payload: { reason: AccountErasureReason; confirm_username: string },
+): Promise<void> {
+    await axiosPrivate.post(`/auth/platform/accounts/${accountId}/erase/`, payload);
 }

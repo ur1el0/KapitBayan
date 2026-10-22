@@ -3,6 +3,7 @@ from django.contrib.auth.tokens import default_token_generator
 from django.db import IntegrityError, transaction
 from django.db.models import Q
 from django.http import FileResponse, Http404
+from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
@@ -17,13 +18,18 @@ from urllib.parse import quote, urlencode
 
 from gridy_audit.models import AuditLog
 from gridy_audit.services import log_action
-from gridy_auth.lifecycle import attempt_private_media_cleanup_safely, queue_private_media_cleanup
+from gridy_auth.lifecycle import (
+    attempt_private_media_cleanup_safely,
+    erase_user_account,
+    queue_private_media_cleanup,
+)
 from gridy_auth.models import Barangay, BarangayApplication, User
 from gridy_auth.permissions import IsBarangayOnboardingReviewer
 from gridy_auth.serializers.onboarding import (
     BarangayApplicationApproveSerializer,
     BarangayApplicationCreateSerializer,
     BarangayApplicationEmailVerificationSerializer,
+    BarangayApplicationErasureSerializer,
     BarangayApplicationOperatorSerializer,
     BarangayApplicationReceiptSerializer,
     BarangayApplicationRejectSerializer,
@@ -607,3 +613,150 @@ class PlatformBarangayApplicationViewSet(
             return Response({"detail": "Application not found."}, status=status.HTTP_404_NOT_FOUND)
 
         return Response(BarangayApplicationOperatorSerializer(application).data)
+
+    @extend_schema(
+        summary="Permanently erase a Barangay application and its linked applicant account",
+        request=BarangayApplicationErasureSerializer,
+        responses={
+            204: OpenApiResponse(description="Application and linked applicant account erased."),
+            400: OpenApiResponse(description="A deletion reason or exact application confirmation is invalid."),
+            403: OpenApiResponse(description="Restricted to active Barangay Operators and Django superusers."),
+            404: OpenApiResponse(description="Application not found."),
+            409: OpenApiResponse(description="The linked account is inconsistent or is the Barangay's last active Admin."),
+        },
+    )
+    @action(detail=True, methods=["post"], url_path="erase")
+    @transaction.atomic
+    def erase(self, request, pk=None):
+        candidate = get_object_or_404(self.get_queryset(), pk=pk)
+        candidate_account_ids = {
+            account_id
+            for account_id in (candidate.applicant_user_id, candidate.created_admin_id)
+            if account_id is not None
+        }
+        if len(candidate_account_ids) > 1:
+            return Response(
+                {"detail": "This application links to conflicting Admin accounts. Resolve the links before deleting it."},
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        candidate_account = (
+            User.objects.filter(pk=next(iter(candidate_account_ids))).first()
+            if candidate_account_ids
+            else None
+        )
+        candidate_barangay_id = candidate_account.barangay_id if candidate_account else None
+        if candidate_barangay_id is not None:
+            get_object_or_404(
+                Barangay.objects.select_for_update(),
+                pk=candidate_barangay_id,
+            )
+
+        # Lock the application after its tenant row so this action serializes
+        # with account erasure and the final-active-Admin guard.
+        application_lock_filter = Q(pk=pk)
+        if candidate_account_ids:
+            candidate_account_id = next(iter(candidate_account_ids))
+            application_lock_filter |= Q(applicant_user_id=candidate_account_id) | Q(
+                created_admin_id=candidate_account_id
+            )
+        locked_application_ids = list(
+            BarangayApplication.objects.filter(application_lock_filter)
+            .order_by("pk")
+            .select_for_update(of=("self",))
+            .values_list("pk", flat=True)
+        )
+        if not any(str(application_id) == str(pk) for application_id in locked_application_ids):
+            raise Http404("Application not found.")
+        application = get_object_or_404(BarangayApplication.objects, pk=pk)
+        linked_account_ids = {
+            account_id
+            for account_id in (application.applicant_user_id, application.created_admin_id)
+            if account_id is not None
+        }
+        if len(linked_account_ids) > 1:
+            return Response(
+                {"detail": "This application links to conflicting Admin accounts. Resolve the links before deleting it."},
+                status=status.HTTP_409_CONFLICT,
+            )
+        if linked_account_ids != candidate_account_ids:
+            return Response(
+                {"detail": "The application changed while deletion was being prepared. Refresh and retry."},
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        target = (
+            User.objects.select_for_update().filter(pk=next(iter(linked_account_ids))).first()
+            if linked_account_ids
+            else None
+        )
+        if target is not None and target.barangay_id != candidate_barangay_id:
+            return Response(
+                {"detail": "The application changed while deletion was being prepared. Refresh and retry."},
+                status=status.HTTP_409_CONFLICT,
+            )
+        if target is not None and (
+            target.role != User.Role.ADMIN
+            or target.is_superuser
+            or target.pk == request.user.pk
+        ):
+            return Response(
+                {"detail": "The linked account is not an eligible Barangay Admin account for this action."},
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        serializer = BarangayApplicationErasureSerializer(
+            data=request.data,
+            context={"application_id": application.pk},
+        )
+        serializer.is_valid(raise_exception=True)
+
+        if target and target.is_active and target.barangay_id is not None:
+            active_admin_count = User.objects.filter(
+                barangay_id=target.barangay_id,
+                role=User.Role.ADMIN,
+                is_active=True,
+                is_superuser=False,
+            ).count()
+            if active_admin_count <= 1:
+                return Response(
+                    {"account": "Deleting this account would remove the Barangay's last active Admin. Arrange another active Admin before retrying."},
+                    status=status.HTTP_409_CONFLICT,
+                )
+
+        reason = serializer.validated_data["reason"]
+        log_action(
+            user=request.user,
+            action_type=AuditLog.ActionType.USER_ACTION,
+            description=(
+                f"{request.user.role} reviewer permanently erased Barangay application "
+                f"#{application.pk}; status={application.status}; "
+                f"linked account ID={target.pk if target else 'none'}; reason={reason}."
+            ),
+            request=request,
+        )
+
+        if target is not None:
+            erase_user_account(
+                target,
+                reason=(
+                    f"Barangay onboarding application #{application.pk} permanently erased; "
+                    f"account ID={target.pk}; reason={reason}."
+                ),
+                request=request,
+                actor=request.user,
+            )
+
+        if application.proof_of_authority:
+            cleanup = queue_private_media_cleanup(
+                "gridy_auth.BarangayApplication",
+                "proof_of_authority",
+                application.proof_of_authority.name,
+            )
+            transaction.on_commit(
+                lambda cleanup_id=cleanup.pk:
+                    attempt_private_media_cleanup_safely(cleanup_id)
+            )
+
+        application.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)

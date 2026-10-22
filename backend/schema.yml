@@ -964,6 +964,43 @@ paths:
           description: Invalid email, reason, or verification attestation
         '404':
           description: Account not found or not eligible
+  /api/v1/auth/platform/accounts/{id}/erase/:
+    post:
+      operationId: api_v1_auth_platform_accounts_erase_create
+      description: Limited operator/superuser recovery and active-state support for
+        barangay accounts.
+      summary: Permanently erase an eligible barangay account
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this user.
+        required: true
+      tags:
+      - Platform Account Support
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlatformAccountErasure'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PlatformAccountErasure'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PlatformAccountErasure'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '204':
+          description: Account erased
+        '400':
+          description: Invalid reason, username confirmation, or final active Admin
+            guard
+        '404':
+          description: Account not found or not eligible
   /api/v1/auth/platform/accounts/{id}/send-password-link/:
     post:
       operationId: api_v1_auth_platform_accounts_send_password_link_create
@@ -1189,6 +1226,45 @@ paths:
           description: Restricted to active Barangay Operators and Django superusers.
         '409':
           description: Only pending applications can be rejected.
+  /api/v1/auth/platform/barangay-applications/{id}/erase/:
+    post:
+      operationId: api_v1_auth_platform_barangay_applications_erase_create
+      description: Let Barangay Operators or controlled superusers review new Barangays.
+      summary: Permanently erase a Barangay application and its linked applicant account
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this barangay application.
+        required: true
+      tags:
+      - Barangay Onboarding Review
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BarangayApplicationErasure'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/BarangayApplicationErasure'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/BarangayApplicationErasure'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '204':
+          description: Application and linked applicant account erased.
+        '400':
+          description: A deletion reason or exact application confirmation is invalid.
+        '403':
+          description: Restricted to active Barangay Operators and Django superusers.
+        '404':
+          description: Application not found.
+        '409':
+          description: The linked account is inconsistent or is the Barangay's last active Admin.
   /api/v1/auth/public/barangay-applications/:
     post:
       operationId: api_v1_auth_public_barangay_applications_create
@@ -3723,6 +3799,20 @@ components:
           minLength: 5
       required:
       - reason
+    BarangayApplicationErasure:
+      type: object
+      description: Require an explicit reason and application reference before erasure.
+      properties:
+        reason:
+          type: string
+          maxLength: 1000
+          minLength: 5
+        confirm_reference:
+          type: string
+          maxLength: 32
+      required:
+      - confirm_reference
+      - reason
     BarangayApplicationVerificationResend:
       type: object
       properties:
@@ -5270,6 +5360,31 @@ components:
       required:
       - is_active
       - reason
+    PlatformAccountErasure:
+      type: object
+      description: Reject unsupported fields instead of silently ignoring privileged
+        input.
+      properties:
+        reason:
+          $ref: '#/components/schemas/PlatformAccountErasureReasonEnum'
+        confirm_username:
+          type: string
+          maxLength: 150
+      required:
+      - confirm_username
+      - reason
+    PlatformAccountErasureReasonEnum:
+      enum:
+      - ACCOUNT_HOLDER_REQUEST
+      - DUPLICATE_ACCOUNT
+      - SECURITY_OR_FRAUD
+      - OTHER_APPROVED_REASON
+      type: string
+      description: |-
+        * `ACCOUNT_HOLDER_REQUEST` - Account holder request
+        * `DUPLICATE_ACCOUNT` - Duplicate account
+        * `SECURITY_OR_FRAUD` - Security or fraud concern
+        * `OTHER_APPROVED_REASON` - Other approved reason
     PlatformAccountRecoveryLink:
       type: object
       description: Reject unsupported fields instead of silently ignoring privileged

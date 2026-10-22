@@ -117,3 +117,20 @@ class PlatformAccountRecoveryLinkSerializer(StrictSerializer):
 class PlatformAccountActiveStateSerializer(StrictSerializer):
     is_active = serializers.BooleanField()
     reason = serializers.ChoiceField(choices=ACCOUNT_SUPPORT_REASON_CHOICES)
+
+
+class PlatformAccountErasureSerializer(StrictSerializer):
+    reason = serializers.ChoiceField(choices=(
+        ("ACCOUNT_HOLDER_REQUEST", "Account holder request"),
+        ("DUPLICATE_ACCOUNT", "Duplicate account"),
+        ("SECURITY_OR_FRAUD", "Security or fraud concern"),
+        ("OTHER_APPROVED_REASON", "Other approved reason"),
+    ))
+    confirm_username = serializers.CharField(max_length=150, trim_whitespace=False)
+
+    def validate_confirm_username(self, value):
+        if value != self.context["target"].username:
+            raise serializers.ValidationError(
+                "Enter the exact account username to confirm permanent deletion."
+            )
+        return value

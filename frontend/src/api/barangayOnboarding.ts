@@ -135,3 +135,13 @@ export async function rejectBarangayApplication(
     );
     return response.data;
 }
+
+export async function eraseBarangayApplication(
+    applicationId: number,
+    payload: { reason: string; confirm_reference: string },
+): Promise<void> {
+    await axiosPrivate.post(
+        `/auth/platform/barangay-applications/${applicationId}/erase/`,
+        payload,
+    );
+}

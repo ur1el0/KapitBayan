@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Building2, CheckCircle2, ClipboardCheck, LogOut, ShieldCheck, XCircle } from 'lucide-react';
+import { ArrowLeft, Building2, CheckCircle2, ClipboardCheck, LogOut, ShieldCheck, Trash2, XCircle } from 'lucide-react';
 import { InlineErrorState } from '../../components/ui/InlineErrorState';
 import { useAuth } from '../../context/auth-context';
 import {
     approveBarangayApplication,
     downloadBarangayApplicationProof,
+    eraseBarangayApplication,
     fetchBarangayApplications,
     rejectBarangayApplication,
     type BarangayApplication,
@@ -18,7 +19,7 @@ function apiErrorMessage(error: unknown, fallback: string) {
     const data = response.response?.data;
     if (!data || typeof data !== 'object') return fallback;
     if (typeof data.detail === 'string') return data.detail;
-    for (const key of ['applicant_email', 'contact_verified', 'proof_reviewed', 'reason']) {
+    for (const key of ['applicant_email', 'contact_verified', 'proof_reviewed', 'reason', 'account', 'confirm_reference']) {
         const value = data[key];
         if (typeof value === 'string') return value;
         if (Array.isArray(value) && typeof value[0] === 'string') return value[0];
@@ -46,6 +47,8 @@ export function PlatformBarangayApplications() {
     const [proofLoadingId, setProofLoadingId] = useState<number | null>(null);
     const [approvalNotes, setApprovalNotes] = useState<Record<number, string>>({});
     const [rejectionReasons, setRejectionReasons] = useState<Record<number, string>>({});
+    const [deletionReasons, setDeletionReasons] = useState<Record<number, string>>({});
+    const [deletionConfirmations, setDeletionConfirmations] = useState<Record<number, string>>({});
     const [busyId, setBusyId] = useState<number | null>(null);
     const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
     const proofDownloadUrls = useRef(new Map<number, string>());
@@ -144,6 +147,33 @@ export function PlatformBarangayApplications() {
             setMessage({ type: 'success', text: `Application KB-${updated.id} rejected and the reason was recorded.` });
         } catch (error) {
             setMessage({ type: 'error', text: apiErrorMessage(error, 'Could not reject this application.') });
+        } finally {
+            setBusyId(null);
+        }
+    };
+
+    const eraseApplication = async (application: BarangayApplication) => {
+        const reason = deletionReasons[application.id]?.trim() ?? '';
+        const confirmReference = deletionConfirmations[application.id] ?? '';
+        if (reason.length < 5 || confirmReference !== `KB-${application.id}`) return;
+
+        setBusyId(application.id);
+        setMessage(null);
+        try {
+            await eraseBarangayApplication(application.id, {
+                reason,
+                confirm_reference: confirmReference,
+            });
+            clearProofDownload(application.id);
+            setApplications((current) => current.filter((item) => item.id !== application.id));
+            setCount((current) => Math.max(0, current - 1));
+            setMessage({
+                type: 'success',
+                text: `Application KB-${application.id} and any linked applicant account were permanently deleted. Barangay, audit, and retained service history remain.`,
+            });
+            if (applications.length === 1 && page > 1) setPage((current) => Math.max(1, current - 1));
+        } catch (error) {
+            setMessage({ type: 'error', text: apiErrorMessage(error, 'Could not permanently delete this application.') });
         } finally {
             setBusyId(null);
         }
@@ -274,6 +304,50 @@ export function PlatformBarangayApplications() {
                                     </div>
                                 </div>
                             )}
+
+                            <section aria-labelledby={`delete-heading-${application.id}`} className="space-y-3 border-t border-rose-200 bg-rose-50 p-4 sm:p-5">
+                                <div>
+                                    <h3 id={`delete-heading-${application.id}`} className="flex items-center gap-2 font-bold text-rose-950">
+                                        <Trash2 className="h-4 w-4" aria-hidden="true" /> Permanently delete application
+                                    </h3>
+                                    <p className="mt-1 text-xs leading-5 text-rose-900">
+                                        Deletes this {application.status.toLowerCase()} application and any linked applicant Admin account. The Barangay record and audit/service history are retained. An approved account cannot be deleted if it is the last active Admin for its Barangay.
+                                    </p>
+                                </div>
+                                <div className="grid gap-3 md:grid-cols-2">
+                                    <div>
+                                        <label htmlFor={`delete-reason-${application.id}`} className="block text-sm font-semibold text-slate-700">Reason for deletion</label>
+                                        <textarea
+                                            id={`delete-reason-${application.id}`}
+                                            rows={2}
+                                            minLength={5}
+                                            maxLength={1000}
+                                            value={deletionReasons[application.id] ?? ''}
+                                            onChange={(event) => setDeletionReasons((current) => ({ ...current, [application.id]: event.target.value }))}
+                                            placeholder="Explain why this application should be removed."
+                                            className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-600"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label htmlFor={`delete-confirm-${application.id}`} className="block text-sm font-semibold text-slate-700">Type KB-{application.id} to confirm</label>
+                                        <input
+                                            id={`delete-confirm-${application.id}`}
+                                            value={deletionConfirmations[application.id] ?? ''}
+                                            onChange={(event) => setDeletionConfirmations((current) => ({ ...current, [application.id]: event.target.value }))}
+                                            autoComplete="off"
+                                            className="mt-1 min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 font-mono text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-600"
+                                        />
+                                    </div>
+                                </div>
+                                <button
+                                    type="button"
+                                    disabled={(deletionReasons[application.id]?.trim().length ?? 0) < 5 || deletionConfirmations[application.id] !== `KB-${application.id}` || busyId !== null}
+                                    onClick={() => void eraseApplication(application)}
+                                    className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-rose-700 px-4 py-2 text-sm font-bold text-white hover:bg-rose-800 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-700 focus-visible:ring-offset-2"
+                                >
+                                    <Trash2 className="h-4 w-4" aria-hidden="true" /> {busyId === application.id ? 'Deleting application…' : 'Permanently delete application and linked account'}
+                                </button>
+                            </section>
                         </article>
                     ))}
                 </section>

@@ -250,3 +250,27 @@ class BarangayApplicationRejectSerializer(serializers.Serializer):
                     "detail": f"Unexpected fields: {', '.join(sorted(unexpected))}."
                 })
         return attrs
+
+
+class BarangayApplicationErasureSerializer(serializers.Serializer):
+    """Require an explicit reason and application reference before erasure."""
+
+    reason = serializers.CharField(min_length=5, max_length=1000, trim_whitespace=True)
+    confirm_reference = serializers.CharField(max_length=32, trim_whitespace=False)
+
+    def validate_confirm_reference(self, value):
+        expected = f"KB-{self.context['application_id']}"
+        if value != expected:
+            raise serializers.ValidationError(
+                f"Type {expected} exactly to confirm permanent deletion."
+            )
+        return value
+
+    def validate(self, attrs):
+        if isinstance(self.initial_data, Mapping):
+            unexpected = set(self.initial_data) - {"reason", "confirm_reference"}
+            if unexpected:
+                raise serializers.ValidationError({
+                    "detail": f"Unexpected fields: {', '.join(sorted(unexpected))}."
+                })
+        return attrs
