@@ -14,7 +14,7 @@ An official submits a public application with the Barangay locality, official co
 4. Staff verifies payment against the barangay's actual account and records the Official Receipt. A positive-fee document cannot be released without the required payment verification and O.R. controls. Cash and statutory-waiver cases follow their documented paths.
 5. The resident follows status and retrieves authorized documents through the API. Private evidence is served through authenticated media endpoints.
 
-See [ADR 007](decisions/007-revenue-and-official-receipt-auditing.md), [ADR 017](decisions/017-manual-epayment-evidence-and-verification.md), and [ADR 018](decisions/018-explicit-document-fee-assessment-and-waiver-provenance.md).
+See [ADR 007](decisions/007-revenue-and-official-receipt-auditing.md), [ADR 017](decisions/017-manual-epayment-evidence-and-verification.md), and [ADR 018](decisions/018-explicit-document-fee-assessment-and-waiver-provenance.md). Admin web document and resident list freshness uses client-initiated polling; see the [web frontend guide](../docs/features/frontend_features.md#admin-list-refresh) for details.
 
 Residents may optionally get a counter queue ticket from one of their document requests when they need an in-person Barangay visit. The ticket records the related request so staff can identify the visit's purpose; the ticket can be completed independently and does not approve, pay, or release the document. A document request can proceed without a queue ticket, and tickets for other services remain independent. A request can have only one waiting or serving linked ticket at a time; a later visit can get a new ticket after the earlier one is completed or cancelled.
 

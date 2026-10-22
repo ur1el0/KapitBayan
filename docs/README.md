@@ -25,7 +25,7 @@ Use this page to find current system guidance. Source code, migrations, generate
 - [Backend features](features/backend_features.md)
 - [Bulk RBI census import](features/bulk_rbi_census_import.md)
 - [Resident web portal](features/citizen_desktop_portal.md)
-- [Web frontend features](features/frontend_features.md)
+- [Web frontend features](features/frontend_features.md) — includes the Admin Documents and Residents auto-refresh behavior.
 - [Walk-in clearances and treasury auditing](features/walkin_and_revenue_clearances.md)
 
 ## Developer walkthroughs

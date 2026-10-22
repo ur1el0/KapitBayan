@@ -22,6 +22,10 @@ The web API client is configured in `frontend/src/api/`. Access credentials are 
 
 See [ADR 002](decisions/002-httponly-jwt-cookie-auth.md), [ADR 003](decisions/003-openapi-contract-driven-development.md), and [API contracts](06-api-endpoint-contracts.md).
 
+## Admin list refresh
+
+Admin document and resident pages fetch updated list data through the existing HTTP API while the browser tab is visible and when it returns to focus. The [Web Frontend Features guide](../docs/features/frontend_features.md#admin-list-refresh) records the affected lists, polling cadence, and in-flight request handling.
+
 ## Feature boundaries
 
 - Route components compose pages and layouts; domain components live under `frontend/src/components/`.
