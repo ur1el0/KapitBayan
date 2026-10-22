@@ -16,7 +16,7 @@ from gridy_auth.permissions import (
     IsResident,
     IsResidentOrBarangayOfficial,
 )
-from gridy_services.models import DocumentRequest, PaymentRecipient
+from gridy_services.models import DocumentRequest, DocumentServiceOffering, PaymentRecipient
 from gridy_services.signals import safe_delete_storage_file
 from gridy_services.serializers import (
     DocumentRequestSerializer,
@@ -31,6 +31,59 @@ from gridy_audit.services import log_action
 from gridy_audit.models import AuditLog
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from ..fee_policy import FEE_EXEMPT_DOCUMENT_TYPES, check_ra11261_eligibility
+
+CANONICAL_DOCUMENT_SNAPSHOTS = {
+    "barangay clearance": {
+        "requirements": [
+            "Government ID or proof of residency",
+            "Community Tax Certificate (Cedula)",
+        ],
+        "published_fee_amount": Decimal("50.00"),
+        "details": "Standard clearance for employment, identification, and official transactions.",
+    },
+    "certificate of indigency": {
+        "requirements": [
+            "Government ID or proof of residency",
+            "Proof of indigent status or declaration of low income",
+        ],
+        "published_fee_amount": Decimal("0.00"),
+        "details": "Statutory fee-exempt certificate for social welfare, medical, and legal assistance.",
+    },
+    "certificate of residency": {
+        "requirements": [
+            "Government ID",
+            "Proof of address (utility bill, lease contract, or voter certification)",
+        ],
+        "published_fee_amount": Decimal("50.00"),
+        "details": "Official certification verifying residency address within the Barangay.",
+    },
+    "residency certificate": {
+        "requirements": [
+            "Government ID",
+            "Proof of address (utility bill, lease contract, or voter certification)",
+        ],
+        "published_fee_amount": Decimal("50.00"),
+        "details": "Official certification verifying residency address within the Barangay.",
+    },
+    "barangay business clearance": {
+        "requirements": [
+            "Government ID of owner or representative",
+            "DTI or SEC Certificate of Registration",
+            "Contract of lease or proof of property ownership",
+        ],
+        "published_fee_amount": Decimal("200.00"),
+        "details": "Clearance required for new business registration or annual business permit renewal.",
+    },
+    "business permit": {
+        "requirements": [
+            "Government ID of owner or representative",
+            "DTI or SEC Certificate of Registration",
+            "Contract of lease or proof of property ownership",
+        ],
+        "published_fee_amount": Decimal("200.00"),
+        "details": "Clearance required for new business registration or annual business permit renewal.",
+    },
+}
 
 class DocumentRequestViewSet(viewsets.ModelViewSet):
     serializer_class = DocumentRequestSerializer
@@ -87,6 +140,19 @@ class DocumentRequestViewSet(viewsets.ModelViewSet):
         user = self.request.user
         data = serializer.validated_data
         offering = data.get("offering")
+        barangay = user.barangay if user and user.is_authenticated else None
+
+        doc_type_clean = " ".join((data.get("document_type") or "").split())
+
+        if not offering and barangay:
+            offering = DocumentServiceOffering.objects.filter(
+                barangay=barangay,
+                is_active=True,
+                document_type__iexact=doc_type_clean,
+            ).first()
+            if offering:
+                serializer.validated_data["offering"] = offering
+
         offering_snapshot = {}
         if offering:
             offering_snapshot = {
@@ -94,6 +160,14 @@ class DocumentRequestViewSet(viewsets.ModelViewSet):
                 "published_fee_amount_snapshot": offering.published_fee_amount,
                 "details_snapshot": offering.details,
             }
+        else:
+            canonical = CANONICAL_DOCUMENT_SNAPSHOTS.get(doc_type_clean.casefold())
+            if canonical:
+                offering_snapshot = {
+                    "requirements_snapshot": list(canonical.get("requirements", [])),
+                    "published_fee_amount_snapshot": canonical.get("published_fee_amount"),
+                    "details_snapshot": canonical.get("details", ""),
+                }
 
         if user.role == User.Role.ADMIN:
             if not user.barangay_id:
