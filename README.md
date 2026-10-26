@@ -4,6 +4,10 @@ KapitBayan is a web and mobile information and service system for barangays. The
 
 The platform supports resident document requests, manual fee assessment and treasury verification, queue services, assistance requests, incident reporting, communications, and public information. A new Barangay's first Admin applies with an official email and password; DILG independently verifies the locality and official before approval activates that same account. DILG review is limited to onboarding and does not expose resident or service records. Only Residents choose usernames. Barangay Admins and Field Officials sign in with email; Admins manage Field Official accounts for their own Barangay and cannot create peer Admin accounts. It records out-of-band payments but does not process funds through a payment gateway. Staff make service decisions; assistance eligibility and document approval are not automated.
 
+## Download the Android app
+
+[**Download the latest Android APK directly**](https://github.com/ur1el0/KapitBayan/releases/latest/download/KapitBayan-Android-v1.0.4.apk) (v1.0.4). This link downloads the APK file directly instead of opening the GitHub Releases page. Android may ask you to confirm installation from your browser or file manager. Install only APKs published by this repository.
+
 ## Architecture and API
 
 - Backend: Django and Django REST Framework in `backend/`.
@@ -113,3 +117,45 @@ cd mobile && flutter analyze && flutter test
 ```
 
 These are example commands, not a report that the current checkout has passed them. Record actual output and any unavailable checks in the active task status.
+
+## What the system does
+
+KapitBayan connects residents with their Barangay's services through a web portal and Android app. The Django API is the source of truth: clients submit requests to it, the API checks the account's role and Barangay scope, and PostgreSQL stores the resulting records and statuses.
+
+### User roles
+
+- **Residents** register for their Barangay, view public information, request available documents, follow request and queue statuses, submit assistance requests and issue reports, and review announcements, schedules, FAQs, and hotlines.
+- **Barangay Admins** review resident accounts and service requests, configure document offerings, manage queue operations and walk-ins, process assistance requests and reports, publish announcements and schedules, maintain public information, and manage Field Official accounts for their Barangay.
+- **Field Officials** use their assigned accounts for the field workflows and records permitted to their role and Barangay.
+- **Barangay Operators** review first-Admin applications and provide bounded account support. They do not use the operator role to browse resident service records. Platform recovery remains a separate, controlled Django superuser function.
+
+### How document requests and queues work together
+
+An Admin maintains the Barangay's document catalog, including each service's requirements, published amount, and instructions. Residents see the active catalog for their Barangay and submit a request with the details shown at that time. KapitBayan saves a snapshot of those details with the request, so later catalog edits do not rewrite an existing application. Staff still review the request and assess or waive fees through the documented process.
+
+A resident can optionally create a counter queue ticket from a document request when they need an in-person visit. The ticket records the visit and its purpose; it does not approve, pay for, or release the document. Document processing and queue position are separate workflows, and either can exist without the other. Residents may also receive a general queue ticket for another service.
+
+### Payments, notifications, and public sharing
+
+- KapitBayan records manual cash or electronic-payment evidence for staff review. It does not connect to a payment gateway or automatically confirm settlement. Staff verify transfers and record the Official Receipt before release when required.
+- Queue, document, report, and announcement updates can trigger push notifications where FCM is configured and the resident has enabled them. Provider acceptance is not proof that a device displayed the notification; delivery is best effort.
+- The Admin notification bell is a database-backed in-app alert and is separate from mobile operating-system push notifications.
+- Web and mobile queue views refresh from API endpoints using periodic HTTP polling. This is near-real-time refresh, not a WebSocket stream or a strict latency guarantee; refresh intervals vary by screen.
+- The announcement share tool can create a public notice link and a QR code for that link. The QR is for sharing public announcement content; it is not an identity, payment, queue, or document verification credential.
+- Email is sent through the configured provider. The current production setup uses Brevo SMTP; delivery should be checked in the application and provider logs, since a generic success message alone does not prove inbox delivery.
+
+### Security and service boundaries
+
+The Django API enforces role checks and Barangay tenant scope for protected operations. A user cannot gain another Barangay's access by changing a client-side identifier. Private identity, onboarding, and payment evidence is served through permission-checked backend paths in the configured private-media deployment. Upload rules differ by endpoint; file validation does not prove an image or document is genuine, and the reviewed implementation does not perform duplicate-image matching.
+
+Human staff make the service decisions. The platform does not automatically determine aid eligibility, verify legal authenticity of submitted documents, settle bank transfers, publish posts to external social media, or provide emergency response. For immediate danger, residents must contact official emergency services or Barangay hotlines.
+
+### Where to learn more
+
+- [Architecture overview](architecture/01-system-overview.md) and [core service workflows](architecture/08-core-feature-workflows.md)
+- [Security and role-based access](architecture/09-security-and-rbac.md)
+- [Feature guides and developer walkthroughs](docs/README.md)
+- [System demo flow](docs/presentations/system-demo-flow.md) and [Barangay demo and training flow](docs/presentations/barangay-demo-and-training-flow.md)
+- [Brevo SMTP setup and troubleshooting](docs/walkthrough/brevo-email-setup.md)
+
+For the direct APK link, update the asset filename in this README when publishing a later release with a differently named APK asset.
