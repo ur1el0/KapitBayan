@@ -3,23 +3,27 @@ import { X } from 'lucide-react';
 import { useModalFocus } from '../../hooks/useModalFocus';
 
 export interface AddHotlineModalProps {
+    mode?: 'create' | 'edit';
     onClose: () => void;
     onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
     form: {
         name: string;
         number: string;
         category: string;
+        is_active?: boolean;
     };
     setForm: React.Dispatch<React.SetStateAction<{
         name: string;
         number: string;
         category: string;
+        is_active: boolean;
     }>>;
     categories: string[];
     isSubmitting: boolean;
 }
 
 export const AddHotlineModal: React.FC<AddHotlineModalProps> = ({
+    mode = 'create',
     onClose,
     onSubmit,
     form,
@@ -29,6 +33,7 @@ export const AddHotlineModal: React.FC<AddHotlineModalProps> = ({
 }) => {
     const hotlineDialogTitleId = useId();
     const hotlineDialogRef = useModalFocus<HTMLDivElement>(true, onClose);
+    const isEditing = mode === 'edit';
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60">
@@ -41,11 +46,11 @@ export const AddHotlineModal: React.FC<AddHotlineModalProps> = ({
                 className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 space-y-4"
             >
                 <div className="flex items-center justify-between">
-                    <h2 id={hotlineDialogTitleId} className="text-xl font-bold text-slate-900">Add Emergency Hotline</h2>
+                    <h2 id={hotlineDialogTitleId} className="text-xl font-bold text-slate-900">{isEditing ? 'Edit Emergency Hotline' : 'Add Emergency Hotline'}</h2>
                     <button
                         type="button"
                         onClick={onClose}
-                        aria-label="Close add emergency hotline dialog"
+                        aria-label={isEditing ? 'Close edit emergency hotline dialog' : 'Close add emergency hotline dialog'}
                         className="inline-flex items-center justify-center min-w-[44px] min-h-[44px] text-slate-400 hover:text-slate-600 transition-colors rounded-lg hover:bg-slate-100 cursor-pointer"
                     >
                         <X size={20} />
@@ -85,6 +90,15 @@ export const AddHotlineModal: React.FC<AddHotlineModalProps> = ({
                             {categories.map(c => <option key={c} value={c}>{c}</option>)}
                         </select>
                     </div>
+                    <label className="flex items-center gap-2 text-sm text-slate-700">
+                        <input
+                            type="checkbox"
+                            checked={form.is_active ?? true}
+                            onChange={e => setForm(p => ({ ...p, is_active: e.target.checked }))}
+                            className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"
+                        />
+                        Active and visible to residents
+                    </label>
                     <div className="flex justify-end gap-3 pt-2">
                         <button type="button" onClick={onClose} className="px-4 py-2 text-sm text-slate-600 hover:text-slate-900 font-medium transition-colors">
                             Cancel
@@ -94,7 +108,7 @@ export const AddHotlineModal: React.FC<AddHotlineModalProps> = ({
                             disabled={isSubmitting}
                             className="px-4 py-2 bg-primary hover:bg-primary-hover text-primary-foreground text-sm font-medium rounded-md transition-colors disabled:opacity-60"
                         >
-                            {isSubmitting ? 'Adding...' : 'Add Hotline'}
+                            {isSubmitting ? (isEditing ? 'Saving...' : 'Adding...') : (isEditing ? 'Save Changes' : 'Add Hotline')}
                         </button>
                     </div>
                 </form>

@@ -2,7 +2,7 @@ import toast from 'react-hot-toast';
 import React, { useEffect, useState } from 'react';
 import { axiosPrivate } from '../../api/axios';
 import { InlineErrorState } from '../../components/ui/InlineErrorState';
-import { Calendar, MapPin, Clock, Plus, Trash2 } from 'lucide-react';
+import { Calendar, MapPin, Clock, Plus, Trash2, Pencil } from 'lucide-react';
 import { ScheduleActivityModal } from '../../components/activities/ScheduleActivityModal';
 
 interface Activity {
@@ -35,11 +35,42 @@ export const Activities: React.FC = () => {
     const [retrying, setRetrying] = useState(false);
 
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [location, setLocation] = useState('');
     const [eventDate, setEventDate] = useState('');
+
+    const closeModal = () => {
+        setIsModalOpen(false);
+        setEditingActivity(null);
+        setTitle('');
+        setDescription('');
+        setLocation('');
+        setEventDate('');
+    };
+
+    const openCreateModal = () => {
+        closeModal();
+        setIsModalOpen(true);
+    };
+
+    const toDateTimeLocalValue = (value: string) => {
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return '';
+        date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
+        return date.toISOString().slice(0, 16);
+    };
+
+    const handleEdit = (activity: Activity) => {
+        setEditingActivity(activity);
+        setTitle(activity.title);
+        setDescription(activity.description);
+        setLocation(activity.location);
+        setEventDate(toDateTimeLocalValue(activity.event_datetime));
+        setIsModalOpen(true);
+    };
     const fetchActivities = async (isRetry = false) => {
         if (isRetry) {
             setRetrying(true);
@@ -64,34 +95,31 @@ export const Activities: React.FC = () => {
         void fetchActivities();
     }, []);
 
-    const handleCreate = async (e: React.FormEvent<HTMLFormElement>) => {
+    const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         setIsSubmitting(true);
         try {
             const isoDate = new Date(eventDate).toISOString();
-            await axiosPrivate.post('/activities/', {
+            const payload = {
                 title,
                 description,
                 location,
                 event_datetime: isoDate,
-            });
+            };
+            if (editingActivity) {
+                await axiosPrivate.patch(`/activities/${editingActivity.id}/`, payload);
+            } else {
+                await axiosPrivate.post('/activities/', payload);
+            }
             await fetchActivities();
             closeModal();
-            toast.success('Activity scheduled successfully!');
+            toast.success(editingActivity ? 'Activity updated successfully.' : 'Activity scheduled successfully!');
         } catch (err) {
-            console.error("Failed to create activity", err);
-            toast.error('Failed to schedule activity.');
+            console.error("Failed to save activity", err);
+            toast.error(editingActivity ? 'Failed to update activity.' : 'Failed to schedule activity.');
         } finally {
             setIsSubmitting(false);
         }
-    };
-
-    const closeModal = () => {
-        setIsModalOpen(false);
-        setTitle('');
-        setDescription('');
-        setLocation('');
-        setEventDate('');
     };
 
     const handleDelete = async (id: number, title: string) => {
@@ -124,7 +152,7 @@ export const Activities: React.FC = () => {
                     <span className="font-semibold text-sm">Upcoming Schedules</span>
                 </div>
                 <button 
-                    onClick={() => setIsModalOpen(true)}
+                    onClick={openCreateModal}
                     className="flex items-center gap-2 bg-primary hover:bg-primary-hover text-primary-foreground px-4 py-2 rounded-lg text-sm font-semibold transition-all shadow-sm hover:shadow active:scale-95"
                 >
                     <Plus className="w-4 h-4" />
@@ -174,6 +202,14 @@ export const Activities: React.FC = () => {
                                                 {act.title}
                                             </h3>
                                             <button
+                                                onClick={() => handleEdit(act)}
+                                                className="text-slate-400 hover:text-primary-text transition-colors p-1 rounded-lg hover:bg-primary/5 shrink-0"
+                                                title="Edit Activity"
+                                                aria-label={`Edit ${act.title}`}
+                                            >
+                                                <Pencil className="w-4 h-4" />
+                                            </button>
+                                            <button
                                                 onClick={() => handleDelete(act.id, act.title)}
                                                 className="text-slate-400 hover:text-red-600 transition-colors p-1 rounded-lg hover:bg-red-50 shrink-0"
                                                 title="Delete Activity"
@@ -207,8 +243,9 @@ export const Activities: React.FC = () => {
             {/* Modern Create Modal */}
             {isModalOpen && (
                 <ScheduleActivityModal
+                    mode={editingActivity ? 'edit' : 'create'}
                     onClose={closeModal}
-                    onSubmit={handleCreate}
+                    onSubmit={handleSave}
                     title={title}
                     setTitle={setTitle}
                     location={location}

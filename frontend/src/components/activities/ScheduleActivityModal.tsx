@@ -3,6 +3,7 @@ import { Calendar, MapPin, X } from 'lucide-react';
 import { useModalFocus } from '../../hooks/useModalFocus';
 
 export interface ScheduleActivityModalProps {
+    mode?: 'create' | 'edit';
     onClose: () => void;
     onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
     title: string;
@@ -17,6 +18,7 @@ export interface ScheduleActivityModalProps {
 }
 
 export const ScheduleActivityModal: React.FC<ScheduleActivityModalProps> = ({
+    mode = 'create',
     onClose,
     onSubmit,
     title,
@@ -31,6 +33,7 @@ export const ScheduleActivityModal: React.FC<ScheduleActivityModalProps> = ({
 }) => {
     const activityDialogTitleId = useId();
     const activityDialogRef = useModalFocus<HTMLDivElement>(true, onClose);
+    const isEditing = mode === 'edit';
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -47,12 +50,12 @@ export const ScheduleActivityModal: React.FC<ScheduleActivityModalProps> = ({
                 <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
                     <h3 id={activityDialogTitleId} className="text-lg font-bold text-slate-900 flex items-center gap-2">
                         <Calendar className="w-5 h-5 text-primary-text" />
-                        Schedule Activity
+                        {isEditing ? 'Edit Activity' : 'Schedule Activity'}
                     </h3>
                     <button
                         type="button"
                         onClick={onClose}
-                        aria-label="Close schedule activity dialog"
+                        aria-label={isEditing ? 'Close edit activity dialog' : 'Close schedule activity dialog'}
                         className="inline-flex items-center justify-center min-w-[44px] min-h-[44px] text-slate-400 hover:text-slate-600 transition-colors rounded-lg hover:bg-slate-200 cursor-pointer"
                     >
                         <X className="w-5 h-5" />
@@ -127,8 +130,8 @@ export const ScheduleActivityModal: React.FC<ScheduleActivityModalProps> = ({
                             className="px-5 py-2.5 rounded-xl text-sm font-semibold text-primary-foreground bg-primary hover:bg-primary-hover transition-colors disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-2 shadow-sm"
                         >
                             {isSubmitting ? (
-                                <><div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Scheduling...</>
-                            ) : 'Schedule Event'}
+                                <><div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> {isEditing ? 'Saving...' : 'Scheduling...'}</>
+                            ) : isEditing ? 'Save Changes' : 'Schedule Event'}
                         </button>
                     </div>
                 </form>
