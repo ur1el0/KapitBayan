@@ -1,7 +1,7 @@
 import toast from 'react-hot-toast';
 import React, { useEffect, useState } from 'react';
 import { axiosPrivate } from '../../api/axios';
-import { Pin, Megaphone, Plus, Trash, Share2 } from 'lucide-react';
+import { Pin, Megaphone, Plus, Trash, Share2, Pencil } from 'lucide-react';
 import { useAuth } from '../../context/auth-context';
 import { BroadcastAnnouncementModal } from '../../components/announcements/BroadcastAnnouncementModal';
 import { AnnouncementShareKitModal } from '../../components/announcements/AnnouncementShareKitModal';
@@ -38,6 +38,7 @@ export const Announcements: React.FC = () => {
     const [retrying, setRetrying] = useState(false);
 
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingAnnouncement, setEditingAnnouncement] = useState<Announcement | null>(null);
     const [shareAnnouncement, setShareAnnouncement] = useState<Announcement | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [title, setTitle] = useState('');
@@ -87,6 +88,24 @@ export const Announcements: React.FC = () => {
         setShareAnnouncement(announcement);
     };
 
+    const openCreateModal = () => {
+        setEditingAnnouncement(null);
+        setTitle('');
+        setContent('');
+        setIsPinned(false);
+        handleRemoveImage();
+        setIsModalOpen(true);
+    };
+
+    const handleEdit = (announcement: Announcement) => {
+        setEditingAnnouncement(announcement);
+        setTitle(announcement.title);
+        setContent(announcement.content);
+        setIsPinned(announcement.is_pinned);
+        handleRemoveImage();
+        setIsModalOpen(true);
+    };
+
     useEffect(() => {
         fetchAnnouncements();
     }, []);
@@ -115,7 +134,7 @@ export const Announcements: React.FC = () => {
         }
     };
 
-    const handleCreate = async (e: React.FormEvent<HTMLFormElement>) => {
+    const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         setIsSubmitting(true);
         try {
@@ -127,15 +146,22 @@ export const Announcements: React.FC = () => {
                 formData.append('image', imageFile);
             }
 
-            await axiosPrivate.post('/announcements/', formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
-            });
-            toast.success('Announcement broadcasted successfully!');
+            if (editingAnnouncement) {
+                await axiosPrivate.patch(`/announcements/${editingAnnouncement.id}/`, formData, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                });
+                toast.success('Announcement updated successfully.');
+            } else {
+                await axiosPrivate.post('/announcements/', formData, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                });
+                toast.success('Announcement broadcasted successfully!');
+            }
             await fetchAnnouncements();
             closeModal();
         } catch (err) {
-            console.error('Failed to create announcement.', err);
-            toast.error('Failed to create announcement.');
+            console.error('Failed to save announcement.', err);
+            toast.error(editingAnnouncement ? 'Failed to update announcement.' : 'Failed to create announcement.');
         } finally {
             setIsSubmitting(false);
         }
@@ -143,6 +169,7 @@ export const Announcements: React.FC = () => {
 
     const closeModal = () => {
         setIsModalOpen(false);
+        setEditingAnnouncement(null);
         setTitle('');
         setContent('');
         setIsPinned(false);
@@ -172,7 +199,7 @@ export const Announcements: React.FC = () => {
                 </div>
                 {user?.role === 'ADMIN' && (
                     <button
-                        onClick={() => setIsModalOpen(true)}
+                        onClick={openCreateModal}
                         className="flex items-center gap-2 bg-primary hover:bg-primary-hover text-primary-foreground px-4 py-2 rounded-lg text-sm font-semibold transition-all shadow-sm hover:shadow active:scale-95 cursor-pointer"
                     >
                         <Plus className="w-4 h-4" />
@@ -246,10 +273,18 @@ export const Announcements: React.FC = () => {
                                         >
                                             <Share2 className="h-3.5 w-3.5" /> Share announcement
                                         </button>
+                                        <button
+                                            onClick={() => handleEdit(ann)}
+                                            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                                            aria-label={`Edit ${ann.title}`}
+                                        >
+                                            <Pencil className="h-3.5 w-3.5" /> Edit
+                                        </button>
                                         <button 
                                             onClick={() => handleDelete(ann.id)}
                                             className="text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
                                             title="Delete broadcast"
+                                            aria-label={`Delete ${ann.title}`}
                                         >
                                             <Trash className="w-4 h-4" />
                                         </button>
@@ -264,8 +299,9 @@ export const Announcements: React.FC = () => {
             {/* Create Announcement Modal */}
             {isModalOpen && (
                 <BroadcastAnnouncementModal
+                    mode={editingAnnouncement ? 'edit' : 'create'}
                     onClose={closeModal}
-                    onSubmit={handleCreate}
+                    onSubmit={handleSave}
                     title={title}
                     setTitle={setTitle}
                     content={content}
@@ -273,6 +309,7 @@ export const Announcements: React.FC = () => {
                     isPinned={isPinned}
                     setIsPinned={setIsPinned}
                     imagePreview={imagePreview}
+                    existingImageUrl={editingAnnouncement?.image}
                     onImageChange={handleImageChange}
                     onRemoveImage={handleRemoveImage}
                     isSubmitting={isSubmitting}

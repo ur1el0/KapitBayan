@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import { axiosPrivate } from '../../api/axios'
-import { Phone, Plus, Trash2 } from 'lucide-react'
+import { Phone, Plus, Trash2, Pencil } from 'lucide-react'
 import { AddHotlineModal } from '../../components/hotlines/AddHotlineModal'
 import { InlineErrorState } from '../../components/ui/InlineErrorState'
 
@@ -15,6 +15,7 @@ interface Hotline {
 }
 
 const CATEGORIES = ['POLICE', 'FIRE', 'MEDICAL', 'BARANGAY', 'OTHER']
+const EMPTY_FORM = { name: '', number: '', category: 'OTHER', is_active: true }
 
 const getCategoryBadge = (category: string) => {
     switch (category) {
@@ -32,8 +33,32 @@ export const HotlineManagement: React.FC = () => {
     const [loadError, setLoadError] = useState(false)
     const [retrying, setRetrying] = useState(false)
     const [isModalOpen, setIsModalOpen] = useState(false)
+    const [editingHotline, setEditingHotline] = useState<Hotline | null>(null)
     const [isSubmitting, setIsSubmitting] = useState(false)
-    const [form, setForm] = useState({ name: '', number: '', category: 'OTHER' })
+    const [form, setForm] = useState(EMPTY_FORM)
+
+    const closeModal = () => {
+        setIsModalOpen(false)
+        setEditingHotline(null)
+        setForm(EMPTY_FORM)
+    }
+
+    const openCreateModal = () => {
+        setEditingHotline(null)
+        setForm(EMPTY_FORM)
+        setIsModalOpen(true)
+    }
+
+    const handleEdit = (hotline: Hotline) => {
+        setEditingHotline(hotline)
+        setForm({
+            name: hotline.name,
+            number: hotline.number,
+            category: hotline.category,
+            is_active: hotline.is_active,
+        })
+        setIsModalOpen(true)
+    }
 
     const fetchHotlines = async (isRetry = false) => {
         if (isRetry) setRetrying(true)
@@ -51,17 +76,22 @@ export const HotlineManagement: React.FC = () => {
 
     useEffect(() => { fetchHotlines() }, [])
 
-    const handleCreate = async (e: React.FormEvent) => {
+    const handleSave = async (e: React.FormEvent) => {
         e.preventDefault()
         setIsSubmitting(true)
         try {
-            const res = await axiosPrivate.post('/hotlines/', form)
-            setHotlines(prev => [...prev, res.data])
-            setIsModalOpen(false)
-            setForm({ name: '', number: '', category: 'OTHER' })
-            toast.success('Hotline added successfully.')
+            if (editingHotline) {
+                const res = await axiosPrivate.patch(`/hotlines/${editingHotline.id}/`, form)
+                setHotlines(prev => prev.map(hotline => hotline.id === editingHotline.id ? res.data : hotline))
+                toast.success('Hotline updated successfully.')
+            } else {
+                const res = await axiosPrivate.post('/hotlines/', form)
+                setHotlines(prev => [...prev, res.data])
+                toast.success('Hotline added successfully.')
+            }
+            closeModal()
         } catch {
-            toast.error('Failed to add hotline.')
+            toast.error(editingHotline ? 'Failed to update hotline.' : 'Failed to add hotline.')
         } finally {
             setIsSubmitting(false)
         }
@@ -89,7 +119,7 @@ export const HotlineManagement: React.FC = () => {
                     <p className="text-slate-500 mt-1">Manage emergency contacts visible to residents.</p>
                 </div>
                 <button
-                    onClick={() => setIsModalOpen(true)}
+                    onClick={openCreateModal}
                     className="flex items-center gap-2 bg-primary hover:bg-primary-hover text-primary-foreground px-4 py-2 rounded-md text-sm font-medium transition-colors"
                 >
                     <Plus size={16} /> Add Hotline
@@ -111,13 +141,14 @@ export const HotlineManagement: React.FC = () => {
                             <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Name</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Number</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Category</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Status</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Actions</th>
                         </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-slate-200">
                         {hotlines.length === 0 ? (
                             <tr>
-                                <td colSpan={4} className="px-6 py-8 text-center text-sm text-slate-500">No hotlines added yet.</td>
+                                <td colSpan={5} className="px-6 py-8 text-center text-sm text-slate-500">No hotlines added yet.</td>
                             </tr>
                         ) : (
                             hotlines.map(h => (
@@ -135,13 +166,29 @@ export const HotlineManagement: React.FC = () => {
                                         </span>
                                     </td>
                                     <td className="px-6 py-4">
-                                        <button
-                                            onClick={() => handleDelete(h.id)}
-                                            className="text-rose-500 hover:text-rose-700 transition-colors"
-                                            aria-label="Delete hotline"
-                                        >
-                                            <Trash2 size={16} />
-                                        </button>
+                                        <span className={`text-xs font-semibold ${h.is_active ? 'text-emerald-700' : 'text-slate-500'}`}>
+                                            {h.is_active ? 'Active' : 'Inactive'}
+                                        </span>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <div className="flex items-center gap-3">
+                                            <button
+                                                onClick={() => handleEdit(h)}
+                                                className="text-slate-500 hover:text-primary-text transition-colors"
+                                                aria-label={`Edit ${h.name}`}
+                                                title="Edit hotline"
+                                            >
+                                                <Pencil size={16} />
+                                            </button>
+                                            <button
+                                                onClick={() => handleDelete(h.id)}
+                                                className="text-rose-500 hover:text-rose-700 transition-colors"
+                                                aria-label={`Delete ${h.name}`}
+                                                title="Delete hotline"
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))
@@ -154,8 +201,9 @@ export const HotlineManagement: React.FC = () => {
             {/* Add Hotline Modal */}
             {isModalOpen && (
                 <AddHotlineModal
-                    onClose={() => setIsModalOpen(false)}
-                    onSubmit={handleCreate}
+                    mode={editingHotline ? 'edit' : 'create'}
+                    onClose={closeModal}
+                    onSubmit={handleSave}
                     form={form}
                     setForm={setForm}
                     categories={CATEGORIES}
