@@ -331,9 +331,9 @@ export const DocumentRequestRow: React.FC<DocumentRequestRowProps> = ({
                                 </select>
                             </label>
                             {recipientsLoadError && (
-                                <div className="flex items-center justify-between gap-2 text-[11px] text-rose-700">
+                                <div role="alert" className="flex items-center justify-between gap-2 text-[11px] text-rose-700">
                                     <span>{t('Could not load your barangay e-payment options. Cash remains available.')}</span>
-                                    <button type="button" onClick={onRetryRecipients} className="font-semibold underline">
+                                    <button type="button" aria-label={t('Retry payment option loading')} onClick={onRetryRecipients} className="font-semibold underline">
                                         {t('Retry')}
                                     </button>
                                 </div>

@@ -45,7 +45,7 @@ void main() {
               selectedRecipientId: null,
               referenceController: TextEditingController(),
               isSubmitting: false,
-              onSelectedRecipientChanged: (_) {},
+              onPaymentChoiceChanged: (_) {},
               onSubmitPaymentReference: () {},
             ),
           ),
@@ -90,7 +90,7 @@ void main() {
               selectedRecipientId: null,
               referenceController: TextEditingController(),
               isSubmitting: false,
-              onSelectedRecipientChanged: (_) {},
+              onPaymentChoiceChanged: (_) {},
               onSubmitPaymentReference: () {},
             ),
           ),
@@ -131,7 +131,7 @@ void main() {
               selectedRecipientId: null,
               referenceController: TextEditingController(),
               isSubmitting: false,
-              onSelectedRecipientChanged: (_) {},
+              onPaymentChoiceChanged: (_) {},
               onSubmitPaymentReference: () {},
             ),
           ),
@@ -169,7 +169,7 @@ void main() {
               selectedRecipientId: null,
               referenceController: TextEditingController(),
               isSubmitting: false,
-              onSelectedRecipientChanged: (_) {},
+              onPaymentChoiceChanged: (_) {},
               onSubmitPaymentReference: () {},
             ),
           ),
@@ -203,7 +203,7 @@ void main() {
               selectedRecipientId: null,
               referenceController: TextEditingController(),
               isSubmitting: false,
-              onSelectedRecipientChanged: (_) {},
+              onPaymentChoiceChanged: (_) {},
               onSubmitPaymentReference: () {},
             ),
           ),
@@ -213,6 +213,98 @@ void main() {
       expect(find.text('Cash Payment at Barangay Hall'), findsOneWidget);
       expect(
         find.textContaining('Please proceed to the Barangay Treasurer desk to settle your fee'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('offers cash before configured barangay e-payment options', (
+      tester,
+    ) async {
+      String? selectedChoice;
+      final request = DocumentRequestModel(
+        id: 120,
+        documentType: 'Barangay Clearance',
+        status: 'READY_FOR_PICKUP',
+        feeAmount: 50.0,
+        paymentStatus: 'UNPAID',
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: DocumentPaymentSection(
+              request: request,
+              canChoosePayment: true,
+              selectedPaymentChoice: null,
+              isSavingPaymentChoice: false,
+              onPaymentChoiceChanged: (value) => selectedChoice = value,
+              canSubmitElectronicPayment: false,
+              isLoadingRecipients: false,
+              recipientError: null,
+              recipients: mockRecipients,
+              selectedRecipientId: null,
+              referenceController: TextEditingController(),
+              isSubmitting: false,
+              onSubmitPaymentReference: () {},
+            ),
+          ),
+        ),
+      );
+
+      final dropdown = tester.widget<DropdownButton<String>>(
+        find.byType(DropdownButton<String>),
+      );
+      expect(dropdown.items!.first.value, 'CASH');
+      expect(dropdown.items!.last.value, 'RECIPIENT:5');
+
+      await tester.tap(find.byType(DropdownButtonFormField<String>));
+      await tester.pumpAndSettle();
+      expect(find.text('Cash at Barangay Hall'), findsWidgets);
+      expect(find.text('GCash · Treasury GCash'), findsOneWidget);
+      await tester.tap(find.text('Cash at Barangay Hall').last);
+      await tester.pumpAndSettle();
+      expect(selectedChoice, 'CASH');
+    });
+
+    testWidgets('uses cash as the only option without configured e-payments', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: DocumentPaymentSection(
+              request: DocumentRequestModel(
+                id: 121,
+                documentType: 'Barangay Clearance',
+                status: 'READY_FOR_PICKUP',
+                feeAmount: 50.0,
+                paymentStatus: 'UNPAID',
+              ),
+              canChoosePayment: true,
+              selectedPaymentChoice: null,
+              isSavingPaymentChoice: false,
+              canSubmitElectronicPayment: false,
+              isLoadingRecipients: false,
+              recipientError: null,
+              recipients: const [],
+              selectedRecipientId: null,
+              referenceController: TextEditingController(),
+              isSubmitting: false,
+              onSubmitPaymentReference: () {},
+            ),
+          ),
+        ),
+      );
+
+      final dropdown = tester.widget<DropdownButton<String>>(
+        find.byType(DropdownButton<String>),
+      );
+      expect(dropdown.items, hasLength(1));
+      expect(dropdown.items!.single.value, 'CASH');
+      expect(
+        find.text(
+          'No e-payment options are configured. Cash at the Barangay Hall is the only available method.',
+        ),
         findsOneWidget,
       );
     });
@@ -240,7 +332,7 @@ void main() {
               selectedRecipientId: null,
               referenceController: TextEditingController(),
               isSubmitting: false,
-              onSelectedRecipientChanged: (_) {},
+              onPaymentChoiceChanged: (_) {},
               onSubmitPaymentReference: () {},
             ),
           ),
@@ -284,7 +376,7 @@ void main() {
                 selectedRecipientId: null,
                 referenceController: TextEditingController(),
                 isSubmitting: false,
-                onSelectedRecipientChanged: (_) {},
+                onPaymentChoiceChanged: (_) {},
                 onSubmitPaymentReference: () {},
                 onViewProof: () => proofViewed = true,
               ),
@@ -334,7 +426,7 @@ void main() {
                 selectedRecipientId: 5,
                 referenceController: TextEditingController(text: 'OLD-REF'),
                 isSubmitting: false,
-                onSelectedRecipientChanged: (_) {},
+                onPaymentChoiceChanged: (_) {},
                 onSubmitPaymentReference: () {},
               ),
             ),
@@ -375,7 +467,7 @@ void main() {
                 selectedRecipientId: 5,
                 referenceController: TextEditingController(text: 'REF-107'),
                 isSubmitting: false,
-                onSelectedRecipientChanged: (_) {},
+                onPaymentChoiceChanged: (_) {},
                 onSubmitPaymentReference: () {},
               ),
             ),
@@ -428,7 +520,7 @@ void main() {
                   selectedProofBytes: mockBytes,
                   selectedProofFilename: 'receipt_screen.png',
                   isSubmitting: false,
-                  onSelectedRecipientChanged: (_) {},
+                  onPaymentChoiceChanged: (_) {},
                   onProofSelected: (bytes) {
                     if (bytes == null) removedProof = true;
                   },

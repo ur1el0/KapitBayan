@@ -53,8 +53,17 @@ describe('CitizenDocuments', () => {
         vi.restoreAllMocks();
     });
 
-    it('submits a selected barangay transfer recipient and reference for manual verification', async () => {
-        vi.mocked(axiosPrivate.post).mockResolvedValue({
+    it('saves the resident-selected barangay payment method before submitting transfer evidence', async () => {
+        vi.mocked(axiosPrivate.post).mockResolvedValueOnce({
+            data: {
+                id: 15,
+                status: 'READY_FOR_PICKUP',
+                fee_amount: '50.00',
+                payment_method: 'MAYA',
+                payment_recipient: 7,
+                payment_status: 'UNPAID',
+            },
+        } as never).mockResolvedValueOnce({
             data: {
                 id: 15,
                 payment_method: 'MAYA',
@@ -65,8 +74,17 @@ describe('CitizenDocuments', () => {
         } as never);
 
         render(<CitizenDocuments />);
-        const recipient = await screen.findByLabelText('Payment recipient for request 15');
-        fireEvent.change(recipient, { target: { value: '7' } });
+        const paymentMethod = await screen.findByLabelText('Choose payment method');
+        fireEvent.change(paymentMethod, { target: { value: 'RECIPIENT:7' } });
+
+        await waitFor(() => {
+            expect(axiosPrivate.post).toHaveBeenNthCalledWith(
+                1,
+                '/document-requests/15/payment-choice/',
+                { payment_recipient_id: 7 },
+            );
+        });
+
         const input = screen.getByLabelText('Transfer reference for request 15');
         fireEvent.change(input, { target: { value: 'GC-REF-5512' } });
 
@@ -77,7 +95,8 @@ describe('CitizenDocuments', () => {
         fireEvent.click(screen.getByRole('button', { name: 'Submit transfer reference' }));
 
         await waitFor(() => {
-            expect(axiosPrivate.post).toHaveBeenCalledWith(
+            expect(axiosPrivate.post).toHaveBeenNthCalledWith(
+                2,
                 '/document-requests/15/payment-reference/',
                 expect.any(FormData),
                 expect.objectContaining({
@@ -85,7 +104,7 @@ describe('CitizenDocuments', () => {
                 }),
             );
         });
-        const formData = vi.mocked(axiosPrivate.post).mock.calls[0][1] as FormData;
+        const formData = vi.mocked(axiosPrivate.post).mock.calls[1][1] as FormData;
         expect(formData.get('payment_recipient_id')).toBe('7');
         expect(formData.get('payment_reference')).toBe('GC-REF-5512');
         expect(formData.get('payment_proof_image')).toBeTruthy();
@@ -120,24 +139,24 @@ describe('CitizenDocuments', () => {
         render(<CitizenDocuments />);
 
         expect(await screen.findByText('Barangay Clearance')).toBeInTheDocument();
-        expect(await screen.findByRole('status')).toHaveTextContent('Loading payment recipients');
+        expect(await screen.findByRole('status')).toHaveTextContent('Loading barangay e-payment options');
         expect(screen.queryByText(/has not configured an e-payment recipient/i)).not.toBeInTheDocument();
 
         initialRead.reject(new Error('recipient service unavailable'));
-        const retryButton = await screen.findByRole('button', { name: 'Retry payment recipient loading' });
-        expect(screen.getByRole('alert')).toHaveTextContent("We couldn't load payment recipients");
+        const retryButton = await screen.findByRole('button', { name: 'Retry payment option loading' });
+        expect(screen.getByRole('alert')).toHaveTextContent('Could not load your barangay e-payment options. Cash remains available.');
         expect(screen.queryByText(/has not configured an e-payment recipient/i)).not.toBeInTheDocument();
 
         fireEvent.click(retryButton);
-        await waitFor(() => expect(retryButton).toBeDisabled());
-        expect(screen.getByRole('status')).toHaveTextContent('Retrying payment recipients');
+        expect(await screen.findByRole('status')).toHaveTextContent('Loading barangay e-payment options');
+        expect(screen.queryByRole('button', { name: 'Retry payment option loading' })).not.toBeInTheDocument();
         expect(axiosPrivate.get).toHaveBeenCalledTimes(3);
 
         failedRetry.reject(new Error('recipient service still unavailable'));
-        await waitFor(() => expect(retryButton).toBeEnabled());
-        expect(screen.getByRole('alert')).toHaveTextContent("We couldn't load payment recipients");
+        const retryAgainButton = await screen.findByRole('button', { name: 'Retry payment option loading' });
+        expect(screen.getByRole('alert')).toHaveTextContent('Could not load your barangay e-payment options. Cash remains available.');
 
-        fireEvent.click(retryButton);
+        fireEvent.click(retryAgainButton);
         recoveredRead.resolve({
             data: [{
                 id: 7,
@@ -150,8 +169,8 @@ describe('CitizenDocuments', () => {
             }],
         });
 
-        expect(await screen.findByLabelText('Payment recipient for request 15')).toBeInTheDocument();
-        expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+        expect(await screen.findByLabelText('Choose payment method')).toBeInTheDocument();
+        await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument());
         expect(screen.getByText('Barangay Clearance')).toBeInTheDocument();
         expect(axiosPrivate.get).toHaveBeenCalledTimes(4);
         const requestedUrls = vi.mocked(axiosPrivate.get).mock.calls.map(([url]) => url);
@@ -177,8 +196,10 @@ describe('CitizenDocuments', () => {
 
         render(<CitizenDocuments />);
 
-        expect(await screen.findByText(/has not configured an e-payment recipient/i)).toBeInTheDocument();
+        expect(await screen.findByText(/No e-payment options are configured/i)).toBeInTheDocument();
         expect(screen.getByText('Barangay Clearance')).toBeInTheDocument();
+        expect(screen.getByLabelText('Choose payment method')).toHaveValue('');
+        expect(screen.getByRole('option', { name: 'Cash at barangay hall' })).toBeInTheDocument();
         expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     });
 

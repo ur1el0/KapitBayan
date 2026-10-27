@@ -55,6 +55,7 @@ export const CitizenDocuments: React.FC = () => {
 
     const fetchPaymentRecipients = async () => {
         setPaymentRecipientsLoading(true);
+        setPaymentRecipientsLoadError(false);
         try {
             const response = await axiosPrivate.get('/payment-recipients/');
             const data = response.data.results || response.data;

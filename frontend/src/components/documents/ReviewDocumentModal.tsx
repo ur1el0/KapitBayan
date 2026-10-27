@@ -486,6 +486,13 @@ export const ReviewDocumentModal = ({
                                 </div>
                             </div>
 
+                            {selectedRequest.payment_method === 'CASH' && !isFeeExempt && Number(selectedRequest.fee_amount ?? feeAmount) > 0 && (
+                                <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 space-y-1 text-xs text-amber-900">
+                                    <p className="font-bold">Resident selected: Cash</p>
+                                    <p>Cash payment will be settled in person at the Barangay Treasurer desk upon pickup.</p>
+                                </div>
+                            )}
+
                             {/* Electronic Payment Details Card */}
                             {Boolean(selectedRequest.payment_reference || selectedRequest.payment_proof_url) && (
                                 <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 space-y-3">

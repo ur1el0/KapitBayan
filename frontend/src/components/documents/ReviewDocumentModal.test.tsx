@@ -127,7 +127,6 @@ describe('ReviewDocumentModal', () => {
             'RELEASED',
             'OR-554433',
             '50.00',
-            'GCASH',
         );
     });
 
@@ -155,7 +154,6 @@ describe('ReviewDocumentModal', () => {
             'RELEASED',
             '',
             '0.00',
-            '',
         );
     });
 
@@ -179,7 +177,6 @@ describe('ReviewDocumentModal', () => {
             'READY_FOR_PICKUP',
             '',
             '50.00',
-            '',
         );
     });
 
@@ -277,7 +274,6 @@ describe('ReviewDocumentModal', () => {
             'READY_FOR_PICKUP',
             '',
             '0.00',
-            '',
             'Endorsed by Punong Barangay as indigent resident',
         );
     });

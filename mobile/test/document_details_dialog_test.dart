@@ -25,6 +25,21 @@ class _DocumentServiceWithRecipient extends DocumentService {
       instructions: 'Use your request ID as reference.',
     ),
   ];
+
+  @override
+  Future<DocumentRequestModel> chooseDocumentPaymentMethod({
+    required int requestId,
+    required String paymentMethod,
+    int? paymentRecipientId,
+  }) async => DocumentRequestModel(
+    id: requestId,
+    documentType: 'Barangay Clearance',
+    status: 'READY_FOR_PICKUP',
+    feeAmount: 50,
+    paymentMethod: paymentMethod == 'CASH' ? 'CASH' : 'GCASH',
+    paymentStatus: 'UNPAID',
+    paymentRecipientId: paymentRecipientId,
+  );
 }
 
 void main() {
@@ -33,7 +48,7 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
-  testWidgets('shows request details and the e-payment recipient panel', (
+  testWidgets('lets residents choose a configured e-payment method', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(1080, 2400);
@@ -52,7 +67,7 @@ void main() {
       documentType: 'Barangay Clearance',
       status: 'READY_FOR_PICKUP',
       feeAmount: 50,
-      paymentMethod: 'GCASH',
+      paymentMethod: '',
       paymentStatus: 'UNPAID',
     );
 
@@ -83,17 +98,19 @@ void main() {
     expect(find.text('Requirements'), findsOneWidget);
     expect(find.text('• Government ID or proof of residency'), findsOneWidget);
     expect(find.text('• Community Tax Certificate (Cedula)'), findsOneWidget);
+    expect(find.text('Choose payment method'), findsOneWidget);
     expect(
-      find.text(
-        'Choose the official recipient configured by your barangay. Staff will verify the transfer reference manually before release.',
-      ),
+      find.text('Cash is always available. E-payment options are set by your Barangay.'),
       findsOneWidget,
     );
-    expect(find.text('Barangay Treasury · GCash'), findsOneWidget);
-    expect(
-      find.textContaining('Use your request ID as reference.'),
-      findsOneWidget,
-    );
+    await tester.tap(find.byType(DropdownButtonFormField<String>));
+    await tester.pumpAndSettle();
+    expect(find.text('Cash at Barangay Hall'), findsOneWidget);
+    expect(find.text('GCash · Barangay Treasury'), findsOneWidget);
+    await tester.tap(find.text('GCash · Barangay Treasury'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Treasurer · 09XX-XXX-1234'), findsOneWidget);
+    expect(find.textContaining('Use your request ID as reference.'), findsOneWidget);
     expect(find.text('Transfer reference'), findsOneWidget);
     expect(find.text('Submit transfer reference'), findsOneWidget);
   });

@@ -42,6 +42,7 @@ describe('DocumentRequestRow', () => {
         recipientsLoading: false,
         recipientsLoadError: false,
         onRetryRecipients: vi.fn(),
+        onChoosePaymentMethod: vi.fn(),
         submittingPayment: false,
         downloading: false,
         cancelling: false,
@@ -147,6 +148,7 @@ describe('DocumentRequestRow', () => {
             ...baseRequest,
             payment_status: 'PENDING_VERIFICATION',
             payment_method: 'GCASH',
+            payment_recipient: 1,
             payment_reference: 'GC-REF-998877',
             payment_transacted_at: '2026-10-10T14:30:00.000Z',
             payment_proof_url: '/api/v1/document-requests/101/payment-proof/',
@@ -190,28 +192,33 @@ describe('DocumentRequestRow', () => {
         const resubmitBtn = screen.getByRole('button', { name: 'Resubmit Payment Evidence' });
         expect(resubmitBtn).toBeInTheDocument();
 
-        // Form is hidden until resident clicks Resubmit
-        expect(screen.queryByLabelText(/Payment recipient for request 101/i)).not.toBeInTheDocument();
+        expect(screen.getByLabelText('Choose payment method')).toHaveValue('RECIPIENT:1');
+        expect(screen.queryByLabelText(/Transfer reference for request 101/i)).not.toBeInTheDocument();
 
         fireEvent.click(resubmitBtn);
 
         // Form is now visible with prefilled values
-        const recipientSelect = screen.getByLabelText('Payment recipient for request 101') as HTMLSelectElement;
-        expect(recipientSelect.value).toBe('1');
+        expect(screen.getByLabelText('Choose payment method')).toHaveValue('RECIPIENT:1');
         const refInput = screen.getByLabelText('Transfer reference for request 101') as HTMLInputElement;
         expect(refInput.value).toBe('GC-REJECTED-123');
 
         // Can cancel retry
         const cancelBtn = screen.getByRole('button', { name: 'Cancel' });
         fireEvent.click(cancelBtn);
-        expect(screen.queryByLabelText(/Payment recipient for request 101/i)).not.toBeInTheDocument();
+        expect(screen.queryByLabelText(/Transfer reference for request 101/i)).not.toBeInTheDocument();
     });
 
-    it('renders initial PaymentReferenceForm when document is READY_FOR_PICKUP and UNPAID', () => {
+    it('offers cash first and configured e-payment choices before showing the transfer form', () => {
         renderInTable(<DocumentRequestRow {...defaultProps} />);
 
-        expect(screen.getByLabelText('Payment recipient for request 101')).toBeInTheDocument();
-        expect(screen.getByLabelText('Transfer reference for request 101')).toBeInTheDocument();
+        const methodSelect = screen.getByLabelText('Choose payment method') as HTMLSelectElement;
+        expect(methodSelect).toHaveValue('');
+        expect(methodSelect.options[1]).toHaveTextContent('Cash at barangay hall');
+        expect(methodSelect.options[2]).toHaveTextContent('GCash · Barangay GCash Hub');
+        expect(screen.queryByLabelText('Transfer reference for request 101')).not.toBeInTheDocument();
+
+        fireEvent.change(methodSelect, { target: { value: 'RECIPIENT:1' } });
+        expect(defaultProps.onChoosePaymentMethod).toHaveBeenCalledWith('RECIPIENT:1');
     });
 
     it('triggers cancel clearance request callback when status is PENDING', () => {
