@@ -290,7 +290,6 @@ class DocumentRequestReviewSerializer(FeePolicyValidationMixin, serializers.Mode
             "admin_notes",
             "or_number",
             "fee_amount",
-            "payment_method",
             "fee_waiver_reason",
             "fee_assessment_status",
         ]

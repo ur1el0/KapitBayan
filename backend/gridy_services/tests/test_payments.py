@@ -69,6 +69,18 @@ class DocumentPaymentWorkflowTests(APITestCase):
         values.update(overrides)
         return DocumentRequest.objects.create(**values)
 
+    def choose_payment_method(self, document, *, recipient=None):
+        payload = (
+            {"payment_recipient_id": recipient.pk}
+            if recipient
+            else {"payment_method": DocumentRequest.PaymentMethod.CASH}
+        )
+        return self.client.post(
+            reverse("document-request-payment-choice", args=[document.pk]),
+            payload,
+            format="json",
+        )
+
 
     def test_resident_can_list_only_active_payment_recipients_in_own_barangay(self):
         own_recipient = PaymentRecipient.objects.create(
@@ -256,6 +268,8 @@ class DocumentPaymentWorkflowTests(APITestCase):
         )
         document = self.make_request()
         self.client.force_authenticate(self.resident)
+        choice_response = self.choose_payment_method(document, recipient=recipient)
+        self.assertEqual(choice_response.status_code, status.HTTP_200_OK, choice_response.data)
 
         response = self.client.post(
             reverse("document-request-payment-reference", args=[document.pk]),
@@ -350,6 +364,11 @@ class DocumentPaymentWorkflowTests(APITestCase):
     def test_resident_can_submit_gcash_reference_for_own_ready_request(self):
         document = self.make_request()
         self.client.force_login(self.resident)
+        choice_response = self.choose_payment_method(
+            document,
+            recipient=self.gcash_recipient,
+        )
+        self.assertEqual(choice_response.status_code, status.HTTP_200_OK, choice_response.data)
 
         response = self.client.post(
             reverse("document-request-payment-reference", args=[document.pk]),
@@ -514,6 +533,10 @@ class DocumentPaymentWorkflowTests(APITestCase):
 
     def test_cash_can_be_recorded_at_release_with_official_receipt(self):
         document = self.make_request()
+        self.client.force_login(self.resident)
+        choice_response = self.choose_payment_method(document)
+        self.assertEqual(choice_response.status_code, status.HTTP_200_OK, choice_response.data)
+
         self.client.force_login(self.official)
 
         response = self.client.patch(

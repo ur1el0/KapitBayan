@@ -3,6 +3,10 @@
 ## Status
 Accepted
 
+## Current implementation note
+
+The resident's payment-method choice and the available choice list are now governed by [ADR 026](026-resident-selected-document-payment-method.md). The UI details below describing the multi-provider selector are historical where they do not match that newer decision.
+
 ## Context
 ADR 010 established manual GCash reference submission, and ADR 011 expanded manual electronic payment recipient configuration to support tenant-level providers (GCash, Maya, Bank Transfer) while keeping statutory cash payment at the barangay hall.
 

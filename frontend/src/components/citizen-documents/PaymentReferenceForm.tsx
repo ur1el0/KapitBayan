@@ -11,6 +11,7 @@ export interface PaymentReferenceFormProps {
     onRetryRecipients: () => void;
     submitting: boolean;
     selectedRecipientId?: string;
+    hideRecipientSelection?: boolean;
     paymentReference?: string;
     onRecipientChange?: (value: string) => void;
     onPaymentReferenceChange?: (value: string) => void;
@@ -29,6 +30,7 @@ export const PaymentReferenceForm: React.FC<PaymentReferenceFormProps> = ({
     onRetryRecipients,
     submitting,
     selectedRecipientId: controlledRecipientId,
+    hideRecipientSelection = false,
     paymentReference: controlledReference,
     onRecipientChange,
     onPaymentReferenceChange,
@@ -182,7 +184,7 @@ export const PaymentReferenceForm: React.FC<PaymentReferenceFormProps> = ({
     return (
         <form className="mt-3 space-y-3 rounded-xl border border-slate-200 bg-slate-50/60 p-4 text-xs" onSubmit={handleSubmit}>
             <p className="text-slate-600 font-medium">
-                {t('Select an official recipient configured by your barangay, follow instructions, enter your transfer reference and date/time, and attach a screenshot of your receipt. Staff verify the transfer manually.')}
+                {t('Follow the selected barangay payment instructions, enter your transfer reference and date/time, and attach a screenshot of your receipt. Staff verify the transfer manually.')}
             </p>
 
             {recipientsLoading && !recipientsLoadError ? (
@@ -221,28 +223,29 @@ export const PaymentReferenceForm: React.FC<PaymentReferenceFormProps> = ({
                 </p>
             ) : (
                 <>
-                    {/* Recipient Dropdown */}
-                    <label className="block text-xs font-semibold text-slate-700">
-                        {t('Payment recipient')}
-                        <select
-                            required
-                            aria-label={`${t('Payment recipient for request')} ${requestId}`}
-                            value={activeRecipientId}
-                            onChange={(event) => {
-                                const val = event.target.value;
-                                setInternalRecipientId(val);
-                                onRecipientChange?.(val);
-                            }}
-                            className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs focus:ring-2 focus:ring-primary focus:outline-none"
-                        >
-                            <option value="">{t('Select a recipient')}</option>
-                            {recipients.map((recipient) => (
-                                <option key={recipient.id} value={recipient.id}>
-                                    {recipient.display_name} · {recipient.provider_label}
-                                </option>
-                            ))}
-                        </select>
-                    </label>
+                    {!hideRecipientSelection && (
+                        <label className="block text-xs font-semibold text-slate-700">
+                            {t('Payment recipient')}
+                            <select
+                                required
+                                aria-label={`${t('Payment recipient for request')} ${requestId}`}
+                                value={activeRecipientId}
+                                onChange={(event) => {
+                                    const val = event.target.value;
+                                    setInternalRecipientId(val);
+                                    onRecipientChange?.(val);
+                                }}
+                                className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs focus:ring-2 focus:ring-primary focus:outline-none"
+                            >
+                                <option value="">{t('Select a recipient')}</option>
+                                {recipients.map((recipient) => (
+                                    <option key={recipient.id} value={recipient.id}>
+                                        {recipient.display_name} · {recipient.provider_label}
+                                    </option>
+                                ))}
+                            </select>
+                        </label>
+                    )}
 
                     {/* Recipient Details Card */}
                     {selectedRecipient && (

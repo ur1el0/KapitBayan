@@ -452,7 +452,6 @@ class _AdminDocumentRequestDetailsScreenState
   late final TextEditingController _orController;
   late final TextEditingController _paymentNoteController;
   late String _selectedStatus;
-  late String _selectedPaymentMethod;
   bool _editFeeAssessment = false;
   bool _isUpdating = false;
   Future<Uint8List>? _proofFuture;
@@ -475,7 +474,6 @@ class _AdminDocumentRequestDetailsScreenState
     _orController = TextEditingController(text: _request.orNumber ?? '');
     _paymentNoteController = TextEditingController();
     _selectedStatus = _request.isPending ? 'PROCESSING' : _request.status;
-    _selectedPaymentMethod = _request.paymentMethod ?? '';
     _editFeeAssessment = _request.isAwaitingAssessment;
     if (_request.paymentProofUrl?.isNotEmpty == true) {
       _proofFuture = widget.service.fetchPaymentProof(_request.id);
@@ -581,14 +579,12 @@ class _AdminDocumentRequestDetailsScreenState
         adminNotes: notes,
         orNumber: _orController.text,
         feeAmount: feeAmount,
-        paymentMethod: _selectedPaymentMethod,
         feeWaiverReason: _editFeeAssessment ? _waiverController.text : null,
       );
       if (!mounted) return;
       setState(() {
         _request = updated;
         _selectedStatus = updated.status;
-        _selectedPaymentMethod = updated.paymentMethod ?? '';
         _adminNotesController.text = updated.adminNotes ?? '';
         _orController.text = updated.orNumber ?? '';
         _feeController.text = updated.feeAmount?.toStringAsFixed(2) ?? '';
@@ -909,33 +905,9 @@ class _AdminDocumentRequestDetailsScreenState
             ),
             const SizedBox(height: 10),
           ],
-          DropdownButtonFormField<String>(
-            initialValue: _selectedPaymentMethod,
-            decoration: const InputDecoration(
-              labelText: 'Collection method',
-              border: OutlineInputBorder(),
-            ),
-            items: const [
-              DropdownMenuItem(
-                value: '',
-                child: Text('Let resident select e-payment'),
-              ),
-              DropdownMenuItem(
-                value: 'CASH',
-                child: Text('Cash at barangay hall'),
-              ),
-              DropdownMenuItem(value: 'GCASH', child: Text('GCash')),
-              DropdownMenuItem(value: 'MAYA', child: Text('Maya')),
-              DropdownMenuItem(value: 'BANK', child: Text('Bank transfer')),
-              DropdownMenuItem(
-                value: 'OTHER',
-                child: Text('Other electronic transfer'),
-              ),
-            ],
-            onChanged: _isUpdating
-                ? null
-                : (value) =>
-                      setState(() => _selectedPaymentMethod = value ?? ''),
+          const Text(
+            'The resident chooses how to pay after the request is ready. Manage e-payment options in Barangay Settings on the web.',
+            style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
           ),
           const SizedBox(height: 10),
           DropdownButtonFormField<String>(

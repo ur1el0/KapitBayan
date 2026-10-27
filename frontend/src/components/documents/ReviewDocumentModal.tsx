@@ -23,7 +23,6 @@ interface ReviewDocumentModalProps {
         newStatus: string,
         orNumber?: string,
         feeAmount?: string,
-        paymentMethod?: string,
         feeWaiverReason?: string,
     ) => void;
     handlePaymentReview: (status: 'VERIFIED' | 'REJECTED', note: string, orNumber?: string) => void;
@@ -178,7 +177,6 @@ export const ReviewDocumentModal = ({
     const [feeAmount, setFeeAmount] = useState('50.00');
     const [isWaived, setIsWaived] = useState(false);
     const [feeWaiverReason, setFeeWaiverReason] = useState('');
-    const [paymentMethod, setPaymentMethod] = useState('');
     const [paymentReviewNote, setPaymentReviewNote] = useState('');
     const isFeeExempt = isFeeExemptDocumentType(selectedRequest?.document_type) || selectedRequest?.fee_assessment_status === 'STATUTORY_EXEMPT';
     const dialogTitleId = useId();
@@ -187,7 +185,6 @@ export const ReviewDocumentModal = ({
     useEffect(() => {
         if (selectedRequest) {
             setOrNumber(selectedRequest.or_number || '');
-            setPaymentMethod(selectedRequest.payment_method || '');
             setPaymentReviewNote('');
 
             const isStatutory = isFeeExemptDocumentType(selectedRequest.document_type) || selectedRequest.fee_assessment_status === 'STATUTORY_EXEMPT';
@@ -222,7 +219,6 @@ export const ReviewDocumentModal = ({
 
     const onUpdate = (status: string) => {
         const effectiveFee = isFeeExempt || isWaived ? '0.00' : feeAmount.trim();
-        const effectiveMethod = isFeeExempt || isWaived ? '' : paymentMethod;
         const effectiveReason = isWaived ? feeWaiverReason.trim() : '';
 
         if (status === 'READY_FOR_PICKUP' && !isFeeExempt) {
@@ -244,7 +240,6 @@ export const ReviewDocumentModal = ({
                 status,
                 orNumber.trim(),
                 effectiveFee,
-                effectiveMethod,
                 effectiveReason,
             );
         } else {
@@ -252,7 +247,6 @@ export const ReviewDocumentModal = ({
                 status,
                 orNumber.trim(),
                 effectiveFee,
-                effectiveMethod,
             );
         }
     };
@@ -485,33 +479,19 @@ export const ReviewDocumentModal = ({
                                         </div>
                                     )}
                                     {!isFeeExempt && (
-                                        <div className="col-span-2">
-                                            <label className="block text-xs font-semibold text-slate-600 mb-1">Payment Method</label>
-                                            <select
-                                                value={paymentMethod}
-                                                onChange={(event) => setPaymentMethod(event.target.value)}
-                                                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
-                                            >
-                                                <option value="">Select when paid</option>
-                                                <option value="CASH">Cash at barangay hall</option>
-                                                <option value="GCASH">GCash transfer</option>
-                                                <option value="MAYA">Maya transfer</option>
-                                                <option value="BANK">Bank transfer</option>
-                                                <option value="OTHER">Other e-payment</option>
-                                            </select>
-                                            {paymentMethod === 'CASH' ? (
-                                                <p className="mt-1 text-xs text-sky-800 font-medium">
-                                                    Cash payment will be settled in person at the Barangay Treasurer desk upon pickup. No electronic proof is required.
-                                                </p>
-                                            ) : (
-                                                <p className="mt-1 text-xs text-slate-600">
-                                                    Cash remains available. Every electronic transfer reference is checked manually by barangay staff; KapitBayan does not process money.
-                                                </p>
-                                            )}
-                                        </div>
+                                        <p className="col-span-2 text-xs text-slate-500">
+                                            The resident chooses how to pay after the request is ready. Manage the Barangay's e-payment options in Barangay Settings.
+                                        </p>
                                     )}
                                 </div>
                             </div>
+
+                            {selectedRequest.payment_method === 'CASH' && !isFeeExempt && Number(selectedRequest.fee_amount ?? feeAmount) > 0 && (
+                                <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 space-y-1 text-xs text-amber-900">
+                                    <p className="font-bold">Resident selected: Cash</p>
+                                    <p>Cash payment will be settled in person at the Barangay Treasurer desk upon pickup.</p>
+                                </div>
+                            )}
 
                             {/* Electronic Payment Details Card */}
                             {Boolean(selectedRequest.payment_reference || selectedRequest.payment_proof_url) && (

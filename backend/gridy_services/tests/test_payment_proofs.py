@@ -398,9 +398,23 @@ class PaymentSubmissionAndReviewWorkflowTests(APITestCase):
         values.update(kwargs)
         return DocumentRequest.objects.create(**values)
 
+    def choose_payment_method(self, document, *, recipient=None):
+        payload = (
+            {"payment_recipient_id": recipient.pk}
+            if recipient
+            else {"payment_method": DocumentRequest.PaymentMethod.CASH}
+        )
+        return self.client.post(
+            reverse("document-request-payment-choice", args=[document.pk]),
+            payload,
+            format="json",
+        )
+
     def test_positive_multipart_submission_saves_details_and_snapshots(self):
         document = self._make_ready_request()
         self.client.force_login(self.resident)
+        choice_response = self.choose_payment_method(document, recipient=self.recipient)
+        self.assertEqual(choice_response.status_code, status.HTTP_200_OK, choice_response.data)
         transacted_at = timezone.now() - datetime.timedelta(minutes=2)
 
         response = self.client.post(
@@ -444,6 +458,8 @@ class PaymentSubmissionAndReviewWorkflowTests(APITestCase):
     def test_upload_extension_and_streamed_mime_follow_verified_image_format(self):
         document = self._make_ready_request()
         self.client.force_login(self.resident)
+        choice_response = self.choose_payment_method(document, recipient=self.recipient)
+        self.assertEqual(choice_response.status_code, status.HTTP_200_OK, choice_response.data)
 
         response = self.client.post(
             reverse("document-request-payment-reference", args=[document.pk]),
@@ -631,6 +647,8 @@ class PaymentSubmissionAndReviewWorkflowTests(APITestCase):
     def test_resubmission_replaces_proof_and_cleans_up_old_file_on_commit(self):
         document = self._make_ready_request(
             payment_status=DocumentRequest.PaymentStatus.REJECTED,
+            payment_method=DocumentRequest.PaymentMethod.GCASH,
+            payment_recipient=self.recipient,
             payment_proof_image=self._sample_image(name="old_proof.png"),
         )
         old_file_name = document.payment_proof_image.name
@@ -664,6 +682,8 @@ class PaymentSubmissionAndReviewWorkflowTests(APITestCase):
     def test_database_save_failure_cleans_new_proof_and_preserves_existing_proof(self):
         document = self._make_ready_request(
             payment_status=DocumentRequest.PaymentStatus.REJECTED,
+            payment_method=DocumentRequest.PaymentMethod.GCASH,
+            payment_recipient=self.recipient,
             payment_proof_image=self._sample_image(name="old_receipt.png"),
         )
         old_name = document.payment_proof_image.name
@@ -695,25 +715,29 @@ class PaymentSubmissionAndReviewWorkflowTests(APITestCase):
         self.assertTrue(storage.exists(old_name))
         self.assertFalse(storage.exists("payment_proofs/new_receipt.png"))
 
-    def test_converting_to_cash_cleans_up_proof_on_commit(self):
+    def test_resident_can_switch_rejected_payment_to_cash_and_cleans_up_proof(self):
         document = self._make_ready_request(
             payment_proof_image=self._sample_image(name="cash_cleared.png"),
-            payment_status=DocumentRequest.PaymentStatus.PENDING_VERIFICATION,
+            payment_method=DocumentRequest.PaymentMethod.GCASH,
+            payment_recipient=self.recipient,
+            payment_status=DocumentRequest.PaymentStatus.REJECTED,
         )
         file_name = document.payment_proof_image.name
         storage = document.payment_proof_image.storage
         self.assertTrue(storage.exists(file_name))
 
-        self.client.force_login(self.admin)
+        self.client.force_login(self.resident)
         with self.captureOnCommitCallbacks(execute=True):
-            response = self.client.patch(
-                reverse("document-request-validate", args=[document.pk]),
+            response = self.client.post(
+                reverse("document-request-payment-choice", args=[document.pk]),
                 {"payment_method": DocumentRequest.PaymentMethod.CASH},
                 format="json",
             )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         document.refresh_from_db()
+        self.assertEqual(document.payment_method, DocumentRequest.PaymentMethod.CASH)
+        self.assertIsNone(document.payment_recipient)
         self.assertFalse(bool(document.payment_proof_image))
         self.assertIsNone(document.payment_transacted_at)
         self.assertFalse(storage.exists(file_name))

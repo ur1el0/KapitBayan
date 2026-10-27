@@ -7,6 +7,23 @@ from rest_framework import serializers
 from ..models import DocumentRequest
 
 
+class PaymentChoiceSerializer(serializers.Serializer):
+    payment_method = serializers.ChoiceField(
+        choices=(DocumentRequest.PaymentMethod.CASH,),
+        required=False,
+    )
+    payment_recipient_id = serializers.IntegerField(min_value=1, required=False)
+
+    def validate(self, attrs):
+        selects_cash = attrs.get("payment_method") == DocumentRequest.PaymentMethod.CASH
+        selects_electronic_recipient = "payment_recipient_id" in attrs
+        if selects_cash == selects_electronic_recipient:
+            raise serializers.ValidationError(
+                "Select cash or one active e-payment recipient configured by your barangay."
+            )
+        return attrs
+
+
 class PaymentReferenceSerializer(serializers.Serializer):
     payment_recipient_id = serializers.IntegerField(min_value=1)
     payment_reference = serializers.CharField(

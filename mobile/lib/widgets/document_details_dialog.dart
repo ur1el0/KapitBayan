@@ -35,6 +35,7 @@ class _DocumentDetailsDialogState extends State<DocumentDetailsDialog> {
   bool _isDownloading = false;
   bool _isRequestingCounterTicket = false;
   bool _isSubmittingPayment = false;
+  bool _isSavingPaymentChoice = false;
   bool _isLoadingPaymentRecipients = false;
   String? _paymentRecipientError;
   List<PaymentRecipientModel> _paymentRecipients = const [];
@@ -71,11 +72,6 @@ class _DocumentDetailsDialogState extends State<DocumentDetailsDialog> {
       if (!mounted) return;
       setState(() {
         _paymentRecipients = recipients;
-        if (!recipients.any((item) => item.id == _selectedRecipientId)) {
-          _selectedRecipientId = recipients.isEmpty
-              ? null
-              : recipients.first.id;
-        }
       });
     } catch (_) {
       if (!mounted) return;
@@ -106,8 +102,8 @@ class _DocumentDetailsDialogState extends State<DocumentDetailsDialog> {
       );
       return;
     }
-    if (_selectedRecipientId == null) {
-      _showPaymentSubmissionMessage('Choose a payment recipient first.');
+    if (_paymentMethod == null || _paymentMethod == 'CASH' || _selectedRecipientId == null) {
+      _showPaymentSubmissionMessage('Choose an e-payment method before submitting a transfer reference.');
       return;
     }
     if (reference.isEmpty) {
@@ -152,6 +148,42 @@ class _DocumentDetailsDialogState extends State<DocumentDetailsDialog> {
       );
     } finally {
       if (mounted) setState(() => _isSubmittingPayment = false);
+    }
+  }
+
+  Future<void> _handlePaymentChoiceChanged(String? choice) async {
+    final service = widget.documentService;
+    if (choice == null || service == null || _isSavingPaymentChoice) return;
+
+    final isCash = choice == 'CASH';
+    final recipientId = isCash
+        ? null
+        : int.tryParse(choice.replaceFirst('RECIPIENT:', ''));
+    if (!isCash && recipientId == null) return;
+
+    setState(() => _isSavingPaymentChoice = true);
+    try {
+      final updated = await service.chooseDocumentPaymentMethod(
+        requestId: widget.request.id,
+        paymentMethod: isCash ? 'CASH' : 'ELECTRONIC',
+        paymentRecipientId: recipientId,
+      );
+      if (!mounted) return;
+      setState(() {
+        _paymentMethod = updated.paymentMethod;
+        _paymentStatus = updated.paymentStatus;
+        _paymentReviewNote = updated.paymentReviewNote;
+        _selectedRecipientId = updated.paymentRecipientId;
+        _paymentReferenceController.clear();
+        _selectedProofBytes = null;
+        _selectedProofFilename = null;
+      });
+      widget.onRequestUpdated?.call();
+    } catch (error) {
+      if (!mounted) return;
+      _showPaymentSubmissionMessage('Could not save payment choice: $error');
+    } finally {
+      if (mounted) setState(() => _isSavingPaymentChoice = false);
     }
   }
 
@@ -298,12 +330,24 @@ class _DocumentDetailsDialogState extends State<DocumentDetailsDialog> {
   Widget build(BuildContext context) {
     final req = widget.request;
     final canDownload = req.isReadyForPickup || req.isReleased;
-
-    final canSubmitElectronicPayment =
+    final canChoosePayment =
         req.isReadyForPickup &&
         (req.feeAmount ?? 0) > 0 &&
-        _paymentMethod != 'CASH' &&
         (_paymentStatus == 'UNPAID' || _paymentStatus == 'REJECTED');
+    final selectedRecipient = _paymentRecipients.where(
+      (recipient) => recipient.id == _selectedRecipientId,
+    );
+    final hasActiveSelectedRecipient = selectedRecipient.isNotEmpty;
+    final selectedPaymentChoice = _paymentMethod == 'CASH'
+        ? 'CASH'
+        : hasActiveSelectedRecipient
+            ? 'RECIPIENT:${_selectedRecipientId!}'
+            : null;
+
+    final canSubmitElectronicPayment =
+        canChoosePayment &&
+        _paymentMethod != 'CASH' &&
+        hasActiveSelectedRecipient;
 
     return Container(
       decoration: const BoxDecoration(
@@ -422,10 +466,16 @@ class _DocumentDetailsDialogState extends State<DocumentDetailsDialog> {
                   feeAmount: req.feeAmount,
                   paymentMethod: _paymentMethod,
                   paymentReference: req.paymentReference,
-                  paymentRecipientId: req.paymentRecipientId,
-                  paymentRecipientName: req.paymentRecipientName,
-                  paymentRecipientIdentifier: req.paymentRecipientIdentifier,
-                  paymentInstructions: req.paymentInstructions,
+                  paymentRecipientId: _selectedRecipientId,
+                  paymentRecipientName: hasActiveSelectedRecipient
+                      ? selectedRecipient.first.recipientName
+                      : req.paymentRecipientName,
+                  paymentRecipientIdentifier: hasActiveSelectedRecipient
+                      ? selectedRecipient.first.recipientIdentifier
+                      : req.paymentRecipientIdentifier,
+                  paymentInstructions: hasActiveSelectedRecipient
+                      ? selectedRecipient.first.instructions
+                      : req.paymentInstructions,
                   paymentStatus: _paymentStatus,
                   paymentReviewNote: _paymentReviewNote,
                   paymentProofUrl: req.paymentProofUrl,
@@ -434,6 +484,10 @@ class _DocumentDetailsDialogState extends State<DocumentDetailsDialog> {
                   createdAt: req.createdAt,
                   updatedAt: req.updatedAt,
                 ),
+                canChoosePayment: canChoosePayment,
+                selectedPaymentChoice: selectedPaymentChoice,
+                isSavingPaymentChoice: _isSavingPaymentChoice,
+                onPaymentChoiceChanged: _handlePaymentChoiceChanged,
                 canSubmitElectronicPayment: canSubmitElectronicPayment,
                 isLoadingRecipients: _isLoadingPaymentRecipients,
                 recipientError: _paymentRecipientError,
@@ -444,8 +498,6 @@ class _DocumentDetailsDialogState extends State<DocumentDetailsDialog> {
                 selectedProofBytes: _selectedProofBytes,
                 selectedProofFilename: _selectedProofFilename,
                 isSubmitting: _isSubmittingPayment,
-                onSelectedRecipientChanged: (value) =>
-                    setState(() => _selectedRecipientId = value),
                 onTransactedAtChanged: (value) =>
                     setState(() => _selectedTransactedAt = value),
                 onProofSelected: (bytes) =>

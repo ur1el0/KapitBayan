@@ -27,11 +27,11 @@ export const CitizenDocuments: React.FC = () => {
     const [downloadingId, setDownloadingId] = useState<number | null>(null);
     const [cancellingId, setCancellingId] = useState<number | null>(null);
     const [paymentReference, setPaymentReference] = useState<Record<number, string>>({});
-    const [selectedRecipientId, setSelectedRecipientId] = useState<Record<number, string>>({});
     const [paymentRecipients, setPaymentRecipients] = useState<PaymentRecipient[]>([]);
     const [paymentRecipientsLoading, setPaymentRecipientsLoading] = useState(true);
     const [paymentRecipientsLoadError, setPaymentRecipientsLoadError] = useState(false);
     const [submittingPaymentId, setSubmittingPaymentId] = useState<number | null>(null);
+    const [choosingPaymentId, setChoosingPaymentId] = useState<number | null>(null);
     const [requestingCounterTicketId, setRequestingCounterTicketId] = useState<number | null>(null);
 
     // Form State
@@ -55,6 +55,7 @@ export const CitizenDocuments: React.FC = () => {
 
     const fetchPaymentRecipients = async () => {
         setPaymentRecipientsLoading(true);
+        setPaymentRecipientsLoadError(false);
         try {
             const response = await axiosPrivate.get('/payment-recipients/');
             const data = response.data.results || response.data;
@@ -225,6 +226,30 @@ export const CitizenDocuments: React.FC = () => {
         }
     };
 
+    const handleChoosePaymentMethod = async (id: number, choice: string) => {
+        setChoosingPaymentId(id);
+        try {
+            const payload = choice === 'CASH'
+                ? { payment_method: 'CASH' }
+                : { payment_recipient_id: Number(choice.replace('RECIPIENT:', '')) };
+            const response = await axiosPrivate.post(
+                `/document-requests/${id}/payment-choice/`,
+                payload,
+            );
+            setRequests((current) => current.map((request) =>
+                request.id === id ? { ...request, ...response.data } : request,
+            ));
+            toast.success(t('Payment method selected.'));
+        } catch (err) {
+            toast.error(getSafeApiErrorMessage(
+                err,
+                t("We couldn't save your payment choice. Please try again."),
+            ));
+        } finally {
+            setChoosingPaymentId(null);
+        }
+    };
+
     return (
         <div className="space-y-6">
             {/* Header Banner */}
@@ -296,17 +321,14 @@ export const CitizenDocuments: React.FC = () => {
                                         recipientsLoading={paymentRecipientsLoading}
                                         recipientsLoadError={paymentRecipientsLoadError}
                                         onRetryRecipients={() => void fetchPaymentRecipients()}
-                                        selectedRecipientId={selectedRecipientId[request.id] || ''}
+                                        choosingPayment={choosingPaymentId === request.id}
                                         paymentReference={paymentReference[request.id] ?? ''}
                                         submittingPayment={submittingPaymentId === request.id}
                                         downloading={downloadingId === request.id}
                                         cancelling={cancellingId === request.id}
                                         requestingCounterTicket={requestingCounterTicketId === request.id}
-                                        onRecipientChange={(value) =>
-                                            setSelectedRecipientId((current) => ({
-                                                ...current,
-                                                [request.id]: value,
-                                            }))
+                                        onChoosePaymentMethod={(choice) =>
+                                            void handleChoosePaymentMethod(request.id, choice)
                                         }
                                         onPaymentReferenceChange={(value) =>
                                             setPaymentReference((current) => ({
