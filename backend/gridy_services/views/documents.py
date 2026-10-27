@@ -1,3 +1,6 @@
+import logging
+import re
+
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
@@ -21,6 +24,7 @@ from gridy_services.signals import safe_delete_storage_file
 from gridy_services.serializers import (
     DocumentRequestSerializer,
     DocumentRequestReviewSerializer,
+    OfficialReceiptNumberSerializer,
     PaymentReferenceSerializer,
     PaymentReviewSerializer,
 )
@@ -31,6 +35,22 @@ from gridy_audit.services import log_action
 from gridy_audit.models import AuditLog
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from ..fee_policy import FEE_EXEMPT_DOCUMENT_TYPES, check_ra11261_eligibility
+
+logger = logging.getLogger(__name__)
+
+
+def _document_request_id_from_tracking_identifier(identifier):
+    """Parse supported printed tracking identifiers without treating OR digits as IDs."""
+    match = re.fullmatch(r"(?:REQ[-\s#:]*)(\d+)", identifier, flags=re.IGNORECASE)
+    if match is None:
+        match = re.fullmatch(r"(\d+)", identifier)
+    if match is None:
+        match = re.fullmatch(
+            r"(?:ID:\s*)?#?(?:BC|CI|RC|BP|DOC)-\d{4}-(\d+)",
+            identifier,
+            flags=re.IGNORECASE,
+        )
+    return int(match.group(1)) if match else None
 
 CANONICAL_DOCUMENT_SNAPSHOTS = {
     "barangay clearance": {
@@ -106,7 +126,7 @@ class DocumentRequestViewSet(viewsets.ModelViewSet):
         if self.action == 'destroy':
             return [permissions.IsAuthenticated()]
 
-        if self.action in ["review_payment", "validate"]:
+        if self.action in ["review_payment", "validate", "verify"]:
             return [permissions.IsAuthenticated(), IsBarangayOfficialOrField()]
 
         return [IsBarangayOfficial()]
@@ -134,6 +154,92 @@ class DocumentRequestViewSet(viewsets.ModelViewSet):
         return DocumentRequest.objects.filter(user=user).select_related(
             "offering"
         ).order_by('-created_at')
+
+    @action(
+        detail=False,
+        methods=["get"],
+        permission_classes=[IsBarangayOfficialOrField],
+        url_path="verify",
+        url_name="verify",
+    )
+    def verify(self, request):
+        """Find a same-Barangay document by exact O.R. number or printed tracking ID."""
+        identifier = (request.query_params.get("identifier") or "").strip()
+        if not identifier:
+            raise ValidationError({"identifier": "Enter a tracking ID or O.R. number."})
+        if len(identifier) > 100:
+            raise ValidationError({"identifier": "The value is too long."})
+
+        requests = self.get_queryset().select_related("user", "barangay")
+        receipt_matches = requests.filter(or_number__iexact=identifier)
+        match_count = receipt_matches.count()
+        if match_count > 1:
+            return Response(
+                {"detail": "This O.R. number matches multiple records. Ask the Barangay Admin to review it."},
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        document_request = receipt_matches.first()
+        if document_request is None:
+            tracking_id = _document_request_id_from_tracking_identifier(identifier)
+            if tracking_id is not None:
+                document_request = requests.filter(pk=tracking_id).first()
+
+        if document_request is None:
+            raise Http404("No document or O.R. record was found in this Barangay.")
+
+        return Response(
+            DocumentRequestSerializer(
+                document_request,
+                context={"request": request},
+            ).data,
+            status=status.HTTP_200_OK,
+        )
+
+    @action(
+        detail=True,
+        methods=["patch"],
+        permission_classes=[IsBarangayOfficial],
+        url_path="or-number",
+        url_name="or-number",
+    )
+    def save_or_number(self, request, pk=None):
+        """Save only the official receipt field, independent of workflow status edits."""
+        serializer = OfficialReceiptNumberSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        or_number = serializer.validated_data["or_number"]
+
+        with transaction.atomic():
+            document_request = DocumentRequest.objects.select_for_update().get(
+                pk=self.get_object().pk
+            )
+            if (
+                document_request.status == DocumentRequest.Status.RELEASED
+                and document_request.fee_amount > 0
+                and not or_number
+            ):
+                raise ValidationError({
+                    "or_number": "A paid released document must keep its official receipt number."
+                })
+
+            document_request.or_number = or_number or None
+            document_request.save(update_fields=["or_number", "updated_at"])
+            log_action(
+                user=request.user,
+                action_type=AuditLog.ActionType.DOCUMENT_ACTION,
+                description=(
+                    f"Updated the official receipt number for document request #{document_request.id}."
+                ),
+                request=request,
+            )
+
+        return Response(
+            DocumentRequestSerializer(
+                document_request,
+                context={"request": request},
+            ).data,
+            status=status.HTTP_200_OK,
+        )
 
     @transaction.atomic
     def perform_create(self, serializer):
@@ -303,6 +409,7 @@ class DocumentRequestViewSet(viewsets.ModelViewSet):
             document_request = DocumentRequest.objects.select_for_update().get(
                 pk=self.get_object().pk
             )
+            original_status = document_request.status
             initial_fee_assessment_status = document_request.fee_assessment_status
             serializer = DocumentRequestReviewSerializer(
                 document_request,
@@ -518,19 +625,25 @@ class DocumentRequestViewSet(viewsets.ModelViewSet):
                 request=request
             )
 
-        if document_request.user:
-            send_notification_to_user_task.delay(
-                user_id=document_request.user.id,
-                title="Document Request Update",
-                body=(
-                    f"Your request for {document_request.document_type} is now "
-                    f"{document_request.get_status_display()}."
-                ),
-                data={
-                    "type": "document",
-                    "request_id": str(document_request.id),
-                },
-            )
+        if document_request.user and document_request.status != original_status:
+            try:
+                send_notification_to_user_task.delay(
+                    user_id=document_request.user.id,
+                    title="Document Request Update",
+                    body=(
+                        f"Your request for {document_request.document_type} is now "
+                        f"{document_request.get_status_display()}."
+                    ),
+                    data={
+                        "type": "document",
+                        "request_id": str(document_request.id),
+                    },
+                )
+            except Exception as exc:
+                logger.warning(
+                    "Could not queue document update notification (%s).",
+                    type(exc).__name__,
+                )
 
         return Response(
             DocumentRequestSerializer(document_request, context={"request": request}).data,

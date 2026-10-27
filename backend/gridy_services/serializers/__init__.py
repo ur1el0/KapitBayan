@@ -2,6 +2,7 @@ from .documents import (
     FeePolicyValidationMixin,
     DocumentRequestSerializer,
     DocumentRequestReviewSerializer,
+    OfficialReceiptNumberSerializer,
 )
 
 from .payments import (
@@ -32,6 +33,7 @@ __all__ = [
     'FeePolicyValidationMixin',
     'DocumentRequestSerializer',
     'DocumentRequestReviewSerializer',
+    'OfficialReceiptNumberSerializer',
     'PaymentReferenceSerializer',
     'PaymentReviewSerializer',
     'AidRequestSerializer',

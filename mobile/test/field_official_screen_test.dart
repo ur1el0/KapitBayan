@@ -37,6 +37,7 @@ class MockFieldOfficialService extends FieldOfficialService {
   final List<IssueReport> reports;
   int? urgencyUpdatedReportId;
   String? updatedUrgency;
+  String? lastVerifiedIdentifier;
 
   @override
   Future<Map<String, dynamic>> fetchLiveQueueStatus() async {
@@ -55,9 +56,10 @@ class MockFieldOfficialService extends FieldOfficialService {
   }
 
   @override
-  Future<DocumentRequestModel?> verifyClearance(int documentId) async {
+  Future<DocumentRequestModel?> verifyClearance(String identifier) async {
+    lastVerifiedIdentifier = identifier;
     return DocumentRequestModel(
-      id: documentId,
+      id: 15,
       documentType: 'Barangay Clearance',
       status: 'READY_FOR_PICKUP',
       purpose: 'Local Employment Verification',
@@ -131,7 +133,7 @@ void main() {
     await tester.tap(find.text('Verify Clearance'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Clearance Authenticity Validator'), findsOneWidget);
+    expect(find.text('Clearance & Receipt Validator'), findsOneWidget);
     expect(find.byType(TextField), findsOneWidget);
 
     // Enter tracking ID and tap Verify
@@ -140,9 +142,16 @@ void main() {
     await tester.pumpAndSettle();
 
     // Verify Clearance Card Details
-    expect(find.text('VALID & AUTHENTIC'), findsOneWidget);
+    expect(find.text('VALID IN SYSTEM'), findsOneWidget);
     expect(find.text('Barangay Clearance'), findsOneWidget);
     expect(find.text('Purpose: Local Employment Verification'), findsOneWidget);
+    expect(mockService.lastVerifiedIdentifier, 'REQ-15');
+
+    await tester.enterText(find.byType(TextField), 'OR-2026-0099');
+    await tester.tap(find.text('Verify'));
+    await tester.pumpAndSettle();
+    expect(mockService.lastVerifiedIdentifier, 'OR-2026-0099');
+    expect(find.text('VALID IN SYSTEM'), findsOneWidget);
 
     // 4. Switch to Tab 3 (Field Reports)
     await tester.tap(find.text('Field Reports'));

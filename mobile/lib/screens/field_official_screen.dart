@@ -153,19 +153,6 @@ class _FieldOfficialScreenState extends State<FieldOfficialScreen>
     final text = _trackingIdController.text.trim();
     if (text.isEmpty || _service == null) return;
 
-    // Support extracting numeric ID from formats like "REQ-12" or "12"
-    final cleanIdStr = text.replaceAll(RegExp(r'[^0-9]'), '');
-    final docId = int.tryParse(cleanIdStr);
-
-    if (docId == null) {
-      setState(() {
-        _verificationError =
-            'Please enter a valid numeric ID or tracking number (e.g., REQ-12).';
-        _verifiedClearance = null;
-      });
-      return;
-    }
-
     setState(() {
       _isVerifying = true;
       _verificationError = null;
@@ -173,20 +160,19 @@ class _FieldOfficialScreenState extends State<FieldOfficialScreen>
     });
 
     try {
-      final result = await _service!.verifyClearance(docId);
+      final result = await _service!.verifyClearance(text);
       if (mounted) {
         setState(() {
           _verifiedClearance = result;
           if (result == null) {
-            _verificationError = 'No clearance found matching ID #$docId.';
+            _verificationError =
+                'No document or O.R. record found for "$text" in this Barangay.';
           }
         });
       }
     } catch (_) {
       if (mounted) {
-        setState(
-          () => _verificationError = 'Network error verifying clearance.',
-        );
+        setState(() => _verificationError = 'Network error verifying the record.');
       }
     } finally {
       if (mounted) setState(() => _isVerifying = false);

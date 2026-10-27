@@ -18,6 +18,14 @@ Fee amount and fee provenance are separate. Staff must make an explicit positive
 - O.R. recording is retained as a treasury action. A request with a positive fee cannot be released without its required O.R.; the release gate is server-side.
 - Statutory fee-exempt requests display the appropriate not-required state and do not require an O.R. for a fee of zero.
 
+### Saving and checking an O.R. number
+
+Barangay Admins save the Official Receipt number from the document review screen using the dedicated **Save O.R. number** action. This updates the receipt field independently from status, payment method, and fee assessment, so an O.R.-only edit does not repeat unrelated workflow actions. Residents cannot edit this field.
+
+Field Officials can use the mobile **Clearance & Receipt Validator** to enter either the printed document tracking ID or the exact O.R. number recorded by the Barangay. The API searches only records in the Field Official's assigned Barangay, checks an exact case-insensitive O.R. match first, and otherwise resolves supported tracking-ID formats. A missing record returns not found; an O.R. shared by multiple records returns an ambiguity error for staff follow-up.
+
+The validator confirms that the entered identifier matches a record in KapitBayan. It does not independently authenticate a paper receipt or confirm that money settled with a bank or e-wallet. Treasury staff still verify payment evidence against the Barangay's actual account.
+
 There are no payment gateways, webhooks, bank scraping, or automated settlement processes. See [ADR 007](../../architecture/decisions/007-revenue-and-official-receipt-auditing.md) and [ADR 017](../../architecture/decisions/017-manual-epayment-evidence-and-verification.md).
 
 ## Evidence storage and access

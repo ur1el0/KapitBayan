@@ -80,7 +80,7 @@ Use an account assigned to one demo barangay.
 Sign in with the field-official account and show the available tabs:
 
 - **Queue ticker:** View queue status and use the permitted field queue actions.
-- **Clearance validator:** Enter a tracking ID and inspect the returned clearance status.
+- **Clearance & Receipt Validator:** Enter a tracking ID or the O.R. number saved by the Barangay Admin and inspect the matching record. Explain that this checks KapitBayan's record; treasury staff separately verify actual payment and a paper O.R.
 - **Field reports:** Review barangay incident reports and record the supported field update.
 
 Explain that field staff have limited permissions scoped by their barangay. Do not use the platform-operator or barangay-admin account to represent a field role.

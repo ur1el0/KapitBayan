@@ -332,3 +332,12 @@ class DocumentRequestReviewSerializer(FeePolicyValidationMixin, serializers.Mode
                 )
             })
         return attrs
+
+
+class OfficialReceiptNumberSerializer(serializers.Serializer):
+    or_number = serializers.CharField(
+        max_length=50,
+        required=True,
+        allow_blank=True,
+        trim_whitespace=True,
+    )

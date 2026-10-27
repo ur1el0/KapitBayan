@@ -155,6 +155,21 @@ class DocumentService {
     );
   }
 
+  /// Saves only an official receipt number without changing request status or fee data.
+  Future<DocumentRequestModel> saveOfficialReceiptNumber({
+    required int requestId,
+    required String orNumber,
+  }) async {
+    final response = await apiClient.patch(
+      '/document-requests/$requestId/or-number/',
+      body: {'or_number': orNumber.trim()},
+      requiresAuth: true,
+    );
+    return DocumentRequestModel.fromJson(
+      jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>,
+    );
+  }
+
   /// Verifies or rejects a pending manual electronic transfer reference.
   Future<DocumentRequestModel> reviewAdminPayment({
     required int requestId,

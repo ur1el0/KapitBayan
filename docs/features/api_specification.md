@@ -23,6 +23,13 @@ New Barangay onboarding uses multipart `POST /api/v1/auth/public/barangay-applic
 
 Barangay Admins create Field Official accounts through `POST /api/v1/auth/staff/` using the official's email and name; the request does not accept a username or password. The server generates an internal username, sends a private password setup link, and returns the email as the sign-in identity. Only Resident accounts use user-chosen usernames.
 
+## Document O.R. save and verification
+
+- `PATCH /api/v1/document-requests/{id}/or-number/` saves only `or_number` for an in-scope document request. It is Barangay Admin-only and accepts a trimmed string up to 50 characters. It does not change the document status, fee assessment, or payment method. A positive-fee request already marked `RELEASED` cannot have its O.R. cleared.
+- `GET /api/v1/document-requests/verify/?identifier={value}` lets a Barangay Admin or Field Official look up a document by exact case-insensitive O.R. number or supported tracking identifier (`REQ-12`, a numeric request ID, or the printed `ID: #BC|CI|RC|BP|DOC-YYYY-NNNN` form). Lookup is restricted to the authenticated user's Barangay. It returns the document request when found, `404` when no matching record exists in that Barangay, and `409` when the O.R. matches multiple records.
+
+This lookup confirms the identifier against KapitBayan's stored record. It does not verify a paper receipt with the treasury or settle an electronic transfer. The official release and payment controls remain enforced by the server-side document workflow.
+
 ## Client integration rules
 
 - Use the repository's configured API client; keep provider credentials and integrations on the server.

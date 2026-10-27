@@ -505,6 +505,32 @@ class _AdminDocumentRequestDetailsScreenState
     );
   }
 
+  Future<void> _saveOrNumber() async {
+    final orNumber = _orController.text.trim();
+    if (orNumber.isEmpty) {
+      _showMessage('Enter an official receipt number first.', error: true);
+      return;
+    }
+
+    setState(() => _isUpdating = true);
+    try {
+      final updated = await widget.service.saveOfficialReceiptNumber(
+        requestId: _request.id,
+        orNumber: orNumber,
+      );
+      if (!mounted) return;
+      setState(() {
+        _request = updated;
+        _orController.text = updated.orNumber ?? '';
+      });
+      _showMessage('Official receipt number saved.');
+    } catch (error) {
+      if (mounted) _showMessage(_errorMessage(error), error: true);
+    } finally {
+      if (mounted) setState(() => _isUpdating = false);
+    }
+  }
+
   String _requesterName() {
     if (_request.requesterName?.trim().isNotEmpty == true) {
       return _request.requesterName!.trim();
@@ -940,8 +966,16 @@ class _AdminDocumentRequestDetailsScreenState
             controller: _orController,
             decoration: const InputDecoration(
               labelText: 'Official receipt number',
-              helperText: 'Required before releasing a paid document.',
+              helperText: 'Residents and field staff can use this to find the Barangay record.',
               border: OutlineInputBorder(),
+            ),
+          ),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              onPressed: _isUpdating ? null : _saveOrNumber,
+              icon: const Icon(Icons.receipt_long_outlined),
+              label: const Text('Save O.R. number'),
             ),
           ),
           const SizedBox(height: 10),
