@@ -28,18 +28,18 @@ export const ResidentsHub: React.FC = () => {
 
     const fetchPendingCount = useCallback(async (showLoading = false, isRetry = false) => {
         if (pendingCountFetchInProgress.current) {
-            if (showLoading) setPendingCountStatus('loading');
+            if (showLoading && !isRetry) setPendingCountStatus('loading');
             return;
         }
         pendingCountFetchInProgress.current = true;
         const requestId = ++pendingCountRequestId.current;
-        if (showLoading) {
-            setPendingCountStatus('loading');
-        }
         if (isRetry) {
             setRetryingPendingCount(true);
         } else {
             setRetryingPendingCount(false);
+            if (showLoading) {
+                setPendingCountStatus('loading');
+            }
         }
 
         try {
