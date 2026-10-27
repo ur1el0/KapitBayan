@@ -10,7 +10,7 @@ export interface AddHotlineModalProps {
         name: string;
         number: string;
         category: string;
-        is_active: boolean;
+        is_active?: boolean;
     };
     setForm: React.Dispatch<React.SetStateAction<{
         name: string;
@@ -93,7 +93,7 @@ export const AddHotlineModal: React.FC<AddHotlineModalProps> = ({
                     <label className="flex items-center gap-2 text-sm text-slate-700">
                         <input
                             type="checkbox"
-                            checked={form.is_active}
+                            checked={form.is_active ?? true}
                             onChange={e => setForm(p => ({ ...p, is_active: e.target.checked }))}
                             className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"
                         />
