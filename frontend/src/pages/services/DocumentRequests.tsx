@@ -240,11 +240,8 @@ export const DocumentRequests: React.FC = () => {
         if (!selectedRequest) return;
         setIsUpdating(true);
         try {
-            const response = await axiosPrivate.patch(`/document-requests/${selectedRequest.id}/validate/`, {
-                status: selectedRequest.status,
+            const response = await axiosPrivate.patch(`/document-requests/${selectedRequest.id}/or-number/`, {
                 or_number: orNumber.trim(),
-                fee_amount: isFeeExemptDocumentType(selectedRequest.document_type) ? '0.00' : selectedRequest.fee_amount,
-                payment_method: selectedRequest.payment_method,
             });
             setRequests((prev) => prev.map((req) =>
                 req.id === selectedRequest.id ? { ...req, ...response.data } : req,

@@ -1,5 +1,6 @@
 import 'dart:convert';
 import '../core/network/api_client.dart';
+import '../core/network/api_exception.dart';
 import '../models/document_request_model.dart';
 import 'issue_service.dart';
 import 'storage_service.dart';
@@ -43,11 +44,12 @@ class FieldOfficialService {
     return {'current_ticket': null, 'total_waiting': 0};
   }
 
-  /// Verifies a physical or digital document clearance by its ID / tracking number
-  Future<DocumentRequestModel?> verifyClearance(int documentId) async {
+  /// Finds a physical or digital document by tracking ID or official receipt number.
+  Future<DocumentRequestModel?> verifyClearance(String identifier) async {
     try {
+      final query = Uri(queryParameters: {'identifier': identifier.trim()}).query;
       final response = await apiClient.get(
-        '/document-requests/$documentId/',
+        '/document-requests/verify/?$query',
         requiresAuth: true,
       );
 
@@ -56,7 +58,7 @@ class FieldOfficialService {
         return DocumentRequestModel.fromJson(data);
       }
       return null;
-    } catch (_) {
+    } on NotFoundException {
       return null;
     }
   }

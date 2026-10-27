@@ -839,6 +839,104 @@ class PaymentSubmissionAndReviewWorkflowTests(APITestCase):
         self.assertEqual(document.or_number, "OR-EARLY-SAVE-123")
         self.assertEqual(document.status, DocumentRequest.Status.READY_FOR_PICKUP)
 
+    @patch("gridy_services.views.documents.send_notification_to_user_task.delay")
+    def test_saving_only_or_number_does_not_send_duplicate_status_notification(
+        self, send_notification
+    ):
+        document = self._make_ready_request()
+        self.client.force_login(self.admin)
+
+        response = self.client.patch(
+            reverse("document-request-validate", args=[document.pk]),
+            {"or_number": "OR-ONLY-SAVE-1"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        send_notification.assert_not_called()
+
+    def test_admin_can_save_or_number_without_resubmitting_workflow_fields(self):
+        document = self._make_ready_request()
+        self.client.force_login(self.admin)
+
+        response = self.client.patch(
+            reverse("document-request-or-number", args=[document.pk]),
+            {"or_number": "OR-2026-0099"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        document.refresh_from_db()
+        self.assertEqual(document.or_number, "OR-2026-0099")
+        self.assertEqual(document.status, DocumentRequest.Status.READY_FOR_PICKUP)
+        self.assertEqual(response.data["or_number"], "OR-2026-0099")
+
+    def test_resident_cannot_save_an_official_receipt_number(self):
+        document = self._make_ready_request()
+        self.client.force_login(self.resident)
+
+        response = self.client.patch(
+            reverse("document-request-or-number", args=[document.pk]),
+            {"or_number": "OR-2026-0099"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        document.refresh_from_db()
+        self.assertFalse(document.or_number)
+
+    def test_field_official_can_find_document_by_exact_or_or_tracking_id(self):
+        document = self._make_ready_request(or_number="OR-2026-0099")
+        self.client.force_login(self.field_official)
+
+        receipt_response = self.client.get(
+            reverse("document-request-verify"),
+            {"identifier": "OR-2026-0099"},
+        )
+        tracking_response = self.client.get(
+            reverse("document-request-verify"),
+            {
+                "identifier": (
+                    f"ID: #BC-{document.created_at.year}-"
+                    f"{document.pk:04d}"
+                )
+            },
+        )
+
+        self.assertEqual(receipt_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(receipt_response.data["id"], document.pk)
+        self.assertEqual(receipt_response.data["or_number"], "OR-2026-0099")
+        self.assertEqual(tracking_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(tracking_response.data["id"], document.pk)
+
+    def test_field_official_receipt_lookup_is_limited_to_their_barangay(self):
+        foreign_document = DocumentRequest.objects.create(
+            barangay=self.other_barangay,
+            is_walkin=True,
+            walkin_name="Foreign Resident",
+            document_type="Barangay Clearance",
+            status=DocumentRequest.Status.READY_FOR_PICKUP,
+            or_number="OR-FOREIGN-2026-1",
+        )
+        self.client.force_login(self.field_official)
+
+        response = self.client.get(
+            reverse("document-request-verify"),
+            {"identifier": foreign_document.or_number},
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_receipt_digits_are_not_misread_as_a_tracking_id(self):
+        self.client.force_login(self.field_official)
+
+        response = self.client.get(
+            reverse("document-request-verify"),
+            {"identifier": "OR-2026-0099"},
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
     def test_model_and_serializer_require_receipt_for_paid_release(self):
         document = self._make_ready_request(
             fee_amount=75,

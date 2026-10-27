@@ -27,7 +27,7 @@ class ClearanceValidatorTab extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Clearance Authenticity Validator',
+            'Clearance & Receipt Validator',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w900,
@@ -36,7 +36,7 @@ class ClearanceValidatorTab extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           const Text(
-            'Enter the Document Tracking ID printed on the resident certificate to verify validity.',
+            'Enter a document tracking ID or the official receipt number recorded by your Barangay.',
             style: TextStyle(fontSize: 13, color: Color(0xFF64748B)),
           ),
           const SizedBox(height: 16),
@@ -46,7 +46,7 @@ class ClearanceValidatorTab extends StatelessWidget {
                 child: TextField(
                   controller: trackingIdController,
                   decoration: InputDecoration(
-                    hintText: 'e.g. 12 or REQ-12',
+                    hintText: 'e.g. REQ-12 or OR-2026-0099',
                     filled: true,
                     fillColor: Colors.white,
                     contentPadding: const EdgeInsets.symmetric(
@@ -177,7 +177,7 @@ class ClearanceResultCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      isValid ? 'VALID & AUTHENTIC' : 'PENDING APPROVAL',
+                      isValid ? 'VALID IN SYSTEM' : 'PENDING APPROVAL',
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w800,
