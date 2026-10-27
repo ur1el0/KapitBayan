@@ -198,25 +198,27 @@ export const Activities: React.FC = () => {
                                 <div className="p-5 flex-1 flex flex-col justify-between">
                                     <div>
                                         <div className="flex items-start justify-between gap-2 mb-2">
-                                            <h3 className="text-lg font-bold text-slate-900 leading-tight group-hover:text-primary-text transition-colors">
+                                            <h3 className="min-w-0 text-lg font-bold text-slate-900 leading-tight group-hover:text-primary-text transition-colors">
                                                 {act.title}
                                             </h3>
-                                            <button
-                                                onClick={() => handleEdit(act)}
-                                                className="text-slate-400 hover:text-primary-text transition-colors p-1 rounded-lg hover:bg-primary/5 shrink-0"
-                                                title="Edit Activity"
-                                                aria-label={`Edit ${act.title}`}
-                                            >
-                                                <Pencil className="w-4 h-4" />
-                                            </button>
-                                            <button
-                                                onClick={() => handleDelete(act.id, act.title)}
-                                                className="text-slate-400 hover:text-red-600 transition-colors p-1 rounded-lg hover:bg-red-50 shrink-0"
-                                                title="Delete Activity"
-                                                aria-label={`Delete ${act.title}`}
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
+                                            <div className="flex shrink-0 items-center gap-1">
+                                                <button
+                                                    onClick={() => handleEdit(act)}
+                                                    className="text-slate-400 hover:text-primary-text transition-colors p-1 rounded-lg hover:bg-primary/5"
+                                                    title="Edit Activity"
+                                                    aria-label={`Edit ${act.title}`}
+                                                >
+                                                    <Pencil className="w-4 h-4" />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDelete(act.id, act.title)}
+                                                    className="text-slate-400 hover:text-red-600 transition-colors p-1 rounded-lg hover:bg-red-50"
+                                                    title="Delete Activity"
+                                                    aria-label={`Delete ${act.title}`}
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            </div>
                                         </div>
                                         <p className="text-sm text-slate-600 line-clamp-2 leading-relaxed mb-4">
                                             {act.description}
