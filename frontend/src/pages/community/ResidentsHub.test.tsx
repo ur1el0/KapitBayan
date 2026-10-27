@@ -9,7 +9,12 @@ vi.mock('./ResidentsManagement', () => ({
 }));
 
 vi.mock('./ResidentVerification', () => ({
-    default: () => <div>Resident verification list</div>,
+    default: ({ onManualRefreshCount }: { onManualRefreshCount?: () => void }) => (
+        <div>
+            Resident verification list
+            <button type="button" onClick={onManualRefreshCount}>Refresh pending resident count</button>
+        </div>
+    ),
 }));
 
 vi.mock('../../api/axios', () => ({
@@ -63,10 +68,13 @@ describe('ResidentsHub pending verification count', () => {
         expect(params.get('tab')).toBe('directory');
     });
 
-    it('announces loading and shows a badge only after a successful count response', async () => {
-        let resolveRequest!: (value: { data: { results: { id: number }[] } }) => void;
+    it('keeps automatic count loading quiet and announces a manual refresh', async () => {
+        let resolveInitialRequest!: (value: { data: { results: { id: number }[] } }) => void;
+        let resolveManualRefresh!: (value: { data: { results: { id: number }[] } }) => void;
         vi.mocked(axiosPrivate.get).mockImplementationOnce(
-            () => new Promise((resolve) => { resolveRequest = resolve; }),
+            () => new Promise((resolve) => { resolveInitialRequest = resolve; }),
+        ).mockImplementationOnce(
+            () => new Promise((resolve) => { resolveManualRefresh = resolve; }),
         );
 
         render(
@@ -75,15 +83,29 @@ describe('ResidentsHub pending verification count', () => {
             </MemoryRouter>,
         );
 
-        expect(screen.getByRole('status')).toHaveTextContent('Loading pending resident count');
+        expect(screen.queryByRole('status')).not.toBeInTheDocument();
         expect(screen.queryByLabelText(/pending resident verifications/i)).not.toBeInTheDocument();
 
         await act(async () => {
-            resolveRequest({ data: { results: [{ id: 1 }, { id: 2 }] } });
+            resolveInitialRequest({ data: { results: [{ id: 1 }, { id: 2 }] } });
         });
 
         expect(await screen.findByLabelText('2 pending resident verifications')).toBeInTheDocument();
-        expect(axiosPrivate.get).toHaveBeenCalledExactlyOnceWith('/auth/pending-residents/');
+        fireEvent.click(screen.getByRole('button', { name: /Resident Verifications/ }));
+        fireEvent.click(await screen.findByRole('button', { name: 'Refresh pending resident count' }));
+
+        expect(screen.getByRole('status')).toHaveTextContent('Loading pending resident count');
+        await act(async () => {
+            resolveManualRefresh({ data: { results: [{ id: 1 }, { id: 2 }, { id: 3 }] } });
+        });
+
+        expect(await screen.findByLabelText('3 pending resident verifications')).toBeInTheDocument();
+        expect(screen.queryByRole('status')).not.toBeInTheDocument();
+        expect(axiosPrivate.get).toHaveBeenCalledTimes(2);
+        expect(vi.mocked(axiosPrivate.get).mock.calls).toEqual([
+            ['/auth/pending-residents/'],
+            ['/auth/pending-residents/'],
+        ]);
     });
 
     it('keeps failures retryable and does not show a false zero count', async () => {

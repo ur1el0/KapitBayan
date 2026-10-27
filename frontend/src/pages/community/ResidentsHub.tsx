@@ -12,7 +12,7 @@ export const ResidentsHub: React.FC = () => {
         tabParam === 'verifications' ? 'verifications' : 'directory'
     );
     const [pendingCount, setPendingCount] = useState<number | null>(null);
-    const [pendingCountStatus, setPendingCountStatus] = useState<'loading' | 'error' | 'success'>('loading');
+    const [pendingCountStatus, setPendingCountStatus] = useState<'idle' | 'loading' | 'error' | 'success'>('idle');
     const [retryingPendingCount, setRetryingPendingCount] = useState(false);
     const pendingCountRequestId = useRef(0);
     const pendingCountFetchInProgress = useRef(false);
@@ -26,14 +26,19 @@ export const ResidentsHub: React.FC = () => {
         }
     }, [tabParam]);
 
-    const fetchPendingCount = useCallback(async (isRetry = false) => {
-        if (pendingCountFetchInProgress.current) return;
+    const fetchPendingCount = useCallback(async (showLoading = false, isRetry = false) => {
+        if (pendingCountFetchInProgress.current) {
+            if (showLoading) setPendingCountStatus('loading');
+            return;
+        }
         pendingCountFetchInProgress.current = true;
         const requestId = ++pendingCountRequestId.current;
+        if (showLoading) {
+            setPendingCountStatus('loading');
+        }
         if (isRetry) {
             setRetryingPendingCount(true);
         } else {
-            setPendingCountStatus('loading');
             setRetryingPendingCount(false);
         }
 
@@ -75,7 +80,7 @@ export const ResidentsHub: React.FC = () => {
             window.removeEventListener('focus', refreshWhenVisible);
             pendingCountRequestId.current += 1;
         };
-    }, [activeTab, fetchPendingCount]);
+    }, [fetchPendingCount]);
 
     const handleTabChange = (tab: 'directory' | 'verifications') => {
         setActiveTab(tab);
@@ -135,7 +140,7 @@ export const ResidentsHub: React.FC = () => {
                 </nav>
                 {pendingCountStatus === 'loading' && (
                     <p role="status" aria-live="polite" className="px-2 pb-3 text-xs text-slate-500">
-                        Loading pending resident count…
+                        {retryingPendingCount ? 'Retrying pending resident count…' : 'Loading pending resident count…'}
                     </p>
                 )}
                 {pendingCountStatus === 'error' && (
@@ -144,7 +149,7 @@ export const ResidentsHub: React.FC = () => {
                         <button
                             type="button"
                             aria-label="Retry pending resident count"
-                            onClick={() => void fetchPendingCount(true)}
+                            onClick={() => void fetchPendingCount(true, true)}
                             disabled={retryingPendingCount}
                             className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg border border-rose-300 px-3 font-semibold text-rose-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 disabled:cursor-wait disabled:opacity-60"
                         >
@@ -160,7 +165,11 @@ export const ResidentsHub: React.FC = () => {
             </div>
 
             <div className="mt-4">
-                {activeTab === 'directory' ? <ResidentsManagement /> : <ResidentVerification />}
+                {activeTab === 'directory' ? (
+                    <ResidentsManagement />
+                ) : (
+                    <ResidentVerification onManualRefreshCount={() => void fetchPendingCount(true)} />
+                )}
             </div>
         </div>
     );

@@ -11,7 +11,11 @@ import {
     RejectionConfirmationModal
 } from "../../components/residents";
 
-export default function ResidentVerification() {
+type ResidentVerificationProps = {
+    onManualRefreshCount?: () => void;
+};
+
+export default function ResidentVerification({ onManualRefreshCount }: ResidentVerificationProps = {}) {
     const [pendingResidents, setPendingResidents] = useState<Resident[]>([]);
     const [loading, setLoading] = useState(true);
     const [loadError, setLoadError] = useState(false);
@@ -149,7 +153,10 @@ export default function ResidentVerification() {
                         <button
                             type="button"
                             aria-label="Refresh pending resident verifications"
-                            onClick={() => { void fetchPendingResidents(true); }}
+                            onClick={() => {
+                                onManualRefreshCount?.();
+                                void fetchPendingResidents(true);
+                            }}
                             disabled={retrying}
                             className="inline-flex min-h-[44px] items-center justify-center rounded-lg border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:cursor-wait disabled:opacity-60"
                         >
