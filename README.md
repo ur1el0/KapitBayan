@@ -6,7 +6,7 @@ The platform supports resident document requests, manual fee assessment and trea
 
 ## Download the Android app
 
-[**Download the latest Android APK directly**](https://github.com/ur1el0/KapitBayan/releases/latest/download/KapitBayan-Android-v1.0.4.apk) (v1.0.4). This link downloads the APK file directly instead of opening the GitHub Releases page. Android may ask you to confirm installation from your browser or file manager. Install only APKs published by this repository.
+[**Download the latest Android APK directly**](https://github.com/ur1el0/KapitBayan/releases/latest/download/KapitBayan-Android-v1.0.5.apk) (v1.0.5). This link downloads the APK file directly instead of opening the GitHub Releases page. Android may ask you to confirm installation from your browser or file manager. Install only APKs published by this repository.
 
 ## Architecture and API
 
