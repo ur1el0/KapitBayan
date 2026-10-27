@@ -81,9 +81,13 @@ export const IssueReports: React.FC = () => {
 
     const getUrgencyBadge = (urgency: string) => {
         switch (urgency.toUpperCase()) {
+            case 'EMERGENCY': return 'bg-red-100 text-red-800 border-red-200';
             case 'URGENT': return 'bg-red-100 text-red-800 border-red-200';
+            case 'HAZARD': return 'bg-orange-100 text-orange-800 border-orange-200';
             case 'HIGH': return 'bg-orange-100 text-orange-800 border-orange-200';
+            case 'MODERATE': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
             case 'MEDIUM': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+            case 'MINOR': return 'bg-slate-100 text-slate-800 border-slate-200';
             case 'LOW': return 'bg-slate-100 text-slate-800 border-slate-200';
             default: return 'bg-slate-100 text-slate-800 border-slate-200';
         }

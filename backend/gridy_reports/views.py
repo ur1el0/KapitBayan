@@ -42,7 +42,6 @@ class IssueReportViewSet(viewsets.ModelViewSet):
         serializer.save(
             reporter=self.request.user,
             status=IssueReport.Status.PENDING,
-            urgency=IssueReport.Urgency.MINOR
         )
         notify_barangay_admins(
             barangay_id=self.request.user.barangay_id,
