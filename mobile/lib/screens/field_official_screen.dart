@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/localization/app_language.dart';
 import '../core/network/api_client.dart';
+import '../core/network/api_exception.dart';
 import '../core/theme/app_colors.dart';
 import '../models/document_request_model.dart';
 import '../models/user_model.dart';
@@ -170,9 +171,16 @@ class _FieldOfficialScreenState extends State<FieldOfficialScreen>
           }
         });
       }
+    } on ApiException catch (error) {
+      if (mounted) {
+        setState(() => _verificationError = error.message);
+      }
     } catch (_) {
       if (mounted) {
-        setState(() => _verificationError = 'Network error verifying the record.');
+        setState(
+          () => _verificationError =
+              'Could not read the verification result. Please try again.',
+        );
       }
     } finally {
       if (mounted) setState(() => _isVerifying = false);
