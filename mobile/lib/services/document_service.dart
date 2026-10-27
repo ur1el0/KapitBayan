@@ -131,14 +131,12 @@ class DocumentService {
     required String adminNotes,
     required String orNumber,
     required String? feeAmount,
-    required String paymentMethod,
     String? feeWaiverReason,
   }) async {
     final body = <String, dynamic>{
       'status': status,
       'admin_notes': adminNotes.trim(),
       'or_number': orNumber.trim(),
-      'payment_method': paymentMethod,
     };
     if (feeAmount != null) body['fee_amount'] = feeAmount.trim();
     if (feeWaiverReason != null && feeWaiverReason.trim().isNotEmpty) {
@@ -147,6 +145,25 @@ class DocumentService {
 
     final response = await apiClient.patch(
       '/document-requests/$requestId/validate/',
+      body: body,
+      requiresAuth: true,
+    );
+    return DocumentRequestModel.fromJson(
+      jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>,
+    );
+  }
+
+  /// Persists the resident's choice of cash or an active barangay e-payment recipient.
+  Future<DocumentRequestModel> chooseDocumentPaymentMethod({
+    required int requestId,
+    required String paymentMethod,
+    int? paymentRecipientId,
+  }) async {
+    final body = paymentMethod == 'CASH'
+        ? <String, dynamic>{'payment_method': 'CASH'}
+        : <String, dynamic>{'payment_recipient_id': paymentRecipientId};
+    final response = await apiClient.post(
+      '/document-requests/$requestId/payment-choice/',
       body: body,
       requiresAuth: true,
     );

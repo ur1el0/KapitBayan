@@ -9,6 +9,10 @@ import '../models/payment_recipient_model.dart';
 
 class DocumentPaymentSection extends StatefulWidget {
   final DocumentRequestModel? request;
+  final bool canChoosePayment;
+  final String? selectedPaymentChoice;
+  final bool isSavingPaymentChoice;
+  final ValueChanged<String?>? onPaymentChoiceChanged;
   final bool canSubmitElectronicPayment;
   final bool isLoadingRecipients;
   final String? recipientError;
@@ -19,7 +23,6 @@ class DocumentPaymentSection extends StatefulWidget {
   final Uint8List? selectedProofBytes;
   final String? selectedProofFilename;
   final bool isSubmitting;
-  final ValueChanged<int?> onSelectedRecipientChanged;
   final ValueChanged<DateTime>? onTransactedAtChanged;
   final ValueChanged<Uint8List?>? onProofSelected;
   final ValueChanged<String?>? onProofFilenameSelected;
@@ -29,6 +32,10 @@ class DocumentPaymentSection extends StatefulWidget {
   const DocumentPaymentSection({
     super.key,
     this.request,
+    this.canChoosePayment = false,
+    this.selectedPaymentChoice,
+    this.isSavingPaymentChoice = false,
+    this.onPaymentChoiceChanged,
     required this.canSubmitElectronicPayment,
     required this.isLoadingRecipients,
     required this.recipientError,
@@ -39,7 +46,6 @@ class DocumentPaymentSection extends StatefulWidget {
     this.selectedProofBytes,
     this.selectedProofFilename,
     required this.isSubmitting,
-    required this.onSelectedRecipientChanged,
     this.onTransactedAtChanged,
     this.onProofSelected,
     this.onProofFilenameSelected,
@@ -165,6 +171,12 @@ class _DocumentPaymentSectionState extends State<DocumentPaymentSection> {
   @override
   Widget build(BuildContext context) {
     final req = widget.request;
+    final selectedRecipients = widget.recipients
+        .where((item) => item.id == widget.selectedRecipientId)
+        .toList();
+    final selectedRecipient = selectedRecipients.isEmpty
+        ? null
+        : selectedRecipients.first;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -269,6 +281,61 @@ class _DocumentPaymentSectionState extends State<DocumentPaymentSection> {
               ],
             ),
           ),
+        ],
+
+        if (widget.canChoosePayment) ...[
+          const SizedBox(height: 16),
+          DropdownButtonFormField<String>(
+            key: ValueKey(widget.selectedPaymentChoice ?? 'no-payment-choice'),
+            initialValue: widget.selectedPaymentChoice,
+            isExpanded: true,
+            decoration: const InputDecoration(
+              labelText: 'Choose payment method',
+              border: OutlineInputBorder(),
+              helperText: 'Cash is always available. E-payment options are set by your Barangay.',
+            ),
+            items: [
+              const DropdownMenuItem<String>(
+                value: 'CASH',
+                child: Text('Cash at Barangay Hall'),
+              ),
+              ...widget.recipients.map(
+                (recipient) => DropdownMenuItem<String>(
+                  value: 'RECIPIENT:${recipient.id}',
+                  child: Text(
+                    '${recipient.providerLabel} · ${recipient.displayName}',
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ),
+            ],
+            onChanged: widget.isSavingPaymentChoice
+                ? null
+                : widget.onPaymentChoiceChanged,
+          ),
+          if (widget.isSavingPaymentChoice) ...[
+            const SizedBox(height: 8),
+            const LinearProgressIndicator(),
+          ],
+          if (widget.recipientError != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              '${widget.recipientError!} Cash remains available.',
+              style: const TextStyle(color: Colors.red, fontSize: 12),
+            ),
+          ] else if (widget.isLoadingRecipients) ...[
+            const SizedBox(height: 6),
+            const Text(
+              'Loading other payment options… Cash is available now.',
+              style: TextStyle(fontSize: 12, color: AppColors.textMuted),
+            ),
+          ] else if (widget.recipients.isEmpty) ...[
+            const SizedBox(height: 6),
+            const Text(
+              'No e-payment options are configured. Cash at the Barangay Hall is the only available method.',
+              style: TextStyle(fontSize: 12, color: AppColors.textMuted),
+            ),
+          ],
         ],
 
         // 2. Cash Instructions Banner
@@ -537,7 +604,7 @@ class _DocumentPaymentSectionState extends State<DocumentPaymentSection> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Choose the official recipient configured by your barangay. Staff will verify the transfer reference manually before release.',
+                  'Follow the selected barangay payment instructions. Staff will verify the transfer reference manually before release.',
                   style: TextStyle(
                     fontSize: 12,
                     height: 1.4,
@@ -552,54 +619,15 @@ class _DocumentPaymentSectionState extends State<DocumentPaymentSection> {
                     widget.recipientError!,
                     style: const TextStyle(color: Colors.red),
                   ),
-                if (!widget.isLoadingRecipients &&
-                    widget.recipientError == null &&
-                    widget.recipients.isEmpty)
-                  const Text(
-                    'Your barangay has no e-payment recipient configured. Contact the barangay hall or pay in person.',
-                  ),
-                if (widget.recipients.isNotEmpty) ...[
-                  DropdownButtonFormField<int>(
-                    initialValue: widget.recipients.any(
-                          (item) => item.id == widget.selectedRecipientId,
-                        )
-                        ? widget.selectedRecipientId
-                        : null,
-                    isExpanded: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Payment recipient',
-                      border: OutlineInputBorder(),
+                if (selectedRecipient != null) ...[
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      '${selectedRecipient.recipientName} · ${selectedRecipient.recipientIdentifier}'
+                      '${selectedRecipient.instructions.isEmpty ? '' : '\n${selectedRecipient.instructions}'}',
+                      style: const TextStyle(fontSize: 12, height: 1.4),
                     ),
-                    items: widget.recipients
-                        .map(
-                          (recipient) => DropdownMenuItem<int>(
-                            value: recipient.id,
-                            child: Text(
-                              '${recipient.displayName} · ${recipient.providerLabel}',
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (value) =>
-                        widget.onSelectedRecipientChanged(value),
                   ),
-                  if (widget.selectedRecipientId != null)
-                    Builder(
-                      builder: (context) {
-                        final recipient = widget.recipients.firstWhere(
-                          (item) => item.id == widget.selectedRecipientId,
-                        );
-                        return Padding(
-                          padding: const EdgeInsets.only(top: 8),
-                          child: Text(
-                            '${recipient.recipientName} · ${recipient.recipientIdentifier}'
-                            '${recipient.instructions.isEmpty ? '' : '\n${recipient.instructions}'}',
-                            style: const TextStyle(fontSize: 12, height: 1.4),
-                          ),
-                        );
-                      },
-                    ),
                   const SizedBox(height: 12),
                   TextField(
                     controller: widget.referenceController,

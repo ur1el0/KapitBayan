@@ -177,7 +177,6 @@ export const DocumentRequests: React.FC = () => {
         newStatus: string,
         updatedOr?: string,
         updatedFee?: string,
-        paymentMethod?: string,
         feeWaiverReason?: string,
     ) => {
         if (!selectedRequest) return;
@@ -188,7 +187,6 @@ export const DocumentRequests: React.FC = () => {
                 status: newStatus,
                 or_number: updatedOr,
                 fee_amount: isFeeExemptDocumentType(selectedRequest.document_type) ? '0.00' : updatedFee,
-                payment_method: paymentMethod,
             };
             if (feeWaiverReason !== undefined) {
                 payload.fee_waiver_reason = feeWaiverReason;

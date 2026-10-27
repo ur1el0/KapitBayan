@@ -9,7 +9,7 @@ Application endpoints are mounted below `/api/v1/`:
 | Route family | Example operations |
 |---|---|
 | `/auth/` | registration, login, refresh, logout, current profile, resident verification/import, sessions, barangay onboarding |
-| `/document-requests/` | request lifecycle, staff validation, fee assessment, payment submission/review, receipt and PDF operations |
+| `/document-requests/` | request lifecycle, staff validation and fee assessment, resident payment choice/submission, payment review, receipt and PDF operations |
 | `/tickets/` | issue ticket, list ticket, live status, staff queue operations |
 | `/aid-requests/` | submit and review assistance applications |
 | `/payment-recipients/` | read or manage barangay payment recipients according to role |
@@ -24,6 +24,13 @@ New Barangay onboarding uses multipart `POST /api/v1/auth/public/barangay-applic
 Barangay Admins create Field Official accounts through `POST /api/v1/auth/staff/` using the official's email and name; the request does not accept a username or password. The server generates an internal username, sends a private password setup link, and returns the email as the sign-in identity. Only Resident accounts use user-chosen usernames.
 
 ## Document O.R. save and verification
+
+## Resident-selected document payment
+
+- `POST /api/v1/document-requests/{id}/payment-choice/` is available to the authenticated resident who owns a positive-fee request after it reaches `READY_FOR_PICKUP`, while its payment status is `UNPAID` or `REJECTED`. Send either `{"payment_method":"CASH"}` or `{"payment_recipient_id": <id>}`. The server derives the electronic provider from an active recipient belonging to the request's Barangay; clients cannot submit an arbitrary provider or another Barangay's recipient.
+- Cash at the Barangay Hall is always an available choice and is presented first. The resident's e-payment choices are the active accounts returned by `GET /api/v1/payment-recipients/`, which is scoped to the resident's Barangay. With no active configured recipients, cash is the sole choice.
+- `POST /api/v1/document-requests/{id}/payment-reference/` accepts the e-payment recipient, transfer reference, timestamp, and proof image only when that recipient matches the resident's saved choice. Cash does not use this endpoint. Barangay staff manually verify e-payment evidence; the system does not process or settle money.
+- Residents may change an unpaid or rejected choice. Changing a rejected choice clears its previous reference, timestamp, review note, and proof. Choices are locked while evidence is pending verification or after payment is verified.
 
 - `PATCH /api/v1/document-requests/{id}/or-number/` saves only `or_number` for an in-scope document request. It is Barangay Admin-only and accepts a trimmed string up to 50 characters. It does not change the document status, fee assessment, or payment method. A positive-fee request already marked `RELEASED` cannot have its O.R. cleared.
 - `GET /api/v1/document-requests/verify/?identifier={value}` lets a Barangay Admin or Field Official look up a document by exact case-insensitive O.R. number or supported tracking identifier (`REQ-12`, a numeric request ID, or the printed `ID: #BC|CI|RC|BP|DOC-YYYY-NNNN` form). Lookup is restricted to the authenticated user's Barangay. It returns the document request when found, `404` when no matching record exists in that Barangay, and `409` when the O.R. matches multiple records.

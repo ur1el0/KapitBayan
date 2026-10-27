@@ -24,13 +24,13 @@ interface DocumentRequestRowProps {
     recipientsLoading: boolean;
     recipientsLoadError: boolean;
     onRetryRecipients: () => void;
-    selectedRecipientId?: string;
+    choosingPayment?: boolean;
     paymentReference?: string;
     submittingPayment: boolean;
     downloading: boolean;
     cancelling: boolean;
     requestingCounterTicket: boolean;
-    onRecipientChange?: (value: string) => void;
+    onChoosePaymentMethod?: (choice: string) => void;
     onPaymentReferenceChange?: (value: string) => void;
     onSubmitPaymentReference: (formData: FormData) => void;
     onDownloadPdf: () => void;
@@ -163,13 +163,13 @@ export const DocumentRequestRow: React.FC<DocumentRequestRowProps> = ({
     recipientsLoading,
     recipientsLoadError,
     onRetryRecipients,
-    selectedRecipientId,
+    choosingPayment = false,
     paymentReference,
     submittingPayment,
     downloading,
     cancelling,
     requestingCounterTicket,
-    onRecipientChange,
+    onChoosePaymentMethod,
     onPaymentReferenceChange,
     onSubmitPaymentReference,
     onDownloadPdf,
@@ -189,6 +189,21 @@ export const DocumentRequestRow: React.FC<DocumentRequestRowProps> = ({
     const isPaymentNotRequired = isStatutoryFeeExempt || isStaffWaived || Number(request.fee_amount ?? 0) <= 0;
 
     const isCash = request.payment_method === 'CASH';
+    const canChoosePayment =
+        request.status.toUpperCase() === 'READY_FOR_PICKUP' &&
+        !isPaymentNotRequired &&
+        (!request.payment_status || ['UNPAID', 'REJECTED'].includes(request.payment_status));
+    const selectedPaymentChoice = isCash
+        ? 'CASH'
+        : request.payment_recipient
+            ? `RECIPIENT:${request.payment_recipient}`
+            : '';
+    const activeSelectedRecipient = recipients.find(
+        (recipient) => recipient.id === request.payment_recipient,
+    );
+    const isElectronicPayment = Boolean(
+        !isCash && request.payment_recipient && activeSelectedRecipient,
+    );
     const hasOfferingSnapshot = Boolean(
         request.offering_id
         || request.requirements_snapshot?.length
@@ -294,6 +309,44 @@ export const DocumentRequestRow: React.FC<DocumentRequestRowProps> = ({
                     )}
 
                     {/* Cash Instructions Banner (REV-07) */}
+                    {canChoosePayment && (
+                        <div className="space-y-1.5">
+                            <label className="block text-xs font-semibold text-slate-700">
+                                {t('Choose payment method')}
+                                <select
+                                    value={selectedPaymentChoice}
+                                    disabled={choosingPayment || recipientsLoading && Boolean(request.payment_recipient)}
+                                    onChange={(event) => {
+                                        if (event.target.value) onChoosePaymentMethod?.(event.target.value);
+                                    }}
+                                    className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs disabled:opacity-60"
+                                >
+                                    <option value="">{t('Select how you will pay')}</option>
+                                    <option value="CASH">{t('Cash at barangay hall')}</option>
+                                    {recipients.map((recipient) => (
+                                        <option key={recipient.id} value={`RECIPIENT:${recipient.id}`}>
+                                            {recipient.provider_label} · {recipient.display_name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </label>
+                            {recipientsLoadError && (
+                                <div className="flex items-center justify-between gap-2 text-[11px] text-rose-700">
+                                    <span>{t('Could not load your barangay e-payment options. Cash remains available.')}</span>
+                                    <button type="button" onClick={onRetryRecipients} className="font-semibold underline">
+                                        {t('Retry')}
+                                    </button>
+                                </div>
+                            )}
+                            {recipientsLoading && !recipientsLoadError && (
+                                <p role="status" className="text-[11px] text-slate-500">{t('Loading barangay e-payment options…')}</p>
+                            )}
+                            {!recipientsLoading && !recipientsLoadError && recipients.length === 0 && (
+                                <p className="text-[11px] text-slate-600">{t('No e-payment options are configured. Cash at the Barangay Hall is the only available method.')}</p>
+                            )}
+                        </div>
+                    )}
+
                     {!isPaymentNotRequired && isCash && (
                         <div className="p-3 rounded-xl border border-amber-200 bg-amber-50/60 text-xs text-amber-900 space-y-1">
                             <p className="font-semibold">{t('Payment Method: Cash')}</p>
@@ -309,7 +362,7 @@ export const DocumentRequestRow: React.FC<DocumentRequestRowProps> = ({
                         )}
 
                     {/* Assessed electronic payment lifecycle */}
-                    {!isPaymentNotRequired && !isCash && (
+                    {!isPaymentNotRequired && !isCash && isElectronicPayment && (
                         <div className="space-y-1.5 text-xs text-slate-600">
                             <p>{t('Assessment')}: ₱{Number(request.fee_amount).toFixed(2)}</p>
 
@@ -369,7 +422,8 @@ export const DocumentRequestRow: React.FC<DocumentRequestRowProps> = ({
                                                 recipientsLoadError={recipientsLoadError}
                                                 onRetryRecipients={onRetryRecipients}
                                                 submitting={submittingPayment}
-                                                initialRecipientId={request.payment_recipient ? String(request.payment_recipient) : selectedRecipientId}
+                                                selectedRecipientId={String(request.payment_recipient)}
+                                                hideRecipientSelection
                                                 initialReference={request.payment_reference || paymentReference}
                                                 initialTransactedAt={request.payment_transacted_at || ''}
                                                 onSubmit={onSubmitPaymentReference}
@@ -389,11 +443,11 @@ export const DocumentRequestRow: React.FC<DocumentRequestRowProps> = ({
                                         recipientsLoadError={recipientsLoadError}
                                         onRetryRecipients={onRetryRecipients}
                                         submitting={submittingPayment}
-                                        selectedRecipientId={selectedRecipientId}
+                                        selectedRecipientId={String(request.payment_recipient)}
                                         paymentReference={paymentReference}
-                                        onRecipientChange={onRecipientChange}
+                                        hideRecipientSelection
                                         onPaymentReferenceChange={onPaymentReferenceChange}
-                                        initialRecipientId={selectedRecipientId}
+                                        initialRecipientId={String(request.payment_recipient)}
                                         initialReference={paymentReference}
                                         onSubmit={onSubmitPaymentReference}
                                     />

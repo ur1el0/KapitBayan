@@ -25,6 +25,7 @@ from gridy_services.serializers import (
     DocumentRequestSerializer,
     DocumentRequestReviewSerializer,
     OfficialReceiptNumberSerializer,
+    PaymentChoiceSerializer,
     PaymentReferenceSerializer,
     PaymentReviewSerializer,
 )
@@ -34,6 +35,7 @@ from decimal import Decimal
 from gridy_audit.services import log_action
 from gridy_audit.models import AuditLog
 from rest_framework.exceptions import PermissionDenied, ValidationError
+from drf_spectacular.utils import extend_schema
 from ..fee_policy import FEE_EXEMPT_DOCUMENT_TYPES, check_ra11261_eligibility
 
 logger = logging.getLogger(__name__)
@@ -113,7 +115,7 @@ class DocumentRequestViewSet(viewsets.ModelViewSet):
         if self.action in ['list', 'retrieve', 'generate_pdf', 'payment_proof']:
             return [permissions.IsAuthenticated()]
 
-        if self.action == "submit_payment_reference":
+        if self.action in {"choose_payment_method", "submit_payment_reference"}:
             return [permissions.IsAuthenticated(), IsResident()]
 
         if self.action == "create":
@@ -193,6 +195,136 @@ class DocumentRequestViewSet(viewsets.ModelViewSet):
                 document_request,
                 context={"request": request},
             ).data,
+            status=status.HTTP_200_OK,
+        )
+
+    @extend_schema(
+        request=PaymentChoiceSerializer,
+        responses=DocumentRequestSerializer,
+    )
+    @action(
+        detail=True,
+        methods=["post"],
+        permission_classes=[IsResident],
+        url_path="payment-choice",
+        url_name="payment-choice",
+    )
+    def choose_payment_method(self, request, pk=None):
+        """Save a resident's choice of cash or an active same-Barangay e-payment recipient."""
+        document_request = self.get_object()
+        serializer = PaymentChoiceSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        old_proof_name = None
+        old_storage = None
+        with transaction.atomic():
+            document_request = DocumentRequest.objects.select_for_update().get(
+                pk=document_request.pk,
+                user_id=request.user.id,
+            )
+            if document_request.status != DocumentRequest.Status.READY_FOR_PICKUP:
+                raise ValidationError({
+                    "detail": "Choose a payment method after the document is ready for pickup."
+                })
+            if document_request.fee_amount <= 0:
+                raise ValidationError({
+                    "detail": "This request does not require a payment."
+                })
+            if document_request.payment_status not in {
+                DocumentRequest.PaymentStatus.UNPAID,
+                DocumentRequest.PaymentStatus.REJECTED,
+            }:
+                raise ValidationError({
+                    "detail": "Payment method cannot be changed while payment is under review or verified."
+                })
+
+            selected = serializer.validated_data
+            if selected.get("payment_method") == DocumentRequest.PaymentMethod.CASH:
+                recipient = None
+                payment_method = DocumentRequest.PaymentMethod.CASH
+            else:
+                recipient = PaymentRecipient.objects.filter(
+                    pk=selected["payment_recipient_id"],
+                    barangay_id=document_request.barangay_id,
+                    is_active=True,
+                ).first()
+                if recipient is None:
+                    raise ValidationError({
+                        "payment_recipient_id": "Select an active payment recipient configured by your barangay."
+                    })
+
+                payment_method = recipient.provider
+
+            choice_is_unchanged = (
+                document_request.payment_method == payment_method
+                and document_request.payment_recipient_id
+                == (recipient.pk if recipient else None)
+            )
+            was_rejected = (
+                document_request.payment_status
+                == DocumentRequest.PaymentStatus.REJECTED
+            )
+            if choice_is_unchanged and not was_rejected:
+                return Response(
+                    DocumentRequestSerializer(
+                        document_request,
+                        context={"request": request},
+                    ).data,
+                    status=status.HTTP_200_OK,
+                )
+
+            if document_request.payment_proof_image and document_request.payment_proof_image.name:
+                old_proof_name = document_request.payment_proof_image.name
+                old_storage = document_request.payment_proof_image.storage
+
+            document_request.payment_method = payment_method
+            document_request.payment_recipient = recipient
+            document_request.payment_recipient_name_snapshot = (
+                recipient.recipient_name if recipient else ""
+            )
+            document_request.payment_recipient_identifier_snapshot = (
+                recipient.recipient_identifier if recipient else ""
+            )
+            document_request.payment_instructions_snapshot = (
+                recipient.instructions if recipient else ""
+            )
+            document_request.payment_reference = ""
+            document_request.payment_transacted_at = None
+            document_request.payment_proof_image = None
+            document_request.payment_status = DocumentRequest.PaymentStatus.UNPAID
+            document_request.payment_review_note = ""
+            document_request.save(
+                update_fields=[
+                    "payment_method",
+                    "payment_recipient",
+                    "payment_recipient_name_snapshot",
+                    "payment_recipient_identifier_snapshot",
+                    "payment_instructions_snapshot",
+                    "payment_reference",
+                    "payment_transacted_at",
+                    "payment_proof_image",
+                    "payment_status",
+                    "payment_review_note",
+                    "updated_at",
+                ]
+            )
+            if old_proof_name and old_storage:
+                transaction.on_commit(
+                    lambda s=old_storage, p=old_proof_name: safe_delete_storage_file(s, p)
+                )
+
+            log_action(
+                user=request.user,
+                action_type=AuditLog.ActionType.DOCUMENT_ACTION,
+                description=(
+                    f"Resident selected {document_request.get_payment_method_display()} "
+                    f"for document request #{document_request.id}."
+                ),
+                request=request,
+            )
+
+        return Response(
+            DocumentRequestSerializer(document_request, context={"request": request}).data,
             status=status.HTTP_200_OK,
         )
 
@@ -698,6 +830,14 @@ class DocumentRequestViewSet(viewsets.ModelViewSet):
                 if recipient is None:
                     raise ValidationError({
                         "payment_recipient_id": "Select an active payment recipient configured by your barangay."
+                    })
+
+                if (
+                    document_request.payment_method != recipient.provider
+                    or document_request.payment_recipient_id != recipient.pk
+                ):
+                    raise ValidationError({
+                        "payment_recipient_id": "Select this e-payment option as your payment method before submitting its transfer reference."
                     })
 
                 if document_request.payment_proof_image and document_request.payment_proof_image.name:

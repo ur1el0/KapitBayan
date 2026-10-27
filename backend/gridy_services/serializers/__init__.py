@@ -6,6 +6,7 @@ from .documents import (
 )
 
 from .payments import (
+    PaymentChoiceSerializer,
     PaymentReferenceSerializer,
     PaymentReviewSerializer,
 )
@@ -34,6 +35,7 @@ __all__ = [
     'DocumentRequestSerializer',
     'DocumentRequestReviewSerializer',
     'OfficialReceiptNumberSerializer',
+    'PaymentChoiceSerializer',
     'PaymentReferenceSerializer',
     'PaymentReviewSerializer',
     'AidRequestSerializer',

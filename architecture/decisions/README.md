@@ -29,6 +29,7 @@ This index lists the decision records present in this repository snapshot. Read 
 | [023](023-dilg-reviewed-barangay-admin-registration.md) | Superseded reviewer identity; application safeguards retained under ADR 025 |
 | [024](024-barangay-onboarding-email-and-authority-evidence.md) | Email verification and private authority evidence retained under ADR 025 |
 | [025](025-barangay-operator-onboarding-and-account-support.md) | Barangay Operator onboarding and bounded account support; no analytics or service-record access |
+| [026](026-resident-selected-document-payment-method.md) | Resident-selected document payment method from Barangay-configured options |
 
 ## Implementation notes
 

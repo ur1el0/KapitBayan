@@ -9,7 +9,7 @@ All application API routes are mounted below `/api/v1/` unless noted.
 | Prefix or route | Owner | Purpose |
 |---|---|---|
 | `/auth/` | `gridy_auth` | Resident registration, login, refresh, logout, profile, resident verification/import, public Barangay directory and pending-only onboarding applications, sessions, barangay-scoped staff management, Barangay Operator onboarding review and bounded account support |
-| `/document-requests/` | `gridy_services` | Digital and walk-in document request lifecycle, fee assessment, payment evidence, receipt and PDF operations |
+| `/document-requests/` | `gridy_services` | Digital and walk-in document request lifecycle, fee assessment, resident payment choice/evidence, receipt and PDF operations |
 | `/tickets/` | `gridy_services` | Ticket creation, resident status, staff queue operations, and live desk status |
 | `/aid-requests/` | `gridy_services` | Assistance request submission and authorized review |
 | `/payment-recipients/` | `gridy_services` | Barangay payment recipient configuration and retrieval under role/tenant policy |
@@ -20,6 +20,8 @@ All application API routes are mounted below `/api/v1/` unless noted.
 | `/health/live/`, `/health/ready/` | `config` | Liveness and dependency readiness checks |
 
 The current payment-proof view is mounted at `/api/v1/document-requests/<pk>/payment-proof/`; a compatibility alias is `/api/v1/documents/<pk>/payment-proof/`. Both paths must preserve the same authentication, ownership/tenant policy, and private response headers.
+
+Residents save a positive-fee document payment choice with `POST /api/v1/document-requests/{id}/payment-choice/` after the request is `READY_FOR_PICKUP`. Cash is always available; e-payment choices come from active recipients configured for that resident's Barangay. A transfer reference is accepted only for the resident's saved active recipient choice. See the [payment workflow guide](../docs/features/walkin_and_revenue_clearances.md#payment-and-release) and [ADR 026](decisions/026-resident-selected-document-payment-method.md).
 
 The schema browser is mounted at `/api/schema/` and `/api/schema/swagger-ui/`; those schema URLs are outside the `/api/v1/` prefix.
 

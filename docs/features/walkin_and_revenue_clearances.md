@@ -13,10 +13,16 @@ Fee amount and fee provenance are separate. Staff must make an explicit positive
 ## Payment and release
 
 - Residents pay only after the request reaches `READY_FOR_PICKUP`.
+- Staff assess the fee and configure the Barangay's active electronic-payment recipients; the resident chooses the payment method for their request.
+- Cash at the Barangay Hall is always available and is shown first. E-payment choices come only from active recipients configured for that resident's Barangay. If none are configured, cash is the only choice.
+- The resident's choice is saved on the request. For an electronic transfer, the resident follows the selected recipient's instructions and submits the reference, transaction time, and receipt evidence. The API rejects a reference for an e-payment recipient that was not selected for that request.
 - CASH remains an in-person treasury flow. Electronic payment methods are out-of-band transfers to configured barangay recipients.
 - Resident references, transfer timestamps, and private receipt screenshots are submitted evidence; staff verify them manually against the barangay's actual account.
+- A rejected electronic payment may be resubmitted using the same or another currently active Barangay recipient, or changed to cash. Changing a rejected choice clears the rejected reference and proof so stale evidence is not reused.
 - O.R. recording is retained as a treasury action. A request with a positive fee cannot be released without its required O.R.; the release gate is server-side.
 - Statutory fee-exempt requests display the appropriate not-required state and do not require an O.R. for a fee of zero.
+
+The staff review screens do not select the resident's payment method. They assess the fee, manage the Barangay's offered e-payment accounts in payment settings, review uploaded evidence, and record the O.R. Resident payment-choice updates are restricted to the request owner and validated against the active recipients in the request's Barangay.
 
 ### Saving and checking an O.R. number
 
