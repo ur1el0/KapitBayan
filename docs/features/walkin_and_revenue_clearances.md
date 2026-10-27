@@ -24,6 +24,8 @@ Barangay Admins save the Official Receipt number from the document review screen
 
 Field Officials can use the mobile **Clearance & Receipt Validator** to enter either the printed document tracking ID or the exact O.R. number recorded by the Barangay. The API searches only records in the Field Official's assigned Barangay, checks an exact case-insensitive O.R. match first, and otherwise resolves supported tracking-ID formats. A missing record returns not found; an O.R. shared by multiple records returns an ambiguity error for staff follow-up.
 
+The mobile validator shows the API's error message when a lookup fails, instead of labeling every failure a network error. An unknown or out-of-Barangay identifier displays a not-found message; an ambiguous O.R. displays the server's review instruction. Session, access, and service errors remain separate from those record results. If the service reports an error, record its status and the matching backend log before treating a receipt as verified.
+
 The validator confirms that the entered identifier matches a record in KapitBayan. It does not independently authenticate a paper receipt or confirm that money settled with a bank or e-wallet. Treasury staff still verify payment evidence against the Barangay's actual account.
 
 There are no payment gateways, webhooks, bank scraping, or automated settlement processes. See [ADR 007](../../architecture/decisions/007-revenue-and-official-receipt-auditing.md) and [ADR 017](../../architecture/decisions/017-manual-epayment-evidence-and-verification.md).
