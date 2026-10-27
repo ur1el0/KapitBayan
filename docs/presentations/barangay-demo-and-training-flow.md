@@ -135,7 +135,7 @@ For a calendar event, open its details and tap **Add to Calendar**. The phone ca
 Sign in with a field-official account and open the **Field Operations** screen. Show its three tabs:
 
 1. **Queue Ticker:** review the live queue and call the next ticket when that action is assigned to the account.
-2. **Verify Clearance:** enter the prepared tracking number and show the returned status. Use made-up or approved demo records only.
+2. **Verify Clearance:** enter the prepared tracking number or O.R. saved by the Barangay Admin and show the matching record. Explain that this checks KapitBayan's record, not whether a bank transfer settled or a paper receipt is genuine. Use made-up or approved demo records only.
 3. **Field Reports:** review reports for the assigned barangay and record a supported status or urgency update.
 
 Explain that field access is limited to the assigned barangay. If a tab or action is unavailable, use the account role and permissions actually assigned; do not switch to another person's admin credentials.

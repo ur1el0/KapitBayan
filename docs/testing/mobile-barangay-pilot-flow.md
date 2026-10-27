@@ -99,6 +99,8 @@ Never advise a resident to share a password, OTP, or identity document with a he
 
 As Resident A, try dashboard refresh, notices, schedules, Help & FAQs, a synthetic document request and status check, queue actions if enabled, and other pilot services that the Barangay has approved. Have staff complete the supported corresponding action, then verify the resident sees the expected result.
 
+For document payment/release checks, have the Barangay Admin save the sample O.R. using **Save O.R. number** without changing the request's status or fee. As the assigned Field Official, enter that O.R. in **Clearance & Receipt Validator** and confirm it finds the same-Barangay record. Repeat with its printed tracking ID, an unknown O.R., and a record belonging to another Barangay; unknown and cross-Barangay identifiers must not reveal records. The validator checks KapitBayan's saved identifier only; it is not proof that a transfer settled or that a paper receipt is genuine.
+
 For hotline links, verify the displayed active number is Barangay-approved. It is safe to open the dialer and cancel; do not place an emergency call as a test.
 
 As Resident B, confirm Barangay-specific records follow the intended visibility rules and cannot be accessed by changing an item ID. Do not probe using another real resident's records.
