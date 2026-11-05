@@ -6,7 +6,7 @@ from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.response import Response
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Exists, OuterRef, Q
 from django.template.loader import get_template
 from django.http import FileResponse, Http404, HttpResponse
 from PIL import Image, UnidentifiedImageError
@@ -19,7 +19,7 @@ from gridy_auth.permissions import (
     IsResident,
     IsResidentOrBarangayOfficial,
 )
-from gridy_services.models import DocumentRequest, DocumentServiceOffering, PaymentRecipient
+from gridy_services.models import DocumentRequest, DocumentServiceOffering, PaymentRecipient, QueueTicket
 from gridy_services.signals import safe_delete_storage_file
 from gridy_services.serializers import (
     DocumentRequestSerializer,
@@ -31,6 +31,7 @@ from gridy_services.serializers import (
 )
 from gridy_communications.tasks import send_notification_to_user_task
 from gridy_communications.admin_notifications import notify_barangay_admins
+from gridy_communications.models import ResidentNotification
 from decimal import Decimal
 from gridy_audit.services import log_action
 from gridy_audit.models import AuditLog
@@ -137,24 +138,34 @@ class DocumentRequestViewSet(viewsets.ModelViewSet):
         user = self.request.user
         if not user or not user.is_authenticated:
             return DocumentRequest.objects.none()
+
+        active_queue_ticket = QueueTicket.objects.filter(
+            document_request_id=OuterRef("pk"),
+            status__in=(QueueTicket.Status.WAITING, QueueTicket.Status.SERVING),
+        )
         
         # The request's barangay is authoritative; only legacy null-barangay
         # digital requests fall back to the resident's current barangay.
         if user.role in [User.Role.ADMIN, User.Role.FIELD_OFFICIAL]:
             if user.barangay_id is None:
                 return DocumentRequest.objects.none()
-            return DocumentRequest.objects.filter(
+            queryset = DocumentRequest.objects.filter(
                 Q(barangay_id=user.barangay_id)
                 | Q(
                     barangay_id__isnull=True,
                     is_walkin=False,
                     user__barangay_id=user.barangay_id,
                 )
-            ).select_related("offering").order_by('-created_at')
+            ).select_related("offering")
+            return queryset.annotate(
+                has_active_queue_ticket=Exists(active_queue_ticket)
+            ).order_by('-created_at')
 
         # Residents see only their own requests
         return DocumentRequest.objects.filter(user=user).select_related(
             "offering"
+        ).annotate(
+            has_active_queue_ticket=Exists(active_queue_ticket)
         ).order_by('-created_at')
 
     @action(
@@ -740,6 +751,22 @@ class DocumentRequestViewSet(viewsets.ModelViewSet):
                     "updated_at",
                 ]
             )
+            if document_request.user and document_request.status != original_status:
+                display_status = document_request.get_status_display()
+                ResidentNotification.objects.create(
+                    user=document_request.user,
+                    notification_type=ResidentNotification.Type.DOCUMENT,
+                    title="Document request update",
+                    message=(
+                        f"Your {document_request.document_type} request is now {display_status}. "
+                        "Open Documents to review the latest requirements and next steps."
+                    ),
+                    data={
+                        "type": "document",
+                        "document_request_id": str(document_request.pk),
+                        "status": document_request.status,
+                    },
+                )
             recipient_desc = (
                 document_request.user.username
                 if document_request.user
@@ -1047,75 +1074,30 @@ class DocumentRequestViewSet(viewsets.ModelViewSet):
         response["Cache-Control"] = "private, no-store, max-age=0"
         response["X-Content-Type-Options"] = "nosniff"
         return response
-
     @action(detail=True, methods=['get'], url_path='generate-pdf')
     def generate_pdf(self, request, pk=None):
         document = self.get_object()
-        
-        if document.status not in [DocumentRequest.Status.PROCESSING, DocumentRequest.Status.READY_FOR_PICKUP, DocumentRequest.Status.RELEASED]:
+        if document.status != DocumentRequest.Status.RELEASED:
             return Response(
-                {"error": "You cannot generate PDFs for pending or rejected documents."}, 
-                status=status.HTTP_400_BAD_REQUEST
+                {"detail": "The O.R. number PDF is available after the Barangay releases the request."},
+                status=status.HTTP_409_CONFLICT,
             )
-            
-        template_path = 'gridy_services/pdf_clearance.html'
-        resident = (
-            document.user.profile
-            if document.user_id and hasattr(document.user, 'profile')
-            else None
-        )
-        barangay = document.barangay
+        if not document.or_number:
+            return Response(
+                {"detail": "The Barangay has not recorded an O.R. number for this request."},
+                status=status.HTTP_409_CONFLICT,
+            )
 
-        if barangay is None and document.user_id:
-            barangay = document.user.barangay
-
-        if barangay is None:
-            raise ValidationError({
-                "detail": "A barangay must be assigned before generating this PDF."
-            })
-
-        # Calculate age if birth_date is present
-        age = None
-        if resident and resident.birth_date:
-            today = timezone.now().date()
-            age = today.year - resident.birth_date.year - ((today.month, today.day) < (resident.birth_date.month, resident.birth_date.day))
-        
-        recipient_name = resident.full_name if resident else (document.walkin_name or "RESIDENT")
-        if resident:
-            purok_name = f"Purok {resident.purok}" if resident.purok else "N/A"
-        else:
-            purok_name = document.walkin_purok or "N/A"
-
-        context = {
-            'document': document,
-            'resident': resident,
-            'recipient_name': recipient_name,
-            'purok_name': purok_name,
-            'barangay': barangay,
-            'office_contact': self._pdf_office_contact(barangay.office_contact),
-            'age': age,
-            'date_issued': timezone.now()
-        }
-        
-        # Create a Django response object with application/pdf content_type
+        template = get_template('gridy_services/pdf_or_number.html')
+        html = template.render({'or_number': document.or_number})
         response = HttpResponse(content_type='application/pdf')
-        safe_filename = document.document_type.replace(' ', '_')
-        response['Content-Disposition'] = f'attachment; filename="{safe_filename}_{document.id}.pdf"'
-        
-        # Render the template to HTML, then convert HTML to PDF
-        template = get_template(template_path)
-        html = template.render(context)
-        
+        safe_filename = re.sub(r'[^A-Za-z0-9_-]', '_', document.or_number)[:50] or f'request_{document.id}'
+        response['Content-Disposition'] = f'attachment; filename="OR_{safe_filename}.pdf"'
+        response['Cache-Control'] = 'private, no-store, max-age=0'
+        response['X-Content-Type-Options'] = 'nosniff'
         pisa_status = pisa.CreatePDF(html, dest=response)
-        
-        if pisa_status.err:
-            return Response({"error": "Failed to generate PDF"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-            
-        return response
 
-    @staticmethod
-    def _pdf_office_contact(value):
-        contact = (value or "").strip()
-        if not contact or ("{{" in contact and "}}" in contact):
-            return "Office of the Punong Barangay"
-        return contact
+        if pisa_status.err:
+            return Response({"detail": "Failed to generate the O.R. number PDF."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        return response

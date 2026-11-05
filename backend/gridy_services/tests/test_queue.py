@@ -4,7 +4,7 @@ from django.urls import reverse
 from rest_framework import status
 from gridy_audit.models import AuditLog
 from gridy_auth.models import Barangay, User
-from gridy_services.models import QueueTicket
+from gridy_services.models import DocumentRequest, QueueTicket
 from .base import ServiceAPIBaseTestCase
 
 
@@ -239,6 +239,36 @@ class QueueTicketAPITests(ServiceAPIBaseTestCase):
         self.assertEqual(ticket.ticket_number, 'T001')
         self.assertFalse(ticket.is_priority)
         self.assertEqual(ticket.priority_status, QueueTicket.Priority.REGULAR)
+
+    def test_document_request_allows_only_one_active_queue_ticket(self):
+        barangay = Barangay.objects.create(name="Single Ticket Document Barangay")
+        self.resident.barangay = barangay
+        self.resident.save(update_fields=["barangay"])
+        document = DocumentRequest.objects.create(
+            user=self.resident,
+            barangay=barangay,
+            document_type="Barangay Clearance",
+            status=DocumentRequest.Status.PROCESSING,
+        )
+        self.client.force_login(self.resident)
+        payload = {
+            "service_type": "DOCUMENT",
+            "document_request_id": document.pk,
+        }
+
+        first = self.client.post(reverse("ticket-list"), payload, format="json")
+        second = self.client.post(reverse("ticket-list"), payload, format="json")
+
+        self.assertEqual(first.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(second.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(QueueTicket.objects.filter(document_request=document).count(), 1)
+
+        QueueTicket.objects.filter(document_request=document).update(
+            status=QueueTicket.Status.COMPLETED
+        )
+        after_completion = self.client.post(reverse("ticket-list"), payload, format="json")
+        self.assertEqual(after_completion.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(QueueTicket.objects.filter(document_request=document).count(), 2)
 
     def test_resident_without_barangay_cannot_create_queue_ticket(self):
         self.client.force_login(self.resident)

@@ -104,6 +104,11 @@ class DocumentRequestSerializer(FeePolicyValidationMixin, serializers.ModelSeria
     request_id = serializers.IntegerField(source='id', read_only=True)
     requester_name = serializers.SerializerMethodField()
     purok = serializers.SerializerMethodField()
+    queue_ticket_active = serializers.BooleanField(
+        source="has_active_queue_ticket",
+        read_only=True,
+        default=False,
+    )
     payment_recipient = serializers.SerializerMethodField()
     payment_recipient_name_snapshot = serializers.SerializerMethodField()
     payment_recipient_identifier_snapshot = serializers.SerializerMethodField()
@@ -139,6 +144,7 @@ class DocumentRequestSerializer(FeePolicyValidationMixin, serializers.ModelSeria
             'offering_details_snapshot',
             'purpose',
             'urgency_tag',
+            'queue_ticket_active',
             'status',
             'admin_notes',
             'or_number',
