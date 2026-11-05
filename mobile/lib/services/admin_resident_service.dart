@@ -61,10 +61,13 @@ class AdminResidentService {
     return items;
   }
 
-  Future<void> verifyResident(int residentId) async {
+  Future<void> verifyResident(
+    int residentId, {
+    bool guardianReviewConfirmed = false,
+  }) async {
     final response = await apiClient.patch(
       '/auth/verify-resident/$residentId/',
-      body: const <String, dynamic>{},
+      body: {'guardian_review_confirmed': guardianReviewConfirmed},
       requiresAuth: true,
     );
     if (response.statusCode != 200) {

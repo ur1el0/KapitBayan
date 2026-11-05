@@ -46,6 +46,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _voterStatus = false;
   bool _requiresGuardian = false;
   late TextEditingController _guardianController;
+  String _guardianRelationship = '';
+  XFile? _guardianshipEvidence;
 
   // Identity & Residency Verification Proofs
   XFile? _philsysPhoto;
@@ -208,6 +210,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return;
     }
 
+    if (_requiresGuardian && _guardianRelationship.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Select the guardian’s relationship.')),
+      );
+      return;
+    }
+
+    if (_requiresGuardian && _guardianshipEvidence == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Upload supporting guardianship evidence.')),
+      );
+      return;
+    }
+
     if (!_dataPrivacyConsent) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -263,6 +279,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
         purok: _purokController.text.trim(),
         addressDetails: _addressDetailsController.text.trim(),
         guardianId: _requiresGuardian ? _guardianController.text.trim() : null,
+        guardianRelationship: _requiresGuardian ? _guardianRelationship : null,
+        guardianshipEvidence: _requiresGuardian ? _guardianshipEvidence : null,
         philsysIdNumber: _philsysIdController.text.trim().isNotEmpty
             ? _philsysIdController.text.trim()
             : null,
@@ -499,6 +517,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   obscureConfirmPassword: _obscureConfirmPassword,
                   birthDate: _birthDate,
                   requiresGuardian: _requiresGuardian,
+                  guardianRelationship: _guardianRelationship,
+                  guardianshipEvidence: _guardianshipEvidence,
                   voterStatus: _voterStatus,
                   isLoading: _isLoading,
                   onBarangayChanged: (value) =>
@@ -511,6 +531,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   onSelectBirthDate: () => _selectBirthDate(context),
                   onVoterStatusChanged: (value) =>
                       setState(() => _voterStatus = value),
+                  onGuardianRelationshipChanged: (value) =>
+                      setState(() => _guardianRelationship = value),
+                  onPickGuardianshipEvidence: () => _pickImageSource(
+                    (file) => setState(() => _guardianshipEvidence = file),
+                  ),
+                  onRemoveGuardianshipEvidence: () =>
+                      setState(() => _guardianshipEvidence = null),
                   onSubmit: _handleRegister,
                 ),
 

@@ -9,6 +9,12 @@ class AdminResidentModel {
   final String? addressDetails;
   final bool voterStatus;
   final bool isVerified;
+  final int? guardianId;
+  final String? guardianName;
+  final String? guardianUsername;
+  final bool? guardianAccountEligible;
+  final String? guardianRelationship;
+  final String? guardianshipEvidence;
   final String? philsysIdNumber;
   final String? philsysIdPhoto;
   final String? secondaryIdType;
@@ -27,6 +33,12 @@ class AdminResidentModel {
     this.addressDetails,
     this.voterStatus = false,
     this.isVerified = false,
+    this.guardianId,
+    this.guardianName,
+    this.guardianUsername,
+    this.guardianAccountEligible,
+    this.guardianRelationship,
+    this.guardianshipEvidence,
     this.philsysIdNumber,
     this.philsysIdPhoto,
     this.secondaryIdType,
@@ -47,6 +59,12 @@ class AdminResidentModel {
       addressDetails: json['address_details']?.toString(),
       voterStatus: json['voter_status'] as bool? ?? false,
       isVerified: json['is_verified'] as bool? ?? false,
+      guardianId: json['guardian'] == null ? null : _toInt(json['guardian']),
+      guardianName: json['guardian_name']?.toString(),
+      guardianUsername: json['guardian_username']?.toString(),
+      guardianAccountEligible: json['guardian_account_eligible'] as bool?,
+      guardianRelationship: json['guardian_relationship']?.toString(),
+      guardianshipEvidence: json['guardianship_evidence']?.toString(),
       philsysIdNumber: json['philsys_id_number']?.toString(),
       philsysIdPhoto: json['philsys_id_photo']?.toString(),
       secondaryIdType: json['secondary_id_type']?.toString(),
@@ -54,6 +72,31 @@ class AdminResidentModel {
       utilityBillingType: json['utility_billing_type']?.toString(),
       utilityBillingPhoto: json['utility_billing_photo']?.toString(),
     );
+  }
+
+  bool get isMinor {
+    final parsed = DateTime.tryParse(birthDate ?? '');
+    if (parsed == null) return false;
+    final today = DateTime.now();
+    var age = today.year - parsed.year;
+    if (today.month < parsed.month ||
+        (today.month == parsed.month && today.day < parsed.day)) {
+      age--;
+    }
+    return age < 18;
+  }
+
+  String get guardianRelationshipLabel {
+    switch (guardianRelationship) {
+      case 'PARENT':
+        return 'Parent';
+      case 'COURT_APPOINTED':
+        return 'Court-appointed guardian';
+      case 'OTHER_AUTHORIZED':
+        return 'Other authorized guardian';
+      default:
+        return 'Not provided';
+    }
   }
 
   static int _toInt(Object? value) {

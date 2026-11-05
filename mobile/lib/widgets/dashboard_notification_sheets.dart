@@ -10,6 +10,7 @@ class NotificationCenterSheet extends StatelessWidget {
   final bool hasError;
   final String? errorMessage;
   final VoidCallback? onRetry;
+  final ValueChanged<NotificationItemModel>? onNotificationTap;
 
   const NotificationCenterSheet({
     super.key,
@@ -18,6 +19,7 @@ class NotificationCenterSheet extends StatelessWidget {
     this.hasError = false,
     this.errorMessage,
     this.onRetry,
+    this.onNotificationTap,
   });
 
   @override
@@ -179,61 +181,105 @@ class NotificationCenterSheet extends StatelessWidget {
                                 item.type == NotificationType.approved;
                             final queueAlert =
                                 item.type == NotificationType.queue;
-                            return Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 4),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(8),
-                                    decoration: BoxDecoration(
-                                      color: approved
-                                          ? const Color(0xFFDCFCE7)
-                                          : queueAlert
-                                          ? const Color(0xFFE0E7FF)
-                                          : const Color(0xFFFEF3C7),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: Icon(
-                                      approved
-                                          ? Icons.check_circle_rounded
-                                          : queueAlert
-                                          ? Icons.confirmation_number_outlined
-                                          : Icons.info_rounded,
-                                      color: approved
-                                          ? const Color(0xFF15803D)
-                                          : queueAlert
-                                          ? AppColors.primaryNavy
-                                          : const Color(0xFFB45309),
-                                      size: 20,
+                            final isUnread = item.isUnread;
+                            return Material(
+                              color: isUnread
+                                  ? const Color(0xFFE2E8F0)
+                                  : Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              child: InkWell(
+                                onTap: onNotificationTap == null
+                                    ? null
+                                    : () => onNotificationTap!(item),
+                                borderRadius: BorderRadius.circular(12),
+                                child: Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: isUnread
+                                          ? const Color(0xFF94A3B8)
+                                          : const Color(0xFFE2E8F0),
                                     ),
                                   ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          item.title,
-                                          style: const TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.bold,
-                                            color: AppColors.textPrimary,
-                                          ),
+                                  child: Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(8),
+                                        decoration: BoxDecoration(
+                                          color: approved
+                                              ? const Color(0xFFDCFCE7)
+                                              : queueAlert
+                                              ? const Color(0xFFE0E7FF)
+                                              : const Color(0xFFFEF3C7),
+                                          shape: BoxShape.circle,
                                         ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          item.category,
-                                          style: const TextStyle(
-                                            fontSize: 12,
-                                            color: AppColors.textMuted,
-                                          ),
+                                        child: Icon(
+                                          approved
+                                              ? Icons.check_circle_rounded
+                                              : queueAlert
+                                              ? Icons
+                                                    .confirmation_number_outlined
+                                              : Icons.info_rounded,
+                                          color: approved
+                                              ? const Color(0xFF15803D)
+                                              : queueAlert
+                                              ? AppColors.primaryNavy
+                                              : const Color(0xFFB45309),
+                                          size: 20,
                                         ),
-                                      ],
-                                    ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Row(
+                                              children: [
+                                                Expanded(
+                                                  child: Text(
+                                                    item.title,
+                                                    style: TextStyle(
+                                                      fontSize: 14,
+                                                      fontWeight: isUnread
+                                                          ? FontWeight.w800
+                                                          : FontWeight.bold,
+                                                      color:
+                                                          AppColors.textPrimary,
+                                                    ),
+                                                  ),
+                                                ),
+                                                if (isUnread) ...[
+                                                  const SizedBox(width: 6),
+                                                  Text(
+                                                    context.tr('New'),
+                                                    style: const TextStyle(
+                                                      color: Color(0xFF475569),
+                                                      fontSize: 11,
+                                                      fontWeight:
+                                                          FontWeight.w800,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ],
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              item.category,
+                                              style: const TextStyle(
+                                                fontSize: 12,
+                                                color: AppColors.textMuted,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                ],
+                                ),
                               ),
                             );
                           },

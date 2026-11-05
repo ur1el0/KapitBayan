@@ -11,6 +11,9 @@ class NotificationItemModel {
   final String? actionRoute;
   final String? description;
 
+  /// Null means this item is synthesized locally and has no persisted read state.
+  final bool? isRead;
+
   const NotificationItemModel({
     required this.id,
     required this.title,
@@ -19,7 +22,23 @@ class NotificationItemModel {
     this.type = NotificationType.info,
     this.actionRoute,
     this.description,
+    this.isRead,
   });
+
+  bool get isUnread => isRead == false;
+
+  NotificationItemModel copyWith({bool? isRead}) {
+    return NotificationItemModel(
+      id: id,
+      title: title,
+      category: category,
+      timestamp: timestamp,
+      type: type,
+      actionRoute: actionRoute,
+      description: description,
+      isRead: isRead ?? this.isRead,
+    );
+  }
 
   /// Formatted relative or short time (e.g. "2 hours ago • Document Services")
   String get formattedSubtitle {

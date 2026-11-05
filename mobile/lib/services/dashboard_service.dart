@@ -273,6 +273,7 @@ class DashboardService {
           timestamp: createdAt ?? DateTime.now(),
           type: type,
           actionRoute: type == NotificationType.queue ? 'queue' : null,
+          isRead: item['is_read'] is bool ? item['is_read'] as bool : null,
         );
       }).toList();
       return _FetchResult(data: items);
@@ -286,6 +287,30 @@ class DashboardService {
         failed: true,
         statusCode: statusCode,
         errorMessage: message,
+      );
+    }
+  }
+
+  /// Marks a persisted resident alert as read. Locally synthesized summaries
+  /// do not have a backend read state and are ignored.
+  Future<void> markNotificationRead(NotificationItemModel notification) async {
+    const prefix = 'resident-';
+    if (!notification.isUnread || !notification.id.startsWith(prefix)) return;
+
+    final notificationId = int.tryParse(
+      notification.id.substring(prefix.length),
+    );
+    if (notificationId == null) return;
+
+    final response = await apiClient.patch(
+      '/resident-notifications/$notificationId/',
+      body: const {'is_read': true},
+      requiresAuth: true,
+    );
+    if (response.statusCode != 200) {
+      throw ApiException(
+        'Could not mark notification as read (HTTP ${response.statusCode}).',
+        statusCode: response.statusCode,
       );
     }
   }

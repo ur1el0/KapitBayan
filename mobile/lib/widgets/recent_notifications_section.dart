@@ -173,6 +173,7 @@ class _NotificationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isUnread = notification.isUnread;
     Color iconBgColor;
     Color iconColor;
     IconData iconData;
@@ -202,7 +203,9 @@ class _NotificationCard extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        // Unread server notifications use a cool gray surface so they stand
+        // out from the white cards the resident has already opened.
+        color: isUnread ? const Color(0xFFE2E8F0) : Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -211,7 +214,10 @@ class _NotificationCard extends StatelessWidget {
             offset: const Offset(0, 3),
           ),
         ],
-        border: Border.all(color: const Color(0xFFF1F5F9), width: 1.2),
+        border: Border.all(
+          color: isUnread ? const Color(0xFF94A3B8) : const Color(0xFFF1F5F9),
+          width: isUnread ? 1.4 : 1.2,
+        ),
       ),
       child: Material(
         color: Colors.transparent,
@@ -245,15 +251,42 @@ class _NotificationCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        notification.title,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textPrimary,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              notification.title,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.textPrimary,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (isUnread) ...[
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 7,
+                                vertical: 3,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF475569),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                context.tr('New'),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                       const SizedBox(height: 2),
                       Text(

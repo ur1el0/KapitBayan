@@ -105,6 +105,8 @@ class AuthService {
     String? contactNumber,
     String? addressDetails,
     String? guardianId,
+    String? guardianRelationship,
+    XFile? guardianshipEvidence,
     String? philsysIdNumber,
     XFile? philsysPhoto,
     String? utilityBillingType,
@@ -129,6 +131,8 @@ class AuthService {
         'contact_number': contactNumber.trim(),
       if (guardianId != null && guardianId.isNotEmpty)
         'guardian_id': guardianId.trim(),
+      if (guardianRelationship != null && guardianRelationship.isNotEmpty)
+        'guardian_relationship': guardianRelationship,
       if (philsysIdNumber != null && philsysIdNumber.trim().isNotEmpty)
         'philsys_id_number': philsysIdNumber.trim(),
       if (utilityBillingType != null && utilityBillingType.trim().isNotEmpty)
@@ -174,6 +178,19 @@ class AuthService {
           filename: secondaryIdPhoto.name.isNotEmpty
               ? secondaryIdPhoto.name
               : 'secondary_id.jpg',
+        ),
+      );
+    }
+
+    if (guardianshipEvidence != null) {
+      final bytes = await guardianshipEvidence.readAsBytes();
+      files.add(
+        http.MultipartFile.fromBytes(
+          'guardianship_evidence',
+          bytes,
+          filename: guardianshipEvidence.name.isNotEmpty
+              ? guardianshipEvidence.name
+              : 'guardian_evidence.jpg',
         ),
       );
     }
