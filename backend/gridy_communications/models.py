@@ -172,6 +172,7 @@ class AdminNotification(models.Model):
 class ResidentNotification(models.Model):
     class Type(models.TextChoices):
         QUEUE = 'queue', 'Queue Alert'
+        DOCUMENT = 'document', 'Document Request Update'
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,

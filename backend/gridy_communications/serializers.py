@@ -102,3 +102,9 @@ class ResidentNotificationSerializer(serializers.ModelSerializer):
             'is_read', 'created_at',
         ]
         read_only_fields = fields
+
+
+class ResidentNotificationReadSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ResidentNotification
+        fields = ["is_read"]
