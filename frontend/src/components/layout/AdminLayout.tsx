@@ -26,7 +26,11 @@ export const AdminLayout: React.FC = () => {
             try {
                 const response = await axiosPrivate.get('/admin-notifications/unread_count/');
                 if (isMounted) {
-                    setUnreadNotificationCount(Number(response.data?.count) || 0);
+                    const count = Number(response.data?.count) || 0;
+                    setUnreadNotificationCount(count);
+                    window.dispatchEvent(new CustomEvent('gridy:admin-notification-count', {
+                        detail: count,
+                    }));
                 }
             } catch {
                 // Keep the last known count visible while the network recovers.

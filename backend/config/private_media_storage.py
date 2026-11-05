@@ -12,7 +12,8 @@ class ResidentAwareCloudinaryStorage(MediaCloudinaryStorage):
     """Store private resident and onboarding evidence as authenticated assets."""
 
     PRIVATE_DIRECTORIES = {
-        "resident_ids", "resident_billings", "payment_proofs", "barangay_onboarding",
+        "resident_ids", "resident_billings", "resident_guardianship",
+        "payment_proofs", "barangay_onboarding",
     }
 
     @classmethod

@@ -3,7 +3,6 @@ from django.db import transaction
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
 from gridy_auth.models import User, Resident, Barangay
-from datetime import date
 from django.conf import settings
 from django.utils import timezone
 from django.db.models import Q
@@ -34,6 +33,16 @@ class RegisterSerializer(serializers.ModelSerializer):
         min_value=1,
     )
     guardian_id = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    guardian_relationship = serializers.ChoiceField(
+        choices=Resident.GuardianRelationship.choices,
+        write_only=True,
+        required=False,
+    )
+    guardianship_evidence = serializers.ImageField(
+        write_only=True,
+        required=False,
+        allow_null=True,
+    )
     philsys_id_number = serializers.CharField(write_only=True, required=False, allow_blank=True)
     philsys_id_photo = serializers.ImageField(write_only=True, required=False, allow_null=True)
     secondary_id_type = serializers.CharField(write_only=True, required=False, allow_blank=True)
@@ -46,6 +55,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         fields = [
             'username', 'email', 'password', 'full_name', 'birth_date', 'voter_status', 
             'contact_number', 'purok', 'address_details', 'barangay_id', 'guardian_id',
+            'guardian_relationship', 'guardianship_evidence',
             'philsys_id_number', 'philsys_id_photo', 'secondary_id_type', 
             'secondary_id_photo', 'utility_billing_type', 'utility_billing_photo',
             'privacy_consent', 'privacy_consent_version',
@@ -57,6 +67,11 @@ class RegisterSerializer(serializers.ModelSerializer):
             validate_password(value)
         except DjangoValidationError as e:
             raise serializers.ValidationError(list(e.messages))
+        return value
+
+    def validate_guardianship_evidence(self, value):
+        if value is not None and value.size > 5 * 1024 * 1024:
+            raise serializers.ValidationError("Guardianship proof images must be 5 MB or smaller.")
         return value
 
     def validate_email(self, value):
@@ -107,17 +122,18 @@ class RegisterSerializer(serializers.ModelSerializer):
 
         birth_date = attrs.get('birth_date')
         guardian_id = attrs.get('guardian_id')
+        guardian_relationship = attrs.get('guardian_relationship')
+        guardianship_evidence = attrs.get('guardianship_evidence')
 
-        # Calculate precise age server-side
-        age = None
-        if birth_date:
-            today = date.today()
-            age = today.year - birth_date.year - ((today.month, today.day) < (birth_date.month, birth_date.day))
-
-        # Enforce minor constraint barrier
-        if age is not None and age < 18 and not guardian_id:
-            raise serializers.ValidationError({"guardian_id": "Residents under 18 must provide a guardian's Registered ID."})
+        today = timezone.localdate()
+        if birth_date and birth_date > today:
+            raise serializers.ValidationError({"birth_date": "Birth date cannot be in the future."})
+        age = (
+            today.year - birth_date.year
+            - ((today.month, today.day) < (birth_date.month, birth_date.day))
+        ) if birth_date else None
         
+        barangay_obj = None
         barangay_id = attrs.get('barangay_id')
         if barangay_id:
             try:
@@ -131,15 +147,63 @@ class RegisterSerializer(serializers.ModelSerializer):
                 })
             attrs['barangay_obj'] = barangay_obj
             
-        # Validate Guardian ID mapping
+        # Minors require a linked adult, a stated relationship, and evidence for a
+        # Barangay Admin to review. These fields support human review; they do not
+        # make a legal determination automatically.
+        if age is not None and age < 18:
+            missing_guardian_data = {}
+            if not guardian_id:
+                missing_guardian_data["guardian_id"] = (
+                    "Residents under 18 must provide a verified adult guardian's Registered ID."
+                )
+            if not guardian_relationship:
+                missing_guardian_data["guardian_relationship"] = (
+                    "Select the parent or guardian's relationship to the resident."
+                )
+            if not guardianship_evidence:
+                missing_guardian_data["guardianship_evidence"] = (
+                    "Upload supporting evidence for the Barangay Admin to review."
+                )
+            if missing_guardian_data:
+                raise serializers.ValidationError(missing_guardian_data)
+        if age is not None and age >= 18 and guardian_id:
+            raise serializers.ValidationError({
+                "guardian_id": "A guardian account may only be linked for residents under 18."
+            })
+        if age is not None and age >= 18 and (guardian_relationship or guardianship_evidence):
+            raise serializers.ValidationError({
+                "guardian_relationship": "Guardian details are only used for residents under 18."
+            })
+
         if guardian_id:
-            try:
-                # The mobile app uses 'username' as the Barangay ID/Registered ID
-                guardian_user = User.objects.get(username=guardian_id, role=User.Role.RESIDENT)
-                # Stash the actual Resident object in attrs for the create() method
-                attrs['guardian_resident'] = guardian_user.profile
-            except (User.DoesNotExist, Resident.DoesNotExist):
-                raise serializers.ValidationError({"guardian_id": "No resident found with this Registered ID."})
+            guardians = User.objects.filter(
+                username__iexact=guardian_id.strip(),
+                role=User.Role.RESIDENT,
+            ).select_related("profile")
+            guardian_user = guardians.first()
+            if guardian_user is None or guardians.count() > 1 or not hasattr(guardian_user, "profile"):
+                raise serializers.ValidationError({
+                    "guardian_id": "No resident found with this Registered ID."
+                })
+
+            guardian_resident = guardian_user.profile
+            guardian_age = today.year - guardian_resident.birth_date.year - (
+                (today.month, today.day)
+                < (guardian_resident.birth_date.month, guardian_resident.birth_date.day)
+            )
+            if not guardian_user.is_active or not guardian_resident.is_verified:
+                raise serializers.ValidationError({
+                    "guardian_id": "The guardian account must be active and verified."
+                })
+            if guardian_age < 18:
+                raise serializers.ValidationError({
+                    "guardian_id": "The guardian must be at least 18 years old."
+                })
+            if barangay_obj is None or guardian_user.barangay_id != barangay_obj.pk:
+                raise serializers.ValidationError({
+                    "guardian_id": "The guardian must be registered in the selected Barangay."
+                })
+            attrs['guardian_resident'] = guardian_resident
             
         return attrs
 
@@ -162,6 +226,8 @@ class RegisterSerializer(serializers.ModelSerializer):
             'secondary_id_photo': validated_data.pop('secondary_id_photo', None),
             'utility_billing_type': validated_data.pop('utility_billing_type', None),
             'utility_billing_photo': validated_data.pop('utility_billing_photo', None),
+            'guardian_relationship': validated_data.pop('guardian_relationship', ''),
+            'guardianship_evidence': validated_data.pop('guardianship_evidence', None),
         }
         
         # Extract the resolved guardian Resident objects

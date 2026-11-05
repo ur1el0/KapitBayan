@@ -181,7 +181,7 @@ export const CitizenDocuments: React.FC = () => {
         }
     };
 
-    const handleDownloadPdf = async (id: number, docType: string) => {
+    const handleDownloadPdf = async (id: number) => {
         try {
             setDownloadingId(id);
             const res = await axiosPrivate.get(`/document-requests/${id}/generate-pdf/`, {
@@ -191,12 +191,12 @@ export const CitizenDocuments: React.FC = () => {
             const downloadUrl = window.URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = downloadUrl;
-            link.download = `${docType.replace(/\s+/g, '_')}_${id}.pdf`;
+            link.download = `official_receipt_number_${id}.pdf`;
             document.body.appendChild(link);
             link.click();
             link.remove();
             window.URL.revokeObjectURL(downloadUrl);
-            toast.success(t('Certificate downloaded.'));
+            toast.success(t('O.R. number PDF downloaded.'));
         } catch{
             toast.error(t('Could not generate PDF. Please contact the barangay hall.'));
         } finally {
@@ -337,7 +337,7 @@ export const CitizenDocuments: React.FC = () => {
                                             }))
                                         }
                                         onSubmitPaymentReference={(formData) => handleSubmitPaymentReference(request.id, formData)}
-                                        onDownloadPdf={() => handleDownloadPdf(request.id, request.document_type)}
+                                        onDownloadPdf={() => handleDownloadPdf(request.id)}
                                         onCancel={() => handleCancelRequest(request.id)}
                                         onGetCounterTicket={() => void handleGetCounterTicket(request)}
                                     />

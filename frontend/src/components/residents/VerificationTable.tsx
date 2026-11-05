@@ -7,7 +7,7 @@ import {
     Receipt,
     IdCard
 } from 'lucide-react';
-import { formatPurok, type Resident } from './types';
+import { formatPurok, isMinorResident, type Resident } from './types';
 
 interface VerificationTableProps {
     residents: Resident[];
@@ -100,7 +100,7 @@ export const VerificationTable: React.FC<VerificationTableProps> = ({
                                             Inspect
                                         </button>
                                         <button
-                                            onClick={() => onApprove(resident.id)}
+                                            onClick={() => isMinorResident(resident.birth_date) ? onInspect(resident) : onApprove(resident.id)}
                                             className="inline-flex items-center gap-1.5 bg-primary hover:bg-primary-hover text-primary-foreground px-3 py-1.5 rounded-lg text-xs font-semibold transition-all shadow-sm hover:shadow active:scale-95"
                                         >
                                             <CheckCircle className="w-3.5 h-3.5" />

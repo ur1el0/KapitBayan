@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../core/theme/app_colors.dart';
 import '../core/localization/app_language.dart';
 import '../models/barangay_model.dart';
 import 'custom_text_field.dart';
 import 'barangay_select_field.dart';
+import 'photo_upload_card.dart';
 
 class ResidentRegistrationDetailsSection extends StatelessWidget {
   final TextEditingController fullNameController;
@@ -24,6 +26,8 @@ class ResidentRegistrationDetailsSection extends StatelessWidget {
   final bool obscureConfirmPassword;
   final DateTime? birthDate;
   final bool requiresGuardian;
+  final String guardianRelationship;
+  final XFile? guardianshipEvidence;
   final bool voterStatus;
   final bool isLoading;
   final ValueChanged<int?> onBarangayChanged;
@@ -31,6 +35,9 @@ class ResidentRegistrationDetailsSection extends StatelessWidget {
   final VoidCallback onToggleConfirmPasswordVisibility;
   final VoidCallback onSelectBirthDate;
   final ValueChanged<bool> onVoterStatusChanged;
+  final ValueChanged<String> onGuardianRelationshipChanged;
+  final VoidCallback onPickGuardianshipEvidence;
+  final VoidCallback onRemoveGuardianshipEvidence;
   final VoidCallback onSubmit;
 
   const ResidentRegistrationDetailsSection({
@@ -52,6 +59,8 @@ class ResidentRegistrationDetailsSection extends StatelessWidget {
     required this.obscureConfirmPassword,
     required this.birthDate,
     required this.requiresGuardian,
+    required this.guardianRelationship,
+    required this.guardianshipEvidence,
     required this.voterStatus,
     required this.isLoading,
     required this.onBarangayChanged,
@@ -59,6 +68,9 @@ class ResidentRegistrationDetailsSection extends StatelessWidget {
     required this.onToggleConfirmPasswordVisibility,
     required this.onSelectBirthDate,
     required this.onVoterStatusChanged,
+    required this.onGuardianRelationshipChanged,
+    required this.onPickGuardianshipEvidence,
+    required this.onRemoveGuardianshipEvidence,
     required this.onSubmit,
   });
 
@@ -349,12 +361,45 @@ class ResidentRegistrationDetailsSection extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            context.tr('Residents under 18 must be registered under a verified parent or guardian.'),
+            context.tr('Link a verified adult resident and upload supporting proof. A Barangay Admin will review it before approval.'),
             style: TextStyle(
               fontSize: 12,
               color: Color(0xFFEF4444),
               fontWeight: FontWeight.w600,
             ),
+          ),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<String>(
+            initialValue: guardianRelationship.isEmpty ? null : guardianRelationship,
+            decoration: InputDecoration(
+              labelText: context.tr('Relationship to the applicant'),
+              border: const OutlineInputBorder(),
+              filled: true,
+              fillColor: Colors.white,
+            ),
+            items: [
+              DropdownMenuItem(value: 'PARENT', child: Text(context.tr('Parent'))),
+              DropdownMenuItem(value: 'COURT_APPOINTED', child: Text(context.tr('Court-appointed guardian'))),
+              DropdownMenuItem(value: 'OTHER_AUTHORIZED', child: Text(context.tr('Other authorized guardian'))),
+            ],
+            onChanged: isLoading
+                ? null
+                : (value) {
+                    if (value != null) onGuardianRelationshipChanged(value);
+                  },
+          ),
+          const SizedBox(height: 12),
+          PhotoUploadCard(
+            title: context.tr('Upload guardianship supporting document'),
+            selectedFile: guardianshipEvidence,
+            onPick: onPickGuardianshipEvidence,
+            onRemove: onRemoveGuardianshipEvidence,
+            enabled: !isLoading,
+          ),
+          const SizedBox(height: 6),
+          Text(
+            context.tr('Examples: a birth certificate for a parent or an official guardianship document. This supports human review; the system does not determine legal guardianship.'),
+            style: const TextStyle(fontSize: 11, color: Color(0xFF92400E)),
           ),
         ],
 

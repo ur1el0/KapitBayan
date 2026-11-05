@@ -8,6 +8,7 @@ from unittest.mock import patch
 from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
+from django.utils import timezone
 from PIL import Image
 from rest_framework import status
 
@@ -199,6 +200,147 @@ class AuthRegistrationAPITests(IsolatedAuthAPITestCase):
         self.assertTrue(
             User.objects.filter(username="resident_with_secondary_id").exists()
         )
+
+    def _minor_payload(self, username, guardian_id=None, birth_date=None):
+        today = timezone.localdate()
+        return {
+            "username": username,
+            "email": f"{username}@example.com",
+            "password": "ValidPassword123!",
+            "full_name": "Minor Test Resident",
+            "birth_date": birth_date or today.replace(year=today.year - 17).isoformat(),
+            "barangay_id": self.barangay.id,
+            "privacy_consent": True,
+            "privacy_consent_version": settings.PRIVACY_CONSENT_VERSION,
+            "purok": "Purok 1",
+            "guardian_id": guardian_id or "",
+            "guardian_relationship": Resident.GuardianRelationship.PARENT,
+            "guardianship_evidence": create_test_image_upload(f"{username}-guardian.png"),
+            "philsys_id_photo": create_test_image_upload(f"{username}.png"),
+        }
+
+    def _post_resident_registration(self, payload):
+        storage = Resident._meta.get_field("philsys_id_photo").storage
+        with patch.object(
+            storage,
+            "save",
+            side_effect=lambda name, content, max_length=None: name,
+        ):
+            return self.client.post(reverse("auth_register"), payload, format="multipart")
+
+    def test_minor_registration_requires_a_guardian(self):
+        response = self._post_resident_registration(
+            self._minor_payload("minor_without_guardian")
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("guardian_id", response.data)
+        self.assertFalse(User.objects.filter(username="minor_without_guardian").exists())
+
+    def test_minor_registration_rejects_a_future_birth_date(self):
+        future_date = (timezone.localdate().replace(year=timezone.localdate().year + 1)).isoformat()
+        response = self._post_resident_registration(
+            self._minor_payload(
+                "minor_future_birth_date",
+                guardian_id="verified_adult_guardian",
+                birth_date=future_date,
+            )
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("birth_date", response.data)
+        self.assertFalse(User.objects.filter(username="minor_future_birth_date").exists())
+
+    def test_minor_must_link_to_a_verified_active_adult_in_the_same_barangay(self):
+        guardian = User.objects.create_user(
+            username="verified_adult_guardian",
+            password="ValidPassword123!",
+            email="verified-guardian@example.com",
+            role=User.Role.RESIDENT,
+            barangay=self.barangay,
+        )
+        guardian_profile = Resident.objects.create(
+            user=guardian,
+            full_name="Verified Adult Guardian",
+            birth_date="1980-01-01",
+            is_verified=True,
+        )
+
+        response = self._post_resident_registration(
+            self._minor_payload("minor_with_verified_guardian", guardian.username)
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(
+            User.objects.get(username="minor_with_verified_guardian").profile.guardian,
+            guardian_profile,
+        )
+        minor_profile = User.objects.get(username="minor_with_verified_guardian").profile
+        self.assertEqual(
+            minor_profile.guardian_relationship,
+            Resident.GuardianRelationship.PARENT,
+        )
+        self.assertTrue(minor_profile.guardianship_evidence.name)
+
+    def test_minor_registration_requires_relationship_and_supporting_evidence(self):
+        guardian = User.objects.create_user(
+            username="guardian_missing_review_data",
+            password="ValidPassword123!",
+            email="guardian-review-data@example.com",
+            role=User.Role.RESIDENT,
+            barangay=self.barangay,
+        )
+        Resident.objects.create(
+            user=guardian,
+            full_name="Verified Adult Guardian",
+            birth_date="1980-01-01",
+            is_verified=True,
+        )
+
+        payload = self._minor_payload("minor_missing_guardian_review_data", guardian.username)
+        payload.pop("guardian_relationship")
+        payload.pop("guardianship_evidence")
+        response = self._post_resident_registration(payload)
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("guardian_relationship", response.data)
+        self.assertIn("guardianship_evidence", response.data)
+        self.assertFalse(
+            User.objects.filter(username="minor_missing_guardian_review_data").exists()
+        )
+
+    def test_minor_rejects_unverified_underage_or_cross_barangay_guardians(self):
+        other_barangay = Barangay.objects.create(name="Guardian Other Barangay")
+        cases = (
+            ("unverified", "1980-01-01", False, self.barangay, True),
+            ("underage", timezone.localdate().replace(year=timezone.localdate().year - 16), True, self.barangay, True),
+            ("cross_barangay", "1980-01-01", True, other_barangay, True),
+            ("inactive", "1980-01-01", True, self.barangay, False),
+        )
+
+        for label, birth_date, verified, barangay, active in cases:
+            with self.subTest(guardian_case=label):
+                guardian = User.objects.create_user(
+                    username=f"guardian_{label}",
+                    password="ValidPassword123!",
+                    email=f"guardian-{label}@example.com",
+                    role=User.Role.RESIDENT,
+                    barangay=barangay,
+                    is_active=active,
+                )
+                Resident.objects.create(
+                    user=guardian,
+                    full_name=f"Guardian {label}",
+                    birth_date=birth_date,
+                    is_verified=verified,
+                )
+                response = self._post_resident_registration(
+                    self._minor_payload(f"minor_{label}", guardian.username)
+                )
+
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+                self.assertIn("guardian_id", response.data)
+                self.assertFalse(User.objects.filter(username=f"minor_{label}").exists())
 
     def test_user_registration_requires_barangay(self):
         response = self.client.post(

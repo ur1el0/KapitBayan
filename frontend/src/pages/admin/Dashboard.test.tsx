@@ -73,7 +73,8 @@ describe('Dashboard', () => {
         vi.clearAllMocks();
         vi.mocked(axiosPrivate.get)
             .mockResolvedValueOnce({ data: summary } as never)
-            .mockResolvedValueOnce({ data: { results: activities } } as never);
+            .mockResolvedValueOnce({ data: { results: activities } } as never)
+            .mockResolvedValueOnce({ data: { count: 0 } } as never);
     });
 
     it('renders barangay metrics and scheduled activities from the API', async () => {
@@ -87,13 +88,39 @@ describe('Dashboard', () => {
         expect(screen.getByText('₱1,250.00')).toBeInTheDocument();
         expect(axiosPrivate.get).toHaveBeenNthCalledWith(1, '/dashboard/summary/', expect.anything());
         expect(axiosPrivate.get).toHaveBeenNthCalledWith(2, '/activities/', expect.anything());
+        expect(axiosPrivate.get).toHaveBeenNthCalledWith(3, '/admin-notifications/unread_count/');
+    });
+
+    it('highlights unread notifications on the dashboard', async () => {
+        vi.mocked(axiosPrivate.get).mockReset();
+        vi.mocked(axiosPrivate.get).mockImplementation((url: string) => Promise.resolve(
+            url === '/dashboard/summary/'
+                ? { data: summary }
+                : url === '/activities/'
+                    ? { data: { results: activities } }
+                    : { data: { count: 3 } },
+        ) as never);
+
+        renderDashboard();
+
+        expect(await screen.findByRole('button', { name: '3 unread notifications. Open notifications.' })).toBeInTheDocument();
+    });
+
+    it('updates the dashboard notification highlight when the shared admin count changes', async () => {
+        renderDashboard();
+        await screen.findByText('Community Health Day');
+
+        window.dispatchEvent(new CustomEvent('gridy:admin-notification-count', { detail: 2 }));
+
+        expect(await screen.findByRole('button', { name: '2 unread notifications. Open notifications.' })).toBeInTheDocument();
     });
 
     it('treats an HTML summary response as a failed read without crashing the dashboard', async () => {
         vi.mocked(axiosPrivate.get).mockReset();
         vi.mocked(axiosPrivate.get)
             .mockResolvedValueOnce({ data: '<!doctype html><html><body>KapitBayan</body></html>' } as never)
-            .mockResolvedValueOnce({ data: { results: activities } } as never);
+            .mockResolvedValueOnce({ data: { results: activities } } as never)
+            .mockResolvedValueOnce({ data: { count: 0 } } as never);
 
         renderDashboard();
 
@@ -106,7 +133,8 @@ describe('Dashboard', () => {
         vi.mocked(axiosPrivate.get).mockReset();
         vi.mocked(axiosPrivate.get)
             .mockResolvedValueOnce({ data: summary } as never)
-            .mockResolvedValueOnce({ data: '<!doctype html><html><body>KapitBayan</body></html>' } as never);
+            .mockResolvedValueOnce({ data: '<!doctype html><html><body>KapitBayan</body></html>' } as never)
+            .mockResolvedValueOnce({ data: { count: 0 } } as never);
 
         renderDashboard();
 
@@ -129,8 +157,11 @@ describe('Dashboard', () => {
                 }
                 return Promise.resolve({ data: summary }) as never;
             }
-            activitiesReads += 1;
-            return Promise.resolve({ data: { results: activities } }) as never;
+            if (url === '/activities/') {
+                activitiesReads += 1;
+                return Promise.resolve({ data: { results: activities } }) as never;
+            }
+            return Promise.resolve({ data: { count: 0 } }) as never;
         });
         renderDashboard();
 
@@ -166,6 +197,7 @@ describe('Dashboard', () => {
                 summaryReads += 1;
                 return Promise.resolve({ data: summary }) as never;
             }
+            if (url !== '/activities/') return Promise.resolve({ data: { count: 0 } }) as never;
             activitiesReads += 1;
             if (activitiesReads === 1) return Promise.reject(new Error('Network unavailable')) as never;
             if (activitiesReads === 2) {

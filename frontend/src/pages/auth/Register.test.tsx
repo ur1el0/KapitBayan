@@ -46,6 +46,23 @@ describe('Resident Register Component', () => {
         expect(screen.getByRole('link', { name: /log in here/i })).toHaveAttribute('href', '/login');
     });
 
+    it('limits birth dates to today and requests a guardian account for applicants under 18', () => {
+        render(
+            <BrowserRouter>
+                <Register />
+            </BrowserRouter>,
+        );
+
+        const birthDateField = screen.getByLabelText('DATE OF BIRTH') as HTMLInputElement;
+        const now = new Date();
+        const localToday = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        const minorBirthDate = `${now.getFullYear() - 17}-01-01`;
+
+        expect(birthDateField.max).toBe(localToday);
+        fireEvent.change(birthDateField, { target: { value: minorBirthDate } });
+        expect(screen.getByLabelText("GUARDIAN'S REGISTERED USERNAME *")).toBeRequired();
+    });
+
     it('blocks registration when the approved barangay directory is unavailable', async () => {
         vi.mocked(axiosPublic.get).mockRejectedValueOnce(new Error('offline'));
         render(

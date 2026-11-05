@@ -4,6 +4,7 @@ from django.urls import reverse
 from rest_framework import status
 from gridy_audit.models import AuditLog
 from gridy_auth.models import Barangay, Resident, User
+from gridy_communications.models import ResidentNotification
 from gridy_services.models import DocumentRequest, DocumentServiceOffering
 from .base import ServiceAPIBaseTestCase
 
@@ -92,6 +93,7 @@ class DocumentRequestAPITests(ServiceAPIBaseTestCase):
             walkin_purok="Purok Maligaya",
             document_type="Barangay Clearance",
             status=DocumentRequest.Status.RELEASED,
+            or_number="OR-WALKIN-1042",
         )
         create_pdf.return_value.err = False
 
@@ -104,15 +106,14 @@ class DocumentRequestAPITests(ServiceAPIBaseTestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response["Content-Type"], "application/pdf")
+        self.assertIn("OR_OR-WALKIN-1042.pdf", response["Content-Disposition"])
+        self.assertEqual(response["Cache-Control"], "private, no-store, max-age=0")
 
         rendered_html = create_pdf.call_args.args[0]
-        self.assertIn("JUAN DELA CRUZ", rendered_html)
-        self.assertIn(barangay.name, rendered_html)
-        self.assertIn("<strong>Purok Maligaya</strong>", rendered_html)
-        self.assertNotIn(
-            "Purok <strong>Purok Maligaya</strong>",
-            rendered_html,
-        )
+        self.assertIn("OR-WALKIN-1042", rendered_html)
+        self.assertNotIn("JUAN DELA CRUZ", rendered_html)
+        self.assertNotIn(barangay.name, rendered_html)
+        self.assertNotIn("Purok Maligaya", rendered_html)
 
     @patch("gridy_services.views.documents.pisa.CreatePDF")
     def test_resident_pdf_preserves_purok_number(self, create_pdf):
@@ -129,6 +130,7 @@ class DocumentRequestAPITests(ServiceAPIBaseTestCase):
             barangay=barangay,
             document_type="Barangay Clearance",
             status=DocumentRequest.Status.RELEASED,
+            or_number="OR-RESIDENT-2042",
         )
         self.client.force_login(self.resident)
         create_pdf.return_value.err = False
@@ -144,7 +146,28 @@ class DocumentRequestAPITests(ServiceAPIBaseTestCase):
         self.assertEqual(response["Content-Type"], "application/pdf")
 
         rendered_html = create_pdf.call_args.args[0]
-        self.assertIn("<strong>Purok 3</strong>", rendered_html)
+        self.assertIn("OR-RESIDENT-2042", rendered_html)
+        self.assertNotIn("Purok 3", rendered_html)
+
+    def test_pdf_is_unavailable_until_released_and_assigned_an_or_number(self):
+        document = DocumentRequest.objects.create(
+            user=self.resident,
+            document_type="Barangay Clearance",
+            status=DocumentRequest.Status.READY_FOR_PICKUP,
+        )
+        self.client.force_login(self.resident)
+
+        response = self.client.get(
+            reverse("document-request-generate-pdf", args=[document.pk])
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+        document.status = DocumentRequest.Status.RELEASED
+        document.save(update_fields=["status"])
+        response_without_or = self.client.get(
+            reverse("document-request-generate-pdf", args=[document.pk])
+        )
+        self.assertEqual(response_without_or.status_code, status.HTTP_409_CONFLICT)
 
     def test_official_creating_walkin_requires_name(self):
         # Walk-in submissions without a resident name are rejected with 400
@@ -277,6 +300,10 @@ class DocumentRequestAPITests(ServiceAPIBaseTestCase):
         # Verify the database actually updated
         doc_req.refresh_from_db()
         self.assertEqual(doc_req.status, DocumentRequest.Status.PROCESSING)
+        notification = ResidentNotification.objects.get(user=self.resident)
+        self.assertEqual(notification.notification_type, ResidentNotification.Type.DOCUMENT)
+        self.assertIn("PROCESSING", notification.message.upper())
+        self.assertEqual(notification.data["document_request_id"], str(doc_req.pk))
 
         # Verify the audit log was fired
         self.assertEqual(AuditLog.objects.filter(action_type=AuditLog.ActionType.DOCUMENT_ACTION).count(), 1)

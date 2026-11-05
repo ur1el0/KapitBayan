@@ -34,11 +34,24 @@ const activeSession = {
     is_revoked: false,
 };
 
+const loginEvent = {
+    id: 81,
+    username: 'field_official_one',
+    role: 'FIELD_OFFICIAL',
+    ip_address: '192.0.2.11',
+    user_agent: 'Chrome Android',
+    created_at: '2026-10-02T12:00:00Z',
+};
+
+const successfulResponseFor = (url: string, preferences = profilePreferences) => {
+    if (url === '/auth/me/') return { data: preferences };
+    if (url === '/auth/sessions/') return { data: { results: [activeSession] } };
+    return { data: { results: [loginEvent] } };
+};
+
 const mockSuccessfulLoads = () => {
     vi.mocked(axiosPrivate.get).mockImplementation((url: string) => Promise.resolve(
-        url === '/auth/me/'
-            ? { data: profilePreferences }
-            : { data: { results: [activeSession] } },
+        successfulResponseFor(url),
     ) as never);
 };
 
@@ -55,11 +68,20 @@ describe('Settings load recovery', () => {
         mockSuccessfulLoads();
     });
 
+    it('shows sign-in time, network address, device, and the location limitation', async () => {
+        render(<Settings />);
+
+        expect(await screen.findByText('field_official_one')).toBeInTheDocument();
+        expect(screen.getByText('IP: 192.0.2.11')).toBeInTheDocument();
+        expect(screen.getByText('Chrome Android')).toBeInTheDocument();
+        expect(screen.getByText(/IP addresses are approximate network information, not GPS location/)).toBeInTheDocument();
+    });
+
     it('does not expose default notification preferences after their GET fails', async () => {
         vi.mocked(axiosPrivate.get).mockImplementation((url: string) => Promise.resolve(
             url === '/auth/me/'
                 ? Promise.reject(new Error('Network unavailable'))
-                : { data: { results: [activeSession] } },
+                : successfulResponseFor(url),
         ) as never);
         render(<Settings />);
 
@@ -76,7 +98,9 @@ describe('Settings load recovery', () => {
         vi.mocked(axiosPrivate.get).mockImplementation((url: string) => Promise.resolve(
             url === '/auth/me/'
                 ? { data: profilePreferences }
-                : Promise.reject(new Error('Network unavailable')),
+                : url === '/auth/sessions/'
+                    ? Promise.reject(new Error('Network unavailable'))
+                    : { data: { results: [loginEvent] } },
         ) as never);
         render(<Settings />);
 
@@ -92,7 +116,7 @@ describe('Settings load recovery', () => {
     it('keeps profile errors visible after a failed retry and clears them after success', async () => {
         let profileReads = 0;
         vi.mocked(axiosPrivate.get).mockImplementation((url: string) => {
-            if (url !== '/auth/me/') return Promise.resolve({ data: { results: [activeSession] } }) as never;
+            if (url !== '/auth/me/') return Promise.resolve(successfulResponseFor(url)) as never;
             profileReads += 1;
             if (profileReads < 3) return Promise.reject(new Error('Network unavailable')) as never;
             return Promise.resolve({ data: profilePreferences }) as never;
@@ -117,7 +141,7 @@ describe('Settings load recovery', () => {
     it('recovers the session list without refetching preferences', async () => {
         let sessionReads = 0;
         vi.mocked(axiosPrivate.get).mockImplementation((url: string) => {
-            if (url !== '/auth/sessions/') return Promise.resolve({ data: profilePreferences }) as never;
+            if (url !== '/auth/sessions/') return Promise.resolve(successfulResponseFor(url)) as never;
             sessionReads += 1;
             return sessionReads === 1
                 ? Promise.reject(new Error('Network unavailable')) as never
@@ -141,7 +165,7 @@ describe('Settings load recovery', () => {
         let resolveProfile: (value: unknown) => void = () => {};
         let profileReads = 0;
         vi.mocked(axiosPrivate.get).mockImplementation((url: string) => {
-            if (url !== '/auth/me/') return Promise.resolve({ data: { results: [activeSession] } }) as never;
+            if (url !== '/auth/me/') return Promise.resolve(successfulResponseFor(url)) as never;
             profileReads += 1;
             if (profileReads === 1) return Promise.reject(new Error('Network unavailable')) as never;
             return new Promise((resolve) => { resolveProfile = resolve; }) as never;
@@ -151,7 +175,7 @@ describe('Settings load recovery', () => {
         fireEvent.click(await screen.findByRole('button', { name: 'Try again' }));
         const pendingRetry = await screen.findByRole('button', { name: 'Trying again…' });
         expect(pendingRetry).toBeDisabled();
-        expect(axiosPrivate.get).toHaveBeenCalledTimes(3);
+        expect(axiosPrivate.get).toHaveBeenCalledTimes(4);
         expect(axiosPrivate.patch).not.toHaveBeenCalled();
 
         resolveProfile({ data: profilePreferences });
@@ -162,7 +186,7 @@ describe('Settings load recovery', () => {
         let resolveSessions: (value: unknown) => void = () => {};
         let sessionReads = 0;
         vi.mocked(axiosPrivate.get).mockImplementation((url: string) => {
-            if (url !== '/auth/sessions/') return Promise.resolve({ data: profilePreferences }) as never;
+            if (url !== '/auth/sessions/') return Promise.resolve(successfulResponseFor(url)) as never;
             sessionReads += 1;
             if (sessionReads === 1) return Promise.reject(new Error('Network unavailable')) as never;
             return new Promise((resolve) => { resolveSessions = resolve; }) as never;
@@ -172,7 +196,7 @@ describe('Settings load recovery', () => {
         fireEvent.click(await screen.findByRole('button', { name: 'Try again' }));
         const pendingRetry = await screen.findByRole('button', { name: 'Trying again…' });
         expect(pendingRetry).toBeDisabled();
-        expect(axiosPrivate.get).toHaveBeenCalledTimes(3);
+        expect(axiosPrivate.get).toHaveBeenCalledTimes(4);
         expect(axiosPrivate.patch).not.toHaveBeenCalled();
         expect(axiosPrivate.delete).not.toHaveBeenCalled();
 
@@ -184,7 +208,7 @@ describe('Settings load recovery', () => {
         vi.mocked(axiosPrivate.get).mockImplementation((url: string) => Promise.resolve(
             url === '/auth/me/'
                 ? { data: { ...profilePreferences, push_alerts: false } }
-                : { data: { results: [activeSession] } },
+                : successfulResponseFor(url),
         ) as never);
         let resolvePatch: (value: unknown) => void = () => {};
         vi.mocked(axiosPrivate.patch).mockReturnValueOnce(new Promise((resolve) => {
@@ -207,7 +231,7 @@ describe('Settings load recovery', () => {
         vi.mocked(axiosPrivate.get).mockImplementation((url: string) => Promise.resolve(
             url === '/auth/me/'
                 ? { data: { ...profilePreferences, push_alerts: true } }
-                : { data: { results: [activeSession] } },
+                : successfulResponseFor(url),
         ) as never);
         vi.mocked(axiosPrivate.patch).mockResolvedValueOnce({ data: {} } as never);
         render(<Settings />);
@@ -225,7 +249,7 @@ describe('Settings load recovery', () => {
         vi.mocked(axiosPrivate.get).mockImplementation((url: string) => Promise.resolve(
             url === '/auth/me/'
                 ? { data: { ...profilePreferences, push_alerts: false } }
-                : { data: { results: [activeSession] } },
+                : successfulResponseFor(url),
         ) as never);
         vi.mocked(axiosPrivate.patch).mockRejectedValueOnce(new Error('Network unavailable'));
         render(<Settings />);

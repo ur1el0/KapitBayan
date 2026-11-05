@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
-import { Bell, Building2, CalendarDays, CheckCircle2, Mail, Pencil, Phone, ShieldCheck, UserRound, X, type LucideIcon } from 'lucide-react';
+import { ArrowRightLeft, Bell, Building2, CalendarDays, CheckCircle2, Mail, Pencil, Phone, ShieldCheck, UserRound, X, type LucideIcon } from 'lucide-react';
 import { axiosPrivate } from '../../api/axios';
 import { useAuth } from '../../context/auth-context';
 import type { User } from '../../context/auth-context';
@@ -19,6 +19,23 @@ interface ProfileDraft {
     contact_number: string;
     birth_date: string;
     voter_status: boolean;
+}
+
+interface TransferBarangayOption {
+    id: number;
+    name: string;
+    municipality?: string;
+    province?: string;
+}
+
+interface TransferRequest {
+    id: number;
+    source_barangay_name: string;
+    destination_barangay_name: string;
+    reason: string;
+    status: string;
+    review_note: string;
+    created_at: string;
 }
 
 function localDateString(date: Date): string {
@@ -65,6 +82,14 @@ export function ResidentProfileSettings() {
     const [isSavingProfile, setIsSavingProfile] = useState(false);
     const [savingPreference, setSavingPreference] = useState<'email_alerts' | 'push_alerts' | null>(null);
     const [feedback, setFeedback] = useState<{ message: string; kind: 'success' | 'error' } | null>(null);
+    const [transferOptions, setTransferOptions] = useState<TransferBarangayOption[]>([]);
+    const [transferRequests, setTransferRequests] = useState<TransferRequest[]>([]);
+    const [transferDestinationId, setTransferDestinationId] = useState('');
+    const [transferReason, setTransferReason] = useState('');
+    const [transferLoading, setTransferLoading] = useState(true);
+    const [transferLoadError, setTransferLoadError] = useState(false);
+    const [transferSubmitting, setTransferSubmitting] = useState(false);
+    const [transferFeedback, setTransferFeedback] = useState<{ message: string; kind: 'success' | 'error' } | null>(null);
 
     const loadProfile = useCallback(async () => {
         setIsLoading(true);
@@ -82,9 +107,63 @@ export function ResidentProfileSettings() {
         }
     }, [updateUser]);
 
+    const loadTransfers = useCallback(async () => {
+        setTransferLoading(true);
+        setTransferLoadError(false);
+        try {
+            const [barangayResponse, requestResponse] = await Promise.all([
+                axiosPrivate.get('/auth/public/barangays/'),
+                axiosPrivate.get('/auth/resident-transfers/'),
+            ]);
+            const barangayRows = Array.isArray(barangayResponse.data)
+                ? barangayResponse.data
+                : barangayResponse.data?.results;
+            const requestRows = Array.isArray(requestResponse.data)
+                ? requestResponse.data
+                : requestResponse.data?.results;
+            if (!Array.isArray(barangayRows) || !Array.isArray(requestRows)) {
+                throw new Error('Invalid transfer directory response.');
+            }
+            setTransferOptions(barangayRows as TransferBarangayOption[]);
+            setTransferRequests(requestRows as TransferRequest[]);
+        } catch {
+            setTransferLoadError(true);
+        } finally {
+            setTransferLoading(false);
+        }
+    }, []);
+
     useEffect(() => {
         void loadProfile();
     }, [loadProfile]);
+
+    useEffect(() => {
+        void loadTransfers();
+    }, [loadTransfers]);
+
+    const handleTransferSubmit = async (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        if (!transferDestinationId || !transferReason.trim()) {
+            setTransferFeedback({ message: t('Choose a Barangay and explain why you are moving.'), kind: 'error' });
+            return;
+        }
+        setTransferSubmitting(true);
+        setTransferFeedback(null);
+        try {
+            await axiosPrivate.post('/auth/resident-transfers/', {
+                destination_barangay_id: Number(transferDestinationId),
+                reason: transferReason.trim(),
+            });
+            setTransferReason('');
+            setTransferDestinationId('');
+            setTransferFeedback({ message: t('Transfer request sent to the receiving Barangay for verification.'), kind: 'success' });
+            await loadTransfers();
+        } catch {
+            setTransferFeedback({ message: t('We could not submit your transfer request. Check the details and try again.'), kind: 'error' });
+        } finally {
+            setTransferSubmitting(false);
+        }
+    };
 
     const handleSaveProfile = async (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -137,6 +216,12 @@ export function ResidentProfileSettings() {
             setSavingPreference(null);
         }
     };
+
+    const currentBarangayId = account?.barangay_id ?? account?.barangay?.id;
+    const availableTransferOptions = transferOptions.filter(
+        (barangay) => String(barangay.id) !== String(currentBarangayId ?? ''),
+    );
+    const hasPendingTransfer = transferRequests.some((request) => request.status === 'PENDING');
 
     const cancelEditing = () => {
         if (account) setDraft(toDraft(account));
@@ -244,6 +329,79 @@ export function ResidentProfileSettings() {
                             <InfoItem label={t('Email address')} value={account.email ?? ''} icon={Mail} />
                             <InfoItem label={t('Barangay')} value={account.barangay?.name ?? ''} icon={Building2} />
                             <InfoItem label={t('Verification')} value={account.profile?.is_verified ? t('Verified resident') : t('Pending verification')} icon={ShieldCheck} />
+                        </div>
+                    )}
+                </div>
+            </section>
+
+            <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm" aria-labelledby="barangay-transfer-heading">
+                <div className="flex items-center gap-3 border-b border-slate-100 p-5 sm:p-6">
+                    <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-50 text-indigo-700"><ArrowRightLeft className="h-5 w-5" aria-hidden="true" /></span>
+                    <div>
+                        <h2 id="barangay-transfer-heading" className="text-lg font-bold text-slate-900">{t('Move to another Barangay')}</h2>
+                        <p className="text-sm text-slate-600">{t('Request an account transfer if you have moved. The receiving Barangay must verify your identity and residence before the account is moved.')}</p>
+                    </div>
+                </div>
+                <div className="space-y-5 p-5 sm:p-6">
+                    {transferFeedback && (
+                        <p role={transferFeedback.kind === 'error' ? 'alert' : 'status'} aria-live={transferFeedback.kind === 'error' ? 'assertive' : 'polite'} className={`rounded-xl border px-4 py-3 text-sm font-medium ${transferFeedback.kind === 'error' ? 'border-rose-200 bg-rose-50 text-rose-800' : 'border-emerald-200 bg-emerald-50 text-emerald-800'}`}>
+                            {transferFeedback.message}
+                        </p>
+                    )}
+                    {transferLoadError ? (
+                        <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
+                            <p>{t('We could not load the Barangay transfer information.')}</p>
+                            <button type="button" onClick={() => void loadTransfers()} className="mt-3 min-h-11 rounded-lg border border-rose-300 bg-white px-4 font-semibold">{t('Try again')}</button>
+                        </div>
+                    ) : transferLoading ? (
+                        <p role="status" className="text-sm text-slate-500">{t('Loading transfer information…')}</p>
+                    ) : !account.profile?.is_verified ? (
+                        <p className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">{t('Barangay transfer requests are available after your resident account is verified.')}</p>
+                    ) : hasPendingTransfer ? (
+                        <p className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">{t('You already have a transfer request waiting for review. You can submit another after it is approved or rejected.')}</p>
+                    ) : (
+                        <form onSubmit={(event) => void handleTransferSubmit(event)} className="space-y-4">
+                            <label htmlFor="transfer-destination" className="block text-sm font-semibold text-slate-800">
+                                {t('Receiving Barangay')}
+                                <select id="transfer-destination" required value={transferDestinationId} onChange={(event) => setTransferDestinationId(event.target.value)} className="mt-2 min-h-12 w-full rounded-xl border border-slate-300 bg-white px-3 text-base font-normal text-slate-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
+                                    <option value="">{t('Choose a Barangay')}</option>
+                                    {availableTransferOptions.map((barangay) => (
+                                        <option key={barangay.id} value={barangay.id}>
+                                            {[barangay.name, barangay.municipality, barangay.province].filter(Boolean).join(', ')}
+                                        </option>
+                                    ))}
+                                </select>
+                            </label>
+                            <label htmlFor="transfer-reason" className="block text-sm font-semibold text-slate-800">
+                                {t('Reason for moving')}
+                                <textarea id="transfer-reason" required maxLength={500} value={transferReason} onChange={(event) => setTransferReason(event.target.value)} rows={3} className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-3 text-base font-normal text-slate-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                            </label>
+                            {availableTransferOptions.length === 0 && (
+                                <p className="text-sm text-slate-600">{t('No other approved Barangays are currently available for transfer.')}</p>
+                            )}
+                            <p className="text-xs leading-5 text-slate-500">{t('Your Barangay assignment changes only after approval. Existing requests and queue records stay with the Barangay that handled them.')}</p>
+                            <button type="submit" disabled={transferSubmitting || availableTransferOptions.length === 0} className="min-h-11 rounded-xl bg-primary px-5 text-sm font-bold text-primary-foreground disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
+                                {transferSubmitting ? t('Submitting…') : t('Submit transfer request')}
+                            </button>
+                        </form>
+                    )}
+
+                    {transferRequests.length > 0 && (
+                        <div className="space-y-3 border-t border-slate-100 pt-5">
+                            <h3 className="font-bold text-slate-900">{t('Transfer request history')}</h3>
+                            {transferRequests.map((request) => (
+                                <article key={request.id} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                                    <div className="flex flex-wrap items-center justify-between gap-2">
+                                        <p className="text-sm font-semibold text-slate-800">{request.source_barangay_name} → {request.destination_barangay_name}</p>
+                                        <span className={`rounded-full px-3 py-1 text-xs font-bold ${request.status === 'PENDING' ? 'bg-amber-100 text-amber-900' : request.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-900' : 'bg-rose-100 text-rose-900'}`}>
+                                            {t(request.status)}
+                                        </span>
+                                    </div>
+                                    <p className="mt-2 text-sm text-slate-600">{request.reason}</p>
+                                    {request.review_note && <p className="mt-2 text-sm text-slate-600"><strong>{t('Admin note')}:</strong> {request.review_note}</p>}
+                                    <p className="mt-2 text-xs text-slate-500">{new Date(request.created_at).toLocaleString()}</p>
+                                </article>
+                            ))}
                         </div>
                     )}
                 </div>

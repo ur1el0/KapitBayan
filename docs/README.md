@@ -27,6 +27,7 @@ Use this page to find current system guidance. Source code, migrations, generate
 - [Resident web portal](features/citizen_desktop_portal.md)
 - [Web frontend features](features/frontend_features.md) — includes the Admin Documents and Residents auto-refresh behavior.
 - [Walk-in clearances and treasury auditing](features/walkin_and_revenue_clearances.md)
+- [Post-defense service and account controls](features/post-defense-controls.md)
 
 ## Developer walkthroughs
 

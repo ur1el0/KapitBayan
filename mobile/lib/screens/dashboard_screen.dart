@@ -78,6 +78,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
   DashboardData _data = const DashboardData();
   bool _isLoading = true;
   final int _selectedNavIndex = 0;
+  final Set<String> _readNotificationIds = <String>{};
+
+  List<NotificationItemModel> get _visibleNotifications => _data.notifications
+      .map(
+        (item) => _readNotificationIds.contains(item.id)
+            ? item.copyWith(isRead: true)
+            : item,
+      )
+      .toList(growable: false);
 
   @override
   void initState() {
@@ -271,13 +280,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                     // 2. Recent Notifications, visible near the top of the dashboard
                     RecentNotificationsSection(
-                      notifications: _data.notifications,
+                      notifications: _visibleNotifications,
                       hasError: _data.hasNotificationsError,
                       errorMessage: _data.notificationsErrorMessage,
                       onRetry: _loadDashboardData,
                       onViewAll: () => _showNotificationModalSheet(context),
                       onNotificationTap: (item) =>
-                          _showNotificationDetailModal(context, item),
+                          _handleNotificationTap(context, item),
                     ),
 
                     const SizedBox(height: 16),
@@ -426,6 +435,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   void _showNotificationModalSheet(BuildContext context) {
+    final dashboardContext = context;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -438,7 +448,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         maxChildSize: 0.85,
         expand: false,
         builder: (context, scrollController) => NotificationCenterSheet(
-          notifications: _data.notifications,
+          notifications: _visibleNotifications,
           hasError: _data.hasNotificationsError,
           errorMessage: _data.notificationsErrorMessage,
           onRetry: () {
@@ -446,9 +456,42 @@ class _DashboardScreenState extends State<DashboardScreen> {
             _loadDashboardData();
           },
           scrollController: scrollController,
+          onNotificationTap: (item) {
+            Navigator.of(context).pop();
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted && dashboardContext.mounted) {
+                _handleNotificationTap(dashboardContext, item);
+              }
+            });
+          },
         ),
       ),
     );
+  }
+
+  void _handleNotificationTap(
+    BuildContext context,
+    NotificationItemModel item,
+  ) {
+    _showNotificationDetailModal(context, item);
+    if (!item.isUnread) return;
+
+    final service = _dashboardService;
+    if (service == null) return;
+    unawaited(_markNotificationRead(service, item));
+  }
+
+  Future<void> _markNotificationRead(
+    DashboardService service,
+    NotificationItemModel item,
+  ) async {
+    try {
+      await service.markNotificationRead(item);
+      if (!mounted) return;
+      setState(() => _readNotificationIds.add(item.id));
+    } catch (_) {
+      // Keep the unread emphasis if the server could not save the read state.
+    }
   }
 
   void _showNotificationDetailModal(

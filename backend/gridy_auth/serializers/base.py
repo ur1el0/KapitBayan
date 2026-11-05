@@ -2,6 +2,7 @@ from rest_framework import serializers
 from django.db.models import Q
 from django.urls import reverse
 from gridy_auth.models import User, Resident, Barangay, RefreshSession
+from gridy_auth.guardianship import guardian_account_is_eligible
 
 
 class ResidentPrivateImageField(serializers.ImageField):
@@ -45,6 +46,9 @@ class ResidentSerializer(serializers.ModelSerializer):
     philsys_id_photo = ResidentPrivateImageField(required=False, allow_null=True)
     secondary_id_photo = ResidentPrivateImageField(required=False, allow_null=True)
     utility_billing_photo = ResidentPrivateImageField(required=False, allow_null=True)
+    guardianship_evidence = ResidentPrivateImageField(read_only=True)
+    guardian_name = serializers.CharField(source="guardian.full_name", read_only=True, allow_null=True)
+    guardian_username = serializers.CharField(source="guardian.user.username", read_only=True, allow_null=True)
 
     remove_philsys_id_photo = serializers.BooleanField(required=False, write_only=True, default=False)
     remove_secondary_id_photo = serializers.BooleanField(required=False, write_only=True, default=False)
@@ -55,11 +59,14 @@ class ResidentSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'username', 'email', 'full_name', 'birth_date', 'voter_status', 
             'contact_number', 'purok', 'address_details', 'is_verified', 'guardian',
+            'guardian_name', 'guardian_username', 'guardian_relationship', 'guardianship_evidence',
             'philsys_id_number', 'philsys_id_photo', 'remove_philsys_id_photo',
             'secondary_id_type', 'secondary_id_photo', 'remove_secondary_id_photo',
             'utility_billing_type', 'utility_billing_photo', 'remove_utility_billing_photo',
         ]
-        read_only_fields = ['is_verified']
+        read_only_fields = [
+            'is_verified', 'guardian', 'guardian_relationship', 'guardianship_evidence',
+        ]
 
     def validate(self, attrs):
         attrs = super().validate(attrs)
@@ -195,6 +202,20 @@ class ResidentAdminUpdateSerializer(ResidentSerializer):
             instance.user.save(update_fields=['email'])
 
         return super().update(instance, validated_data)
+
+
+class ResidentAdminReviewSerializer(ResidentSerializer):
+    guardian_account_eligible = serializers.SerializerMethodField()
+
+    class Meta(ResidentSerializer.Meta):
+        fields = ResidentSerializer.Meta.fields + ['guardian_account_eligible']
+
+    def get_guardian_account_eligible(self, obj):
+        return guardian_account_is_eligible(
+            obj.guardian,
+            barangay_id=obj.user.barangay_id,
+        )
+
 
 class UserSerializer(serializers.ModelSerializer):
     profile = ResidentSerializer(required=False)

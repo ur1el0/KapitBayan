@@ -171,82 +171,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedAdminNotificationList'
           description: ''
-    post:
-      operationId: api_v1_admin_notifications_create
-      tags:
-      - api
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/AdminNotification'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/AdminNotification'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/AdminNotification'
-        required: true
-      security:
-      - cookieAuth: []
-      responses:
-        '201':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AdminNotification'
-          description: ''
   /api/v1/admin-notifications/{id}/:
-    get:
-      operationId: api_v1_admin_notifications_retrieve
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: string
-        required: true
-      tags:
-      - api
-      security:
-      - cookieAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AdminNotification'
-          description: ''
-    put:
-      operationId: api_v1_admin_notifications_update
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: string
-        required: true
-      tags:
-      - api
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/AdminNotification'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/AdminNotification'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/AdminNotification'
-        required: true
-      security:
-      - cookieAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AdminNotification'
-          description: ''
     patch:
       operationId: api_v1_admin_notifications_partial_update
       parameters:
@@ -261,13 +186,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PatchedAdminNotification'
+              $ref: '#/components/schemas/PatchedAdminNotificationRead'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/PatchedAdminNotification'
+              $ref: '#/components/schemas/PatchedAdminNotificationRead'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/PatchedAdminNotification'
+              $ref: '#/components/schemas/PatchedAdminNotificationRead'
       security:
       - cookieAuth: []
       responses:
@@ -275,7 +200,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AdminNotification'
+                $ref: '#/components/schemas/AdminNotificationRead'
           description: ''
     delete:
       operationId: api_v1_admin_notifications_destroy
@@ -308,7 +233,20 @@ paths:
           multipart/form-data:
             schema:
               $ref: '#/components/schemas/AdminNotification'
-        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminNotification'
+          description: ''
+  /api/v1/admin-notifications/unread_count/:
+    get:
+      operationId: api_v1_admin_notifications_unread_count_retrieve
+      tags:
+      - api
       security:
       - cookieAuth: []
       responses:
@@ -688,6 +626,20 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+        '413':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
   /api/v1/auth/login/:
     post:
       operationId: api_v1_auth_login_create
@@ -714,6 +666,29 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CustomTokenObtainPair'
+          description: ''
+  /api/v1/auth/login-events/:
+    get:
+      operationId: api_v1_auth_login_events_list
+      description: Show an account's sign-ins and, for admins, their own Field Officials'
+        sign-ins.
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedLoginEventList'
           description: ''
   /api/v1/auth/logout/:
     post:
@@ -855,7 +830,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PaginatedResidentList'
+                $ref: '#/components/schemas/PaginatedResidentAdminReviewList'
           description: ''
   /api/v1/auth/platform/accounts/:
     get:
@@ -1185,6 +1160,46 @@ paths:
           description: Restricted to active Barangay Operators and Django superusers.
         '409':
           description: A matching tenant/Admin or account conflict prevents provisioning.
+  /api/v1/auth/platform/barangay-applications/{id}/erase/:
+    post:
+      operationId: api_v1_auth_platform_barangay_applications_erase_create
+      description: Let Barangay Operators or controlled superusers review new Barangays.
+      summary: Permanently erase a Barangay application and its linked applicant account
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this barangay application.
+        required: true
+      tags:
+      - Barangay Onboarding Review
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BarangayApplicationErasure'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/BarangayApplicationErasure'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/BarangayApplicationErasure'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '204':
+          description: Application and linked applicant account erased.
+        '400':
+          description: A deletion reason or exact application confirmation is invalid.
+        '403':
+          description: Restricted to active Barangay Operators and Django superusers.
+        '404':
+          description: Application not found.
+        '409':
+          description: The linked account is inconsistent or is the Barangay's last
+            active Admin.
   /api/v1/auth/platform/barangay-applications/{id}/reject/:
     post:
       operationId: api_v1_auth_platform_barangay_applications_reject_create
@@ -1226,45 +1241,6 @@ paths:
           description: Restricted to active Barangay Operators and Django superusers.
         '409':
           description: Only pending applications can be rejected.
-  /api/v1/auth/platform/barangay-applications/{id}/erase/:
-    post:
-      operationId: api_v1_auth_platform_barangay_applications_erase_create
-      description: Let Barangay Operators or controlled superusers review new Barangays.
-      summary: Permanently erase a Barangay application and its linked applicant account
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this barangay application.
-        required: true
-      tags:
-      - Barangay Onboarding Review
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/BarangayApplicationErasure'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/BarangayApplicationErasure'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/BarangayApplicationErasure'
-        required: true
-      security:
-      - cookieAuth: []
-      responses:
-        '204':
-          description: Application and linked applicant account erased.
-        '400':
-          description: A deletion reason or exact application confirmation is invalid.
-        '403':
-          description: Restricted to active Barangay Operators and Django superusers.
-        '404':
-          description: Application not found.
-        '409':
-          description: The linked account is inconsistent or is the Barangay's last active Admin.
   /api/v1/auth/public/barangay-applications/:
     post:
       operationId: api_v1_auth_public_barangay_applications_create
@@ -1353,7 +1329,7 @@ paths:
   /api/v1/auth/public/barangays/:
     get:
       operationId: api_v1_auth_public_barangays_list
-      description: List existing Barangays so residents can select their jurisdiction.
+      description: List approved Barangays so residents can select their jurisdiction.
       tags:
       - Barangay Directory
       security:
@@ -1373,9 +1349,12 @@ paths:
       operationId: api_v1_auth_register_create
       description: 'Resident registration requires at least one valid uploaded image:
         a PhilSys ID photo, a secondary ID photo, or a utility/residency proof photo.
-        A typed PhilSys ID number alone does not satisfy this requirement. For historical
-        administrative bulk ingestion without digital proof images, authorized barangay
-        officials must use the RBI CSV import endpoint (/api/v1/auth/import-residents/).'
+        Applicants under 18 must also provide a verified adult guardian account, relationship,
+        and supporting evidence for Barangay Admin review. The review is a human check
+        and does not automatically determine legal guardianship. A typed PhilSys ID
+        number alone does not satisfy this requirement. For historical administrative
+        bulk ingestion without digital proof images, authorized barangay officials
+        must use the RBI CSV import endpoint (/api/v1/auth/import-residents/).'
       tags:
       - Authentication
       requestBody:
@@ -1452,7 +1431,119 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PaginatedResidentList'
+                $ref: '#/components/schemas/PaginatedResidentAdminReviewList'
+          description: ''
+  /api/v1/auth/resident-transfers/:
+    get:
+      operationId: api_v1_auth_resident_transfers_list
+      description: A receiving Barangay Admin reviews resident-initiated account transfers.
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResidentTransferRequestList'
+          description: ''
+    post:
+      operationId: api_v1_auth_resident_transfers_create
+      description: A receiving Barangay Admin reviews resident-initiated account transfers.
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResidentTransferCreate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ResidentTransferCreate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ResidentTransferCreate'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResidentTransferCreate'
+          description: ''
+  /api/v1/auth/resident-transfers/{id}/approve/:
+    post:
+      operationId: api_v1_auth_resident_transfers_approve_create
+      description: A receiving Barangay Admin reviews resident-initiated account transfers.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResidentTransferReview'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ResidentTransferReview'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ResidentTransferReview'
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResidentTransferReview'
+          description: ''
+  /api/v1/auth/resident-transfers/{id}/reject/:
+    post:
+      operationId: api_v1_auth_resident_transfers_reject_create
+      description: A receiving Barangay Admin reviews resident-initiated account transfers.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResidentTransferReview'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ResidentTransferReview'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ResidentTransferReview'
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResidentTransferReview'
           description: ''
   /api/v1/auth/resident/{id}/:
     get:
@@ -1474,7 +1565,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Resident'
+                $ref: '#/components/schemas/ResidentAdminReview'
           description: ''
     put:
       operationId: api_v1_auth_resident_update
@@ -1823,6 +1914,17 @@ paths:
         required: true
       tags:
       - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedResidentVerificationReview'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedResidentVerificationReview'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedResidentVerificationReview'
       security:
       - cookieAuth: []
       responses:
@@ -1830,7 +1932,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Resident'
+                $ref: '#/components/schemas/ResidentAdminReview'
           description: ''
         '404':
           content:
@@ -1994,6 +2096,152 @@ paths:
         schema:
           type: integer
         description: A unique integer value identifying this fcm device.
+        required: true
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/document-catalog/:
+    get:
+      operationId: api_v1_document_catalog_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedDocumentServiceOfferingList'
+          description: ''
+    post:
+      operationId: api_v1_document_catalog_create
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentServiceOffering'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DocumentServiceOffering'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DocumentServiceOffering'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentServiceOffering'
+          description: ''
+  /api/v1/document-catalog/{id}/:
+    get:
+      operationId: api_v1_document_catalog_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this document service offering.
+        required: true
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentServiceOffering'
+          description: ''
+    put:
+      operationId: api_v1_document_catalog_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this document service offering.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentServiceOffering'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DocumentServiceOffering'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DocumentServiceOffering'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentServiceOffering'
+          description: ''
+    patch:
+      operationId: api_v1_document_catalog_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this document service offering.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedDocumentServiceOffering'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedDocumentServiceOffering'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedDocumentServiceOffering'
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentServiceOffering'
+          description: ''
+    delete:
+      operationId: api_v1_document_catalog_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this document service offering.
         required: true
       tags:
       - api
@@ -2169,6 +2417,74 @@ paths:
               schema:
                 $ref: '#/components/schemas/DocumentRequest'
           description: ''
+  /api/v1/document-requests/{id}/or-number/:
+    patch:
+      operationId: api_v1_document_requests_or_number_partial_update
+      description: Save only the official receipt field, independent of workflow status
+        edits.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this document request.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedDocumentRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedDocumentRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedDocumentRequest'
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentRequest'
+          description: ''
+  /api/v1/document-requests/{id}/payment-choice/:
+    post:
+      operationId: api_v1_document_requests_payment_choice_create
+      description: Save a resident's choice of cash or an active same-Barangay e-payment
+        recipient.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this document request.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentChoice'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PaymentChoice'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PaymentChoice'
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentRequest'
+          description: ''
   /api/v1/document-requests/{id}/payment-proof/:
     get:
       operationId: api_v1_document_requests_payment_proof_retrieve
@@ -2278,6 +2594,22 @@ paths:
           multipart/form-data:
             schema:
               $ref: '#/components/schemas/PatchedDocumentRequest'
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentRequest'
+          description: ''
+  /api/v1/document-requests/verify/:
+    get:
+      operationId: api_v1_document_requests_verify_retrieve
+      description: Find a same-Barangay document by exact O.R. number or printed tracking
+        ID.
+      tags:
+      - api
       security:
       - cookieAuth: []
       responses:
@@ -2983,7 +3315,8 @@ paths:
   /api/v1/resident-notifications/:
     get:
       operationId: api_v1_resident_notifications_list
-      description: Expose only the authenticated user's persisted resident alerts.
+      description: Expose a resident's alerts and allow them to mark only their own
+        as read.
       tags:
       - api
       security:
@@ -2998,9 +3331,10 @@ paths:
                   $ref: '#/components/schemas/ResidentNotification'
           description: ''
   /api/v1/resident-notifications/{id}/:
-    get:
-      operationId: api_v1_resident_notifications_retrieve
-      description: Expose only the authenticated user's persisted resident alerts.
+    patch:
+      operationId: api_v1_resident_notifications_partial_update
+      description: Expose a resident's alerts and allow them to mark only their own
+        as read.
       parameters:
       - in: path
         name: id
@@ -3009,6 +3343,17 @@ paths:
         required: true
       tags:
       - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedResidentNotificationRead'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedResidentNotificationRead'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedResidentNotificationRead'
       security:
       - cookieAuth: []
       responses:
@@ -3016,7 +3361,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ResidentNotification'
+                $ref: '#/components/schemas/ResidentNotificationRead'
           description: ''
   /api/v1/tickets/:
     get:
@@ -3404,40 +3749,50 @@ components:
           type: integer
           readOnly: true
         notification_type:
-          $ref: '#/components/schemas/AdminNotificationNotificationTypeEnum'
+          allOf:
+          - $ref: '#/components/schemas/AdminNotificationNotificationTypeEnum'
+          readOnly: true
         title:
           type: string
-          maxLength: 255
+          readOnly: true
         message:
           type: string
+          readOnly: true
         is_read:
           type: boolean
+          readOnly: true
         created_at:
           type: string
           format: date-time
           readOnly: true
-        user:
-          type: integer
-          readOnly: true
-          description: The specific admin receiving the alert
       required:
       - created_at
       - id
+      - is_read
       - message
+      - notification_type
       - title
-      - user
     AdminNotificationNotificationTypeEnum:
       enum:
       - queue
       - document
+      - report
+      - registration
       - system
       - alert
       type: string
       description: |-
         * `queue` - Queue Alert
         * `document` - Document Request
+        * `report` - Issue Report
+        * `registration` - Resident Registration
         * `system` - System Update
         * `alert` - Security/Verification Alert
+    AdminNotificationRead:
+      type: object
+      properties:
+        is_read:
+          type: boolean
     AidRequest:
       type: object
       properties:
@@ -3652,6 +4007,20 @@ components:
           maxLength: 128
       required:
       - token
+    BarangayApplicationErasure:
+      type: object
+      description: Require an explicit reason and application reference before erasure.
+      properties:
+        reason:
+          type: string
+          maxLength: 1000
+          minLength: 5
+        confirm_reference:
+          type: string
+          maxLength: 32
+      required:
+      - confirm_reference
+      - reason
     BarangayApplicationOperator:
       type: object
       properties:
@@ -3799,20 +4168,6 @@ components:
           minLength: 5
       required:
       - reason
-    BarangayApplicationErasure:
-      type: object
-      description: Require an explicit reason and application reference before erasure.
-      properties:
-        reason:
-          type: string
-          maxLength: 1000
-          minLength: 5
-        confirm_reference:
-          type: string
-          maxLength: 32
-      required:
-      - confirm_reference
-      - reason
     BarangayApplicationVerificationResend:
       type: object
       properties:
@@ -3883,11 +4238,29 @@ components:
         document_type:
           type: string
           maxLength: 100
+        offering_id:
+          type: integer
+          nullable: true
+        requirements_snapshot:
+          readOnly: true
+        published_fee_amount_snapshot:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+          readOnly: true
+          nullable: true
+        offering_details_snapshot:
+          type: string
+          readOnly: true
         purpose:
           type: string
           nullable: true
         urgency_tag:
           $ref: '#/components/schemas/UrgencyTagEnum'
+        queue_ticket_active:
+          type: boolean
+          readOnly: true
+          default: false
         status:
           allOf:
           - $ref: '#/components/schemas/DocumentRequestStatusEnum'
@@ -3935,7 +4308,7 @@ components:
           readOnly: true
         payment_method:
           allOf:
-          - $ref: '#/components/schemas/PaymentMethodEnum'
+          - $ref: '#/components/schemas/DocumentRequestPaymentMethodEnum'
           readOnly: true
         payment_recipient:
           type: integer
@@ -3990,6 +4363,7 @@ components:
       - fee_waiver_reason
       - id
       - is_walkin
+      - offering_details_snapshot
       - or_number
       - payment_instructions_snapshot
       - payment_method
@@ -4001,11 +4375,28 @@ components:
       - payment_review_note
       - payment_status
       - payment_transacted_at
+      - published_fee_amount_snapshot
       - purok
+      - queue_ticket_active
       - request_id
       - requester_name
+      - requirements_snapshot
       - status
       - updated_at
+    DocumentRequestPaymentMethodEnum:
+      enum:
+      - CASH
+      - GCASH
+      - MAYA
+      - BANK
+      - OTHER
+      type: string
+      description: |-
+        * `CASH` - Cash
+        * `GCASH` - GCash
+        * `MAYA` - Maya
+        * `BANK` - Bank transfer
+        * `OTHER` - Other
     DocumentRequestStatusEnum:
       enum:
       - PENDING
@@ -4020,6 +4411,48 @@ components:
         * `READY_FOR_PICKUP` - Ready for Pickup
         * `REJECTED` - Rejected
         * `RELEASED` - Released
+    DocumentServiceOffering:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        barangay:
+          type: integer
+          readOnly: true
+        document_type:
+          type: string
+          maxLength: 100
+        requirements:
+          type: array
+          items:
+            type: string
+            maxLength: 250
+          maxItems: 30
+        published_fee_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+          nullable: true
+        details:
+          type: string
+          maxLength: 2000
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - barangay
+      - created_at
+      - document_type
+      - id
+      - updated_at
     DocumentStats:
       type: object
       properties:
@@ -4196,6 +4629,16 @@ components:
           description: CSV file containing resident accounts to import.
       required:
       - file
+    GuardianRelationshipEnum:
+      enum:
+      - PARENT
+      - COURT_APPOINTED
+      - OTHER_AUTHORIZED
+      type: string
+      description: |-
+        * `PARENT` - Parent
+        * `COURT_APPOINTED` - Court-appointed guardian
+        * `OTHER_AUTHORIZED` - Other authorized guardian
     IssueReport:
       type: object
       properties:
@@ -4288,6 +4731,40 @@ components:
       - resolved
       - total
       - urgency_breakdown
+    LoginEvent:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        user_id:
+          type: integer
+          readOnly: true
+        username:
+          type: string
+          readOnly: true
+        role:
+          type: string
+          readOnly: true
+        ip_address:
+          type: string
+          readOnly: true
+          nullable: true
+        user_agent:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - ip_address
+      - role
+      - user_agent
+      - user_id
+      - username
     PaginatedActivityScheduleList:
       type: object
       required:
@@ -4449,6 +4926,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/DocumentRequest'
+    PaginatedDocumentServiceOfferingList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/DocumentServiceOffering'
     PaginatedEmergencyHotlineList:
       type: object
       required:
@@ -4541,6 +5041,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/IssueReport'
+    PaginatedLoginEventList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/LoginEvent'
     PaginatedPaymentRecipientList:
       type: object
       required:
@@ -4633,7 +5156,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/RefreshSession'
-    PaginatedResidentList:
+    PaginatedResidentAdminReviewList:
       type: object
       required:
       - count
@@ -4655,7 +5178,30 @@ components:
         results:
           type: array
           items:
-            $ref: '#/components/schemas/Resident'
+            $ref: '#/components/schemas/ResidentAdminReview'
+    PaginatedResidentTransferRequestList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ResidentTransferRequest'
     PaginatedStaffUserListList:
       type: object
       required:
@@ -4732,29 +5278,11 @@ components:
         created_by:
           type: integer
           readOnly: true
-    PatchedAdminNotification:
+    PatchedAdminNotificationRead:
       type: object
       properties:
-        id:
-          type: integer
-          readOnly: true
-        notification_type:
-          $ref: '#/components/schemas/AdminNotificationNotificationTypeEnum'
-        title:
-          type: string
-          maxLength: 255
-        message:
-          type: string
         is_read:
           type: boolean
-        created_at:
-          type: string
-          format: date-time
-          readOnly: true
-        user:
-          type: integer
-          readOnly: true
-          description: The specific admin receiving the alert
     PatchedAidRequestReview:
       type: object
       properties:
@@ -4856,11 +5384,29 @@ components:
         document_type:
           type: string
           maxLength: 100
+        offering_id:
+          type: integer
+          nullable: true
+        requirements_snapshot:
+          readOnly: true
+        published_fee_amount_snapshot:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+          readOnly: true
+          nullable: true
+        offering_details_snapshot:
+          type: string
+          readOnly: true
         purpose:
           type: string
           nullable: true
         urgency_tag:
           $ref: '#/components/schemas/UrgencyTagEnum'
+        queue_ticket_active:
+          type: boolean
+          readOnly: true
+          default: false
         status:
           allOf:
           - $ref: '#/components/schemas/DocumentRequestStatusEnum'
@@ -4908,7 +5454,7 @@ components:
           readOnly: true
         payment_method:
           allOf:
-          - $ref: '#/components/schemas/PaymentMethodEnum'
+          - $ref: '#/components/schemas/DocumentRequestPaymentMethodEnum'
           readOnly: true
         payment_recipient:
           type: integer
@@ -4944,6 +5490,42 @@ components:
           type: string
           format: date-time
           readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+    PatchedDocumentServiceOffering:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        barangay:
+          type: integer
+          readOnly: true
+        document_type:
+          type: string
+          maxLength: 100
+        requirements:
+          type: array
+          items:
+            type: string
+            maxLength: 250
+          maxItems: 30
+        published_fee_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+          nullable: true
+        details:
+          type: string
+          maxLength: 2000
+        is_active:
+          type: boolean
         created_at:
           type: string
           format: date-time
@@ -5109,7 +5691,7 @@ components:
         contact_verified:
           type: boolean
         reason:
-          $ref: '#/components/schemas/ReasonEnum'
+          $ref: '#/components/schemas/ReasonF33Enum'
     PatchedQueueTicket:
       type: object
       properties:
@@ -5129,6 +5711,13 @@ components:
         service_type:
           type: string
           maxLength: 100
+        document_request_id:
+          type: integer
+          nullable: true
+        document_request_type:
+          type: string
+          readOnly: true
+          nullable: true
         priority_status:
           $ref: '#/components/schemas/PriorityStatusEnum'
         is_priority:
@@ -5181,12 +5770,32 @@ components:
           type: string
           nullable: true
           maxLength: 100
+        address_details:
+          type: string
+          maxLength: 255
         is_verified:
           type: boolean
           readOnly: true
         guardian:
           type: integer
+          readOnly: true
           nullable: true
+        guardian_name:
+          type: string
+          readOnly: true
+          nullable: true
+        guardian_username:
+          type: string
+          readOnly: true
+          nullable: true
+        guardian_relationship:
+          allOf:
+          - $ref: '#/components/schemas/GuardianRelationshipEnum'
+          readOnly: true
+        guardianship_evidence:
+          type: string
+          format: uri
+          readOnly: true
         philsys_id_number:
           type: string
           nullable: true
@@ -5227,6 +5836,17 @@ components:
         remove_utility_billing_photo:
           type: boolean
           writeOnly: true
+          default: false
+    PatchedResidentNotificationRead:
+      type: object
+      properties:
+        is_read:
+          type: boolean
+    PatchedResidentVerificationReview:
+      type: object
+      properties:
+        guardian_review_confirmed:
+          type: boolean
           default: false
     PatchedStaffUserUpdate:
       type: object
@@ -5283,20 +5903,27 @@ components:
         push_alerts:
           type: boolean
           description: Receieve real-time FCM push notifications
-    PaymentMethodEnum:
+        profile_picture:
+          type: string
+          format: uri
+          nullable: true
+        remove_profile_picture:
+          type: boolean
+          writeOnly: true
+          default: false
+    PaymentChoice:
+      type: object
+      properties:
+        payment_method:
+          $ref: '#/components/schemas/PaymentChoicePaymentMethodEnum'
+        payment_recipient_id:
+          type: integer
+          minimum: 1
+    PaymentChoicePaymentMethodEnum:
       enum:
       - CASH
-      - GCASH
-      - MAYA
-      - BANK
-      - OTHER
       type: string
-      description: |-
-        * `CASH` - Cash
-        * `GCASH` - GCash
-        * `MAYA` - Maya
-        * `BANK` - Bank transfer
-        * `OTHER` - Other
+      description: '* `CASH` - CASH'
     PaymentRecipient:
       type: object
       properties:
@@ -5356,7 +5983,7 @@ components:
         is_active:
           type: boolean
         reason:
-          $ref: '#/components/schemas/ReasonEnum'
+          $ref: '#/components/schemas/ReasonF33Enum'
       required:
       - is_active
       - reason
@@ -5393,7 +6020,7 @@ components:
         contact_verified:
           type: boolean
         reason:
-          $ref: '#/components/schemas/ReasonEnum'
+          $ref: '#/components/schemas/ReasonF33Enum'
       required:
       - contact_verified
       - reason
@@ -5590,6 +6217,13 @@ components:
         service_type:
           type: string
           maxLength: 100
+        document_request_id:
+          type: integer
+          nullable: true
+        document_request_type:
+          type: string
+          readOnly: true
+          nullable: true
         priority_status:
           $ref: '#/components/schemas/PriorityStatusEnum'
         is_priority:
@@ -5615,6 +6249,7 @@ components:
           readOnly: true
       required:
       - created_at
+      - document_request_type
       - resident_name
       - service_type
       - status
@@ -5644,7 +6279,7 @@ components:
         * `SERVING` - Serving
         * `COMPLETED` - Completed
         * `CANCELLED` - Cancelled
-    ReasonEnum:
+    ReasonF33Enum:
       enum:
       - INCORRECT_CONTACT
       - LOCKED_OUT
@@ -5721,6 +6356,14 @@ components:
         contact_number:
           type: string
           writeOnly: true
+        purok:
+          type: string
+          writeOnly: true
+          maxLength: 100
+        address_details:
+          type: string
+          writeOnly: true
+          maxLength: 255
         barangay_id:
           type: integer
           minimum: 1
@@ -5728,6 +6371,15 @@ components:
         guardian_id:
           type: string
           writeOnly: true
+        guardian_relationship:
+          allOf:
+          - $ref: '#/components/schemas/GuardianRelationshipEnum'
+          writeOnly: true
+        guardianship_evidence:
+          type: string
+          format: uri
+          writeOnly: true
+          nullable: true
         philsys_id_number:
           type: string
           writeOnly: true
@@ -5766,6 +6418,7 @@ components:
       - password
       - privacy_consent
       - privacy_consent_version
+      - purok
       - username
     Resident:
       type: object
@@ -5797,12 +6450,32 @@ components:
           type: string
           nullable: true
           maxLength: 100
+        address_details:
+          type: string
+          maxLength: 255
         is_verified:
           type: boolean
           readOnly: true
         guardian:
           type: integer
+          readOnly: true
           nullable: true
+        guardian_name:
+          type: string
+          readOnly: true
+          nullable: true
+        guardian_username:
+          type: string
+          readOnly: true
+          nullable: true
+        guardian_relationship:
+          allOf:
+          - $ref: '#/components/schemas/GuardianRelationshipEnum'
+          readOnly: true
+        guardianship_evidence:
+          type: string
+          format: uri
+          readOnly: true
         philsys_id_number:
           type: string
           nullable: true
@@ -5848,6 +6521,124 @@ components:
       - birth_date
       - email
       - full_name
+      - guardian
+      - guardian_name
+      - guardian_relationship
+      - guardian_username
+      - guardianship_evidence
+      - id
+      - is_verified
+      - username
+    ResidentAdminReview:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        username:
+          type: string
+          readOnly: true
+          default: ''
+        email:
+          type: string
+          readOnly: true
+          default: ''
+        full_name:
+          type: string
+          maxLength: 255
+        birth_date:
+          type: string
+          format: date
+        voter_status:
+          type: boolean
+        contact_number:
+          type: string
+          nullable: true
+          maxLength: 20
+        purok:
+          type: string
+          nullable: true
+          maxLength: 100
+        address_details:
+          type: string
+          maxLength: 255
+        is_verified:
+          type: boolean
+          readOnly: true
+        guardian:
+          type: integer
+          readOnly: true
+          nullable: true
+        guardian_name:
+          type: string
+          readOnly: true
+          nullable: true
+        guardian_username:
+          type: string
+          readOnly: true
+          nullable: true
+        guardian_relationship:
+          allOf:
+          - $ref: '#/components/schemas/GuardianRelationshipEnum'
+          readOnly: true
+        guardianship_evidence:
+          type: string
+          format: uri
+          readOnly: true
+        philsys_id_number:
+          type: string
+          nullable: true
+          description: PhilSys National ID Card Number
+          maxLength: 50
+        philsys_id_photo:
+          type: string
+          format: uri
+          nullable: true
+        remove_philsys_id_photo:
+          type: boolean
+          writeOnly: true
+          default: false
+        secondary_id_type:
+          type: string
+          nullable: true
+          description: Optional secondary ID type (e.g. Passport, Driver's License,
+            UMID, Postal ID)
+          maxLength: 50
+        secondary_id_photo:
+          type: string
+          format: uri
+          nullable: true
+        remove_secondary_id_photo:
+          type: boolean
+          writeOnly: true
+          default: false
+        utility_billing_type:
+          type: string
+          nullable: true
+          description: Optional utility billing proof type (e.g. Electric/Meralco,
+            Water, Internet)
+          maxLength: 50
+        utility_billing_photo:
+          type: string
+          format: uri
+          nullable: true
+        remove_utility_billing_photo:
+          type: boolean
+          writeOnly: true
+          default: false
+        guardian_account_eligible:
+          type: string
+          readOnly: true
+      required:
+      - birth_date
+      - email
+      - full_name
+      - guardian
+      - guardian_account_eligible
+      - guardian_name
+      - guardian_relationship
+      - guardian_username
+      - guardianship_evidence
       - id
       - is_verified
       - username
@@ -5880,12 +6671,32 @@ components:
           type: string
           nullable: true
           maxLength: 100
+        address_details:
+          type: string
+          maxLength: 255
         is_verified:
           type: boolean
           readOnly: true
         guardian:
           type: integer
+          readOnly: true
           nullable: true
+        guardian_name:
+          type: string
+          readOnly: true
+          nullable: true
+        guardian_username:
+          type: string
+          readOnly: true
+          nullable: true
+        guardian_relationship:
+          allOf:
+          - $ref: '#/components/schemas/GuardianRelationshipEnum'
+          readOnly: true
+        guardianship_evidence:
+          type: string
+          format: uri
+          readOnly: true
         philsys_id_number:
           type: string
           nullable: true
@@ -5930,6 +6741,11 @@ components:
       required:
       - birth_date
       - full_name
+      - guardian
+      - guardian_name
+      - guardian_relationship
+      - guardian_username
+      - guardianship_evidence
       - id
       - is_verified
       - username
@@ -5987,8 +6803,93 @@ components:
     ResidentNotificationNotificationTypeEnum:
       enum:
       - queue
+      - document
       type: string
-      description: '* `queue` - Queue Alert'
+      description: |-
+        * `queue` - Queue Alert
+        * `document` - Document Request Update
+    ResidentNotificationRead:
+      type: object
+      properties:
+        is_read:
+          type: boolean
+    ResidentTransferCreate:
+      type: object
+      properties:
+        destination_barangay_id:
+          type: integer
+          writeOnly: true
+        reason:
+          type: string
+          maxLength: 500
+      required:
+      - destination_barangay_id
+      - reason
+    ResidentTransferRequest:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        resident_name:
+          type: string
+          readOnly: true
+        resident_username:
+          type: string
+          readOnly: true
+        source_barangay_name:
+          type: string
+          readOnly: true
+        destination_barangay_id:
+          type: integer
+          readOnly: true
+        destination_barangay_name:
+          type: string
+          readOnly: true
+        reason:
+          type: string
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/StatusBdeEnum'
+          readOnly: true
+        review_note:
+          type: string
+          readOnly: true
+        residency_confirmed:
+          type: boolean
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        reviewed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+      required:
+      - created_at
+      - destination_barangay_id
+      - destination_barangay_name
+      - id
+      - reason
+      - residency_confirmed
+      - resident_name
+      - resident_username
+      - review_note
+      - reviewed_at
+      - source_barangay_name
+      - status
+    ResidentTransferReview:
+      type: object
+      properties:
+        residency_confirmed:
+          type: boolean
+          default: false
+        review_note:
+          type: string
+          maxLength: 500
     RoleEnum:
       enum:
       - ADMIN
@@ -6202,6 +7103,14 @@ components:
         push_alerts:
           type: boolean
           description: Receieve real-time FCM push notifications
+        profile_picture:
+          type: string
+          format: uri
+          nullable: true
+        remove_profile_picture:
+          type: boolean
+          writeOnly: true
+          default: false
       required:
       - barangay
       - full_name

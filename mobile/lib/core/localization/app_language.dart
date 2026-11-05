@@ -304,6 +304,13 @@ const Map<String, String> _filipino = {
       'Hindi dapat lumampas sa 100 character ang purok o sona.',
   'Registered Voter in this Barangay': 'Botante sa Barangay na ito',
   'Residents under 18 must be registered under a verified parent or guardian.': 'Ang wala pang 18 taong gulang ay kailangang irehistro ng beripikadong magulang o tagapag-alaga.',
+  'Link a verified adult resident and upload supporting proof. A Barangay Admin will review it before approval.': 'I-ugnay ang isang beripikadong residenteng nasa hustong gulang at mag-upload ng dokumentong susuporta rito. Susuriin ito ng Barangay Admin bago aprubahan.',
+  'Relationship to the applicant': 'Ugnayan sa aplikante',
+  'Parent': 'Magulang',
+  'Court-appointed guardian': 'Tagapag-alagang itinalaga ng hukuman',
+  'Other authorized guardian': 'Iba pang awtorisadong tagapag-alaga',
+  'Upload guardianship supporting document': 'I-upload ang dokumentong sumusuporta sa pagiging tagapag-alaga',
+  'Examples: a birth certificate for a parent or an official guardianship document. This supports human review; the system does not determine legal guardianship.': 'Halimbawa: birth certificate para sa magulang o opisyal na dokumento ng guardianship. Susuriin ito ng tao; hindi ang system ang nagpapasya sa legal na guardianship.',
   "GUARDIAN'S REGISTERED ID (REQUIRED)":
       'ID NG TAGAPAG-ALAGA NA NAKAREHISTRO (KINAKAILANGAN)',
   'Select your birth date': 'Piliin ang petsa ng iyong kapanganakan.',

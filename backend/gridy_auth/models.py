@@ -238,6 +238,11 @@ class User(AbstractUser):
     )
         
 class Resident(models.Model):
+    class GuardianRelationship(models.TextChoices):
+        PARENT = "PARENT", "Parent"
+        COURT_APPOINTED = "COURT_APPOINTED", "Court-appointed guardian"
+        OTHER_AUTHORIZED = "OTHER_AUTHORIZED", "Other authorized guardian"
+
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     full_name = models.CharField(max_length=255)
     birth_date = models.DateField()
@@ -247,6 +252,26 @@ class Resident(models.Model):
     address_details = models.CharField(max_length=255, blank=True, default='')
     is_verified = models.BooleanField(default=False)
     guardian = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='dependents')
+    guardian_relationship = models.CharField(
+        max_length=24,
+        choices=GuardianRelationship.choices,
+        blank=True,
+        default="",
+    )
+    guardianship_evidence = models.ImageField(
+        upload_to="resident_guardianship/",
+        blank=True,
+        null=True,
+        help_text="Private supporting evidence reviewed by the resident's Barangay Admin.",
+    )
+    guardian_reviewed_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="reviewed_minor_guardianships",
+    )
+    guardian_reviewed_at = models.DateTimeField(null=True, blank=True)
     privacy_consent_version = models.CharField(
         max_length=64,
         null=True,
@@ -281,6 +306,79 @@ class RefreshSession(models.Model):
 
     def __str__(self):
         return f"Session for {self.user.username} (JTI: {self.refresh_token_jti[:8]})"
+
+
+class LoginEvent(models.Model):
+    """A successful sign-in record; it intentionally stores no token material."""
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="login_events",
+    )
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.CharField(max_length=512, blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ["-created_at", "-pk"]
+        indexes = [models.Index(fields=["user", "-created_at"])]
+
+
+class ResidentTransferRequest(models.Model):
+    class Status(models.TextChoices):
+        PENDING = "PENDING", "Pending review"
+        APPROVED = "APPROVED", "Approved"
+        REJECTED = "REJECTED", "Rejected"
+
+    resident = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="barangay_transfer_requests",
+    )
+    source_barangay = models.ForeignKey(
+        Barangay,
+        on_delete=models.PROTECT,
+        related_name="outgoing_resident_transfers",
+    )
+    destination_barangay = models.ForeignKey(
+        Barangay,
+        on_delete=models.PROTECT,
+        related_name="incoming_resident_transfers",
+    )
+    reason = models.CharField(max_length=500)
+    status = models.CharField(
+        max_length=12,
+        choices=Status.choices,
+        default=Status.PENDING,
+        db_index=True,
+    )
+    review_note = models.CharField(max_length=500, blank=True, default="")
+    residency_confirmed = models.BooleanField(default=False)
+    reviewed_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="reviewed_resident_transfers",
+    )
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at", "-pk"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["resident"],
+                condition=Q(status="PENDING"),
+                name="one_pending_resident_transfer",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["destination_barangay", "status", "created_at"]),
+            models.Index(fields=["resident", "created_at"]),
+        ]
 
 
 class PrivateMediaCleanup(models.Model):

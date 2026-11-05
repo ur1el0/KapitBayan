@@ -303,6 +303,9 @@ BLOCKED_PRODUCTION_LOGIN_USERNAMES = tuple(
     if username.strip()
 )
 
+# Keep successful sign-in history only for the approved 90-day review window.
+LOGIN_EVENT_RETENTION_DAYS = 90
+
 AUTHENTICATION_BACKENDS = (
     'gridy_auth.authentication.ProductionSafeModelBackend',
 )
@@ -405,7 +408,7 @@ SPECTACULAR_SETTINGS = {
     'DESCRIPTION': 'KapitBayan Barangay Information and Service Management System API',
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
-    'SERVE_PERMISSIOMNS': ['gridy_auth.permissions.IsBarangayOfficial'],
+    'SERVE_PERMISSIONS': ['gridy_auth.permissions.IsBarangayOfficial'],
 }
 
 # General-purpose cache. API throttles use the shared database table instead.

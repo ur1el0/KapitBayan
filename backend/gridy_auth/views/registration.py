@@ -20,7 +20,10 @@ class RegisterView(APIView):
         description=(
             "Resident registration requires at least one valid uploaded image: "
             "a PhilSys ID photo, a secondary ID photo, or a utility/residency "
-            "proof photo. A typed PhilSys ID number alone does not satisfy this "
+            "proof photo. Applicants under 18 must also provide a verified adult "
+            "guardian account, relationship, and supporting evidence for Barangay "
+            "Admin review. The review is a human check and does not automatically "
+            "determine legal guardianship. A typed PhilSys ID number alone does not satisfy this "
             "requirement. For historical administrative bulk ingestion without "
             "digital proof images, authorized barangay officials must use the "
             "RBI CSV import endpoint (/api/v1/auth/import-residents/)."

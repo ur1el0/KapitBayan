@@ -380,29 +380,93 @@ class _AdminResidentDetailsScreenState
   bool _isUpdating = false;
 
   Future<void> _verify() async {
+    var guardianReviewConfirmed = false;
     final approved = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Approve resident?'),
-        content: Text(
-          'This will verify ${widget.resident.fullName} and activate resident services.',
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          title: const Text('Approve resident?'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'This will verify ${widget.resident.fullName} and activate resident services.',
+                ),
+                if (widget.resident.isMinor) ...[
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Minor guardian review',
+                    style: TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                  const SizedBox(height: 6),
+                  Text('Guardian: ${widget.resident.guardianName ?? 'Not provided'}'),
+                  Text('Registered username: ${widget.resident.guardianUsername ?? 'Not provided'}'),
+                  Text(
+                    widget.resident.guardianAccountEligible == true
+                        ? 'Account status: Active, verified adult in this Barangay'
+                        : 'Account status: Not eligible; it must be active, verified, age 18 or older, and registered in this Barangay',
+                    style: TextStyle(
+                      color: widget.resident.guardianAccountEligible == true
+                          ? Colors.green.shade800
+                          : Colors.red.shade800,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  Text('Relationship: ${widget.resident.guardianRelationshipLabel}'),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Review the supporting document in the resident details first. Confirm that it supports the stated relationship under the Barangay’s review procedure. The system does not determine legal guardianship.',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                  CheckboxListTile(
+                    contentPadding: EdgeInsets.zero,
+                    value: guardianReviewConfirmed,
+                    title: const Text(
+                      'I reviewed the evidence and confirmed it supports the stated relationship under the Barangay’s review procedure.',
+                      style: TextStyle(fontSize: 13),
+                    ),
+                    onChanged: widget.resident.guardianId != null &&
+                            widget.resident.guardianAccountEligible == true &&
+                            widget.resident.guardianRelationship?.isNotEmpty == true &&
+                            widget.resident.guardianshipEvidence?.isNotEmpty == true
+                        ? (value) => setDialogState(
+                              () => guardianReviewConfirmed = value ?? false,
+                            )
+                        : null,
+                  ),
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: widget.resident.isMinor &&
+                      (widget.resident.guardianId == null ||
+                          widget.resident.guardianAccountEligible != true ||
+                          widget.resident.guardianRelationship?.isEmpty != false ||
+                          widget.resident.guardianshipEvidence?.isEmpty != false ||
+                          !guardianReviewConfirmed)
+                  ? null
+                  : () => Navigator.pop(dialogContext, true),
+              child: const Text('Approve'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Approve'),
-          ),
-        ],
       ),
     );
     if (approved != true || !mounted) return;
     setState(() => _isUpdating = true);
     try {
-      await widget.service.verifyResident(widget.resident.id);
+      await widget.service.verifyResident(
+        widget.resident.id,
+        guardianReviewConfirmed: guardianReviewConfirmed,
+      );
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
@@ -544,6 +608,12 @@ class _AdminResidentDetailsScreenState
   Widget build(BuildContext context) {
     final resident = widget.resident;
     final evidence = <({String title, String? path, String field})>[
+      if (resident.guardianId != null)
+        (
+          title: 'Guardian supporting document',
+          path: resident.guardianshipEvidence,
+          field: 'guardianship_evidence',
+        ),
       (
         title: 'PhilSys National ID',
         path: resident.philsysIdPhoto,
@@ -609,6 +679,17 @@ class _AdminResidentDetailsScreenState
                   _detail('Username', resident.username),
                   _detail('Email', resident.email),
                   _detail('Birth date', resident.birthDate),
+                  if (resident.guardianId != null) ...[
+                    _detail('Linked guardian', resident.guardianName),
+                    _detail('Guardian username', resident.guardianUsername),
+                    _detail(
+                      'Guardian account status',
+                      resident.guardianAccountEligible == true
+                          ? 'Active, verified adult in this Barangay'
+                          : 'Not currently eligible',
+                    ),
+                    _detail('Relationship', resident.guardianRelationshipLabel),
+                  ],
                   _detail('Contact number', resident.contactNumber),
                   _detail('Purok', resident.purok),
                   _detail('Address', resident.addressDetails),

@@ -252,3 +252,92 @@ class ResidentVerificationAPITests(IsolatedAuthAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         resident.refresh_from_db()
         self.assertFalse(resident.is_verified)
+
+    def test_minor_cannot_be_approved_without_guardian_review_attestation(self):
+        self.user.role = User.Role.ADMIN
+        self.user.barangay = self.barangay
+        self.user.save()
+        guardian_user = User.objects.create_user(
+            username="minor_review_guardian",
+            password=None,
+            role=User.Role.RESIDENT,
+            barangay=self.barangay,
+        )
+        guardian = Resident.objects.create(
+            user=guardian_user,
+            full_name="Minor Review Guardian",
+            birth_date="1980-01-01",
+            is_verified=True,
+        )
+        applicant_user = User.objects.create_user(
+            username="minor_pending_review",
+            password=None,
+            role=User.Role.RESIDENT,
+            barangay=self.barangay,
+        )
+        resident = Resident.objects.create(
+            user=applicant_user,
+            full_name="Minor Pending Review",
+            birth_date="2015-01-01",
+            guardian=guardian,
+            guardian_relationship=Resident.GuardianRelationship.PARENT,
+            guardianship_evidence="resident_guardianship/review-proof.png",
+        )
+        self.client.force_authenticate(user=self.user)
+
+        response = self.client.patch(
+            reverse("verify_resident", args=[resident.pk]),
+            {},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("guardian_review_confirmed", response.data)
+        resident.refresh_from_db()
+        self.assertFalse(resident.is_verified)
+        self.assertIsNone(resident.guardian_reviewed_by_id)
+        self.assertIsNone(resident.guardian_reviewed_at)
+
+    def test_minor_approval_records_the_reviewing_barangay_admin(self):
+        self.user.role = User.Role.ADMIN
+        self.user.barangay = self.barangay
+        self.user.save()
+        guardian_user = User.objects.create_user(
+            username="minor_approved_guardian",
+            password=None,
+            role=User.Role.RESIDENT,
+            barangay=self.barangay,
+        )
+        guardian = Resident.objects.create(
+            user=guardian_user,
+            full_name="Minor Approved Guardian",
+            birth_date="1980-01-01",
+            is_verified=True,
+        )
+        applicant_user = User.objects.create_user(
+            username="minor_approved_review",
+            password=None,
+            role=User.Role.RESIDENT,
+            barangay=self.barangay,
+        )
+        resident = Resident.objects.create(
+            user=applicant_user,
+            full_name="Minor Approved Review",
+            birth_date="2015-01-01",
+            guardian=guardian,
+            guardian_relationship=Resident.GuardianRelationship.PARENT,
+            guardianship_evidence="resident_guardianship/approved-proof.png",
+        )
+        self.client.force_authenticate(user=self.user)
+
+        response = self.client.patch(
+            reverse("verify_resident", args=[resident.pk]),
+            {"guardian_review_confirmed": True},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        resident.refresh_from_db()
+        self.assertTrue(resident.is_verified)
+        self.assertEqual(resident.guardian_reviewed_by, self.user)
+        self.assertIsNotNone(resident.guardian_reviewed_at)

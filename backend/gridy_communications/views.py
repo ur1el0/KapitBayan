@@ -26,6 +26,7 @@ from gridy_communications.serializers import (
     AdminNotificationSerializer,
     AdminNotificationReadSerializer,
     ResidentNotificationSerializer,
+    ResidentNotificationReadSerializer,
 )
 from gridy_communications.tasks import send_announcement_notification_task
 
@@ -318,14 +319,27 @@ class AdminNotificationViewSet(
         return Response({"count": self.get_queryset().filter(is_read=False).count()})
 
 
-class ResidentNotificationViewSet(viewsets.ReadOnlyModelViewSet):
-    """Expose only the authenticated user's persisted resident alerts."""
+class ResidentNotificationViewSet(
+    mixins.ListModelMixin,
+    mixins.UpdateModelMixin,
+    viewsets.GenericViewSet,
+):
+    """Expose a resident's alerts and allow them to mark only their own as read."""
 
     serializer_class = ResidentNotificationSerializer
     permission_classes = [permissions.IsAuthenticated]
     pagination_class = None
+    http_method_names = ["get", "patch", "head", "options"]
+
+    def get_serializer_class(self):
+        if self.action in {"update", "partial_update"}:
+            return ResidentNotificationReadSerializer
+        return ResidentNotificationSerializer
 
     def get_queryset(self):
-        return ResidentNotification.objects.filter(
+        notifications = ResidentNotification.objects.filter(
             user=self.request.user,
-        ).order_by('-created_at', '-id')[:100]
+        ).order_by('-created_at', '-id')
+        # Bound list payloads, but leave detail lookups unsliced so the
+        # resident can mark any returned notification as read.
+        return notifications[:100] if self.action == "list" else notifications

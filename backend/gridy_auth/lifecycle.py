@@ -19,6 +19,7 @@ RESIDENT_PRIVATE_MEDIA_FIELDS = (
     "philsys_id_photo",
     "secondary_id_photo",
     "utility_billing_photo",
+    "guardianship_evidence",
 )
 PRIVATE_MEDIA_STORAGE_MODELS = {
     "gridy_auth.Resident": RESIDENT_PRIVATE_MEDIA_FIELDS,

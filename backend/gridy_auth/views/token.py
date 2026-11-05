@@ -11,7 +11,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from gridy_audit.services import get_client_ip
 from gridy_auth.authentication import is_production_test_account
-from gridy_auth.models import RefreshSession, User
+from gridy_auth.models import LoginEvent, RefreshSession, User
 from gridy_auth.serializers import CustomTokenObtainPairSerializer
 
 
@@ -80,6 +80,11 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                 ip_address=ip_address,
                 user_agent=user_agent,
                 expires_at=expires_at
+            )
+            LoginEvent.objects.create(
+                user=user,
+                ip_address=ip_address,
+                user_agent=user_agent[:512],
             )
 
             # Set refresh token in HttpOnly SameSite secure cookie

@@ -12,7 +12,7 @@ import '../services/document_service.dart';
 import 'document_payment_section.dart';
 import 'document_request_summary.dart';
 
-/// Modal dialog showing complete document request lifecycle details and PDF download
+/// Modal dialog showing the request lifecycle and released O.R. number PDF.
 class DocumentDetailsDialog extends StatefulWidget {
   final DocumentRequestModel request;
   final DocumentService? documentService;
@@ -282,7 +282,7 @@ class _DocumentDetailsDialogState extends State<DocumentDetailsDialog> {
       }
 
       final directory = await getApplicationDocumentsDirectory();
-      final fileName = 'kapitbayan_clearance_${widget.request.id}.pdf';
+      final fileName = 'kapitbayan_or_number_${widget.request.id}.pdf';
       final file = File('${directory.path}/$fileName');
 
       await file.writeAsBytes(pdfBytes, flush: true);
@@ -302,7 +302,7 @@ class _DocumentDetailsDialogState extends State<DocumentDetailsDialog> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('PDF saved and opened: $fileName'),
+          content: Text('O.R. number PDF saved and opened: $fileName'),
           backgroundColor: const Color(0xFF10B981),
           behavior: SnackBarBehavior.floating,
         ),
@@ -314,7 +314,7 @@ class _DocumentDetailsDialogState extends State<DocumentDetailsDialog> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Could not download or open the PDF: $message'),
+          content: Text('Could not download or open the O.R. number PDF: $message'),
           backgroundColor: const Color(0xFFEF4444),
           behavior: SnackBarBehavior.floating,
         ),
@@ -329,7 +329,7 @@ class _DocumentDetailsDialogState extends State<DocumentDetailsDialog> {
   @override
   Widget build(BuildContext context) {
     final req = widget.request;
-    final canDownload = req.isReadyForPickup || req.isReleased;
+    final canDownload = req.isReleased && (req.orNumber?.trim().isNotEmpty ?? false);
     final canChoosePayment =
         req.isReadyForPickup &&
         (req.feeAmount ?? 0) > 0 &&
@@ -535,7 +535,7 @@ class _DocumentDetailsDialogState extends State<DocumentDetailsDialog> {
                 const SizedBox(height: 10),
               ],
 
-              // Action Button if PDF can be generated or Close
+              // The downloadable PDF contains only the official receipt number.
               if (canDownload) ...[
                 SizedBox(
                   width: double.infinity,
@@ -560,8 +560,8 @@ class _DocumentDetailsDialogState extends State<DocumentDetailsDialog> {
                           ),
                     label: Text(
                       _isDownloading
-                          ? 'Generating Certificate...'
-                          : 'Download Official PDF',
+                          ? 'Preparing O.R. number...'
+                          : 'Download O.R. Number',
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
