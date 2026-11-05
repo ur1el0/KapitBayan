@@ -130,6 +130,13 @@ jobs:
               "gridy_auth.0020_dilg_reviewed_admin_registration",
               "gridy_auth.0021_barangayapplication_email_verification_sent_at_and_more",
               "gridy_auth.0022_barangay_operator_role",
+              "gridy_auth.0023_user_profile_picture",
+              "gridy_auth.0024_resident_address_details",
+              "gridy_auth.0025_private_media_cleanup_profile_picture",
+              "gridy_auth.0026_loginevent_residenttransferrequest",
+              "gridy_auth.0027_resident_guardianship_review",
+              "gridy_communications.0012_alter_adminnotification_notification_type",
+              "gridy_communications.0013_alter_residentnotification_notification_type",
           }
 
           if os.environ.get("CONFIRM_PRODUCTION", "").lower() != "true":
@@ -142,10 +149,10 @@ jobs:
               raise SystemExit(1)
           unexpected = [migration for migration in actual if migration not in allowed]
           if unexpected:
-              print("This recovery workflow only permits the reviewed auth migration chain.", file=sys.stderr)
+              print("This workflow only permits migrations in its reviewed allowlist.", file=sys.stderr)
               print("Unexpected pending migrations: " + ", ".join(unexpected), file=sys.stderr)
               raise SystemExit(1)
-          print("Confirmed migration plan matches the approved auth migration chain.")
+          print("Confirmed migration plan matches the reviewed migration allowlist.")
           PY
 
       - name: Apply the confirmed migrations
