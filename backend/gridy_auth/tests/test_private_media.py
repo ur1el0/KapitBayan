@@ -26,6 +26,7 @@ class ResidentPrivateMediaAPITests(IsolatedAuthAPITestCase):
             full_name="Private Media Resident",
             birth_date="1990-01-01",
             philsys_id_photo="resident_ids/private-test.png",
+            guardianship_evidence="resident_guardianship/private-test.png",
         )
         image_data = BytesIO()
         Image.new("RGB", (1, 1)).save(image_data, format="PNG")
@@ -109,6 +110,28 @@ class ResidentPrivateMediaAPITests(IsolatedAuthAPITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+    def test_only_same_barangay_admin_can_access_guardianship_evidence(self):
+        response = self.get_media_as(
+            self.admin,
+            resident=self.resident,
+            field_name="guardianship_evidence",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        response = self.get_media_as(
+            self.resident_user,
+            resident=self.resident,
+            field_name="guardianship_evidence",
+        )
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+        response = self.get_media_as(
+            self.foreign_admin,
+            resident=self.resident,
+            field_name="guardianship_evidence",
+        )
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
     def test_resident_cannot_access_another_residents_private_media(self):
         response = self.get_media_as(
             self.other_resident_user,
@@ -169,6 +192,10 @@ class ResidentPrivateMediaAPITests(IsolatedAuthAPITestCase):
         self.assertEqual(
             data["philsys_id_photo"],
             self.media_url().removeprefix("/api/v1/"),
+        )
+        self.assertEqual(
+            data["guardianship_evidence"],
+            self.media_url(field_name="guardianship_evidence").removeprefix("/api/v1/"),
         )
 
     def test_legacy_media_route_never_serves_resident_evidence(self):

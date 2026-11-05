@@ -36,3 +36,4 @@ from .onboarding import (
 )
 from .staff import StaffManagementViewSet
 from .platform_account_support import PlatformAccountSupportViewSet
+from .post_defense import LoginEventListView, ResidentTransferViewSet

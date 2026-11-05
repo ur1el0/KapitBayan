@@ -23,6 +23,8 @@ from .views import (
     PlatformBarangayApplicationViewSet,
     StaffManagementViewSet,
     PlatformAccountSupportViewSet,
+    LoginEventListView,
+    ResidentTransferViewSet,
 )
 from .views.resident_media import ResidentPrivateMediaView
 
@@ -30,6 +32,7 @@ router = DefaultRouter()
 router.register(r'resident', ResidentViewSet, basename='resident')
 router.register(r'barangay', BarangayViewSet, basename='barangay')
 router.register(r"sessions", SessionViewSet, basename="session")
+router.register(r"resident-transfers", ResidentTransferViewSet, basename="resident-transfer")
 router.register(r"staff", StaffManagementViewSet, basename="staff")
 router.register(r"platform/accounts", PlatformAccountSupportViewSet, basename="platform-account-support")
 router.register(
@@ -63,6 +66,7 @@ urlpatterns = [
         name='platform-barangay-application-proof',
     ),
     path('login/', CustomTokenObtainPairView.as_view(), name='auth_login'),
+    path('login-events/', LoginEventListView.as_view(), name='auth-login-events'),
     path('token/refresh/', CustomTokenRefreshView.as_view(), name='auth_token_refresh'),
     path('logout/', LogoutView.as_view(), name='auth_logout'),
     path('me/', UserProfileView.as_view(), name='auth_me'),

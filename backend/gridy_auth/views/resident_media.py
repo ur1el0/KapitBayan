@@ -26,6 +26,7 @@ class ResidentPrivateMediaView(APIView):
         "philsys_id_photo",
         "secondary_id_photo",
         "utility_billing_photo",
+        "guardianship_evidence",
     }
 
     def get(self, request, resident_id, field_name):
@@ -47,7 +48,16 @@ class ResidentPrivateMediaView(APIView):
             and requester.barangay_id is not None
             and requester.barangay_id == resident.user.barangay_id
         )
-        if not (is_owner or is_same_barangay_official):
+        # Guardianship documents are available only to the assigned Barangay Admin
+        # reviewing the application, never from the applicant's own account.
+        allowed_guardianship_review = (
+            field_name == "guardianship_evidence" and is_same_barangay_official
+        )
+        if field_name == "guardianship_evidence":
+            allowed = allowed_guardianship_review
+        else:
+            allowed = is_owner or is_same_barangay_official
+        if not allowed:
             raise Http404("Media not found.")
 
         media_file = getattr(resident, field_name)

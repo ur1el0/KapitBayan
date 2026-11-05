@@ -13,7 +13,7 @@ from rest_framework_simplejwt.token_blacklist.models import (
 )
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from gridy_auth.models import Barangay, RefreshSession, Resident, User
+from gridy_auth.models import Barangay, LoginEvent, RefreshSession, Resident, User
 from .base import IsolatedAuthAPITestCase
 
 
@@ -44,6 +44,7 @@ class AuthAPITests(IsolatedAuthAPITestCase):
         self.assertTrue(cookie['httponly'])
         self.assertEqual(cookie['samesite'], 'Strict')
         self.assertEqual(cookie['path'], '/api/v1/auth/')
+        self.assertTrue(LoginEvent.objects.filter(user=self.user).exists())
 
     def test_barangay_operator_can_login_and_access_only_onboarding_and_account_support(self):
         reviewer = User.objects.create_user(

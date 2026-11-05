@@ -6,6 +6,7 @@ from datetime import datetime
 from django.db import transaction
 from django.db.transaction import atomic as import_atomic
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from rest_framework import status, permissions, viewsets
 from rest_framework.views import APIView
 from rest_framework.generics import ListAPIView
@@ -14,8 +15,10 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from drf_spectacular.utils import extend_schema, OpenApiTypes
 
 from gridy_auth.models import User, Resident
+from gridy_auth.guardianship import guardian_account_is_eligible
 from gridy_auth.serializers import (
     ResidentAdminUpdateSerializer,
+    ResidentAdminReviewSerializer,
     ResidentSerializer,
 )
 from gridy_auth.permissions import IsBarangayOfficial
@@ -46,6 +49,10 @@ class ResidentRejectionSerializer(serializers.Serializer):
         allow_blank=False,
         trim_whitespace=True,
     )
+
+
+class ResidentVerificationReviewSerializer(serializers.Serializer):
+    guardian_review_confirmed = serializers.BooleanField(required=False, default=False)
 
 @extend_schema(
     summary="Bulk Import Residents from CSV",
@@ -221,17 +228,21 @@ class ResidentImportView(APIView):
 def _get_barangay_scoped_resident_or_404(user, pk, *, pending_only=False):
     if user.barangay_id is None:
         raise PermissionDenied("Your account is not assigned to a barangay.")
-    residents = Resident.objects.select_related("user").filter(
+    residents = Resident.objects.select_related(
+        "user", "guardian", "guardian__user"
+    ).filter(
         user__barangay_id=user.barangay_id
     )
     if pending_only:
-        residents = residents.filter(is_verified=False).select_for_update()
+        # The guardian joins above are nullable; PostgreSQL cannot lock the
+        # nullable side of an outer join. Lock only the resident row here.
+        residents = residents.filter(is_verified=False).select_for_update(of=("self",))
 
     return get_object_or_404(residents, pk=pk)
 
 class PendingResidentsView(ListAPIView):
     permission_classes = [permissions.IsAuthenticated, IsBarangayOfficial]
-    serializer_class = ResidentSerializer
+    serializer_class = ResidentAdminReviewSerializer
 
     def get_queryset(self):
         user = self.request.user
@@ -240,7 +251,7 @@ class PendingResidentsView(ListAPIView):
                 is_verified=False,
                 user__barangay_id=user.barangay_id,
             )
-            .select_related("user")
+            .select_related("user", "guardian", "guardian__user")
             .order_by("-user__date_joined", "-pk")
         )
 
@@ -248,14 +259,69 @@ class PendingResidentsView(ListAPIView):
 class VerifyResidentView(APIView):
     permission_classes = [permissions.IsAuthenticated, IsBarangayOfficial]
 
-    @extend_schema(summary="Verify a resident account", responses={200: ResidentSerializer, 404: OpenApiTypes.OBJECT})
+    @extend_schema(
+        summary="Verify a resident account",
+        request=ResidentVerificationReviewSerializer,
+        responses={
+            200: ResidentAdminReviewSerializer,
+            404: OpenApiTypes.OBJECT,
+        },
+    )
     def patch(self, request, pk):
+        review_serializer = ResidentVerificationReviewSerializer(data=request.data)
+        review_serializer.is_valid(raise_exception=True)
         with transaction.atomic():
             resident = _get_barangay_scoped_resident_or_404(
                 request.user,
                 pk,
                 pending_only=True,
             )
+            # Lock and reload both linked records so account deactivation,
+            # verification changes, or a Barangay move cannot race this approval.
+            guardian = None
+            if resident.guardian_id:
+                guardian = Resident.objects.select_for_update().filter(
+                    pk=resident.guardian_id
+                ).first()
+                if guardian is not None:
+                    guardian_user = User.objects.select_for_update().filter(
+                        pk=guardian.user_id
+                    ).first()
+                    if guardian_user is not None:
+                        guardian.user = guardian_user
+                resident.guardian = guardian
+
+            today = timezone.localdate()
+            age = today.year - resident.birth_date.year - (
+                (today.month, today.day) < (resident.birth_date.month, resident.birth_date.day)
+            )
+            if age < 18:
+                if not guardian_account_is_eligible(
+                    guardian,
+                    barangay_id=resident.user.barangay_id,
+                    today=today,
+                ):
+                    raise serializers.ValidationError({
+                        "guardian": (
+                            "The linked guardian account must be active, verified, at least 18, "
+                            "and registered in this Barangay before approving the minor."
+                        )
+                    })
+                if not resident.guardian_relationship or not resident.guardianship_evidence:
+                    raise serializers.ValidationError({
+                        "guardian_review_confirmed": (
+                            "Guardian relationship evidence is missing. Ask the applicant to submit it before approval."
+                        )
+                    })
+                if not review_serializer.validated_data["guardian_review_confirmed"]:
+                    raise serializers.ValidationError({
+                        "guardian_review_confirmed": (
+                            "Review the submitted evidence and confirm that it supports the stated guardian relationship under the Barangay's review procedure before approval."
+                        )
+                    })
+                resident.guardian_reviewed_by = request.user
+                resident.guardian_reviewed_at = timezone.now()
+                resident.save(update_fields=["guardian_reviewed_by", "guardian_reviewed_at"])
             resident.is_verified = True
             resident.save(update_fields=["is_verified"])
 
@@ -264,12 +330,16 @@ class VerifyResidentView(APIView):
                 action_type=AuditLog.ActionType.USER_ACTION,
                 description=(
                     f"Verified resident account for {resident.full_name} "
-                    f"(ID: {resident.id})."
+                    f"(ID: {resident.id})"
+                    + (" after recording the guardian evidence review." if age < 18 else ".")
                 ),
                 request=request,
             )
 
-        return Response(ResidentSerializer(resident).data, status=status.HTTP_200_OK)
+        return Response(
+            ResidentAdminReviewSerializer(resident).data,
+            status=status.HTTP_200_OK,
+        )
 
 class RejectResidentView(APIView):
     permission_classes = [permissions.IsAuthenticated, IsBarangayOfficial]
@@ -314,12 +384,12 @@ class ResidentViewSet(viewsets.ModelViewSet):
     """Directory endpoint for verified residents. Supports list, retrieve, update, and delete."""
     http_method_names = ["get", "put", "patch", "delete", "head", "options"]
     permission_classes = [permissions.IsAuthenticated, IsBarangayOfficial]
-    serializer_class = ResidentSerializer
+    serializer_class = ResidentAdminReviewSerializer
 
     def get_serializer_class(self):
         if self.action in ("update", "partial_update"):
             return ResidentAdminUpdateSerializer
-        return ResidentSerializer
+        return ResidentAdminReviewSerializer
 
     def perform_update(self, serializer):
         email_update = "email" in serializer.validated_data.get("user", {})
@@ -355,4 +425,7 @@ class ResidentViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        return Resident.objects.filter(is_verified=True, user__barangay=user.barangay).select_related('user').order_by('full_name')
+        return Resident.objects.filter(
+            is_verified=True,
+            user__barangay=user.barangay,
+        ).select_related("user", "guardian", "guardian__user").order_by("full_name")

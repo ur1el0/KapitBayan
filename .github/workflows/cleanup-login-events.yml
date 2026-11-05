@@ -1,0 +1,84 @@
+name: Clean up expired login history
+
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cleanup-login-events
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+      # This job only runs a database cleanup management command; it never
+      # serves requests. DEBUG avoids requiring media/email credentials here.
+      DEBUG: "True"
+      SECRET_KEY: maintenance-only-not-a-production-signing-key
+
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install backend dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      - name: Validate the production database secret
+        run: |
+          python - <<'PY'
+          import os
+          import sys
+
+          if not os.environ.get("DATABASE_URL", "").strip():
+              print("PRODUCTION_DATABASE_URL is not configured in the production environment.", file=sys.stderr)
+              raise SystemExit(1)
+          PY
+
+      - name: Check login-event migration state
+        id: schema
+        run: |
+          python - <<'PY'
+          import os
+          os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
+
+          import django
+          django.setup()
+
+          from django.db import connection
+          from django.db.migrations.recorder import MigrationRecorder
+
+          if connection.vendor != "postgresql":
+              raise SystemExit("PRODUCTION_DATABASE_URL must point to PostgreSQL.")
+
+          applied = MigrationRecorder(connection).applied_migrations()
+          ready = ("gridy_auth", "0026_loginevent_residenttransferrequest") in applied
+          if not ready:
+              print("Login-event migration is not applied; cleanup is skipped until it is.")
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write(f"ready={'true' if ready else 'false'}\n")
+          PY
+
+      - name: Delete expired login-history records
+        if: steps.schema.outputs.ready == 'true'
+        run: python manage.py cleanup_login_events
