@@ -7,6 +7,7 @@ import { useLanguage } from '../../context/language-context';
 import { LanguageSwitcher } from '../../components/language/LanguageSwitcher';
 import { TextField } from '../../components/ui/TextField';
 import { Button } from '../../components/ui/Button';
+import { FileUploadZone } from '../../components/ui/FileUploadZone';
 import {
     RegisterHeroBanner,
     ResidentVerificationUploads,
@@ -29,6 +30,8 @@ export const Register: React.FC = () => {
     const [purok, setPurok] = useState('');
     const [addressDetails, setAddressDetails] = useState('');
     const [guardianId, setGuardianId] = useState('');
+    const [guardianRelationship, setGuardianRelationship] = useState('');
+    const [guardianshipEvidence, setGuardianshipEvidence] = useState<File | null>(null);
 
     // Verification proofs state
     const [isVerificationExpanded, setIsVerificationExpanded] = useState(false);
@@ -85,17 +88,21 @@ export const Register: React.FC = () => {
     }, [fetchBarangays]);
 
     // Dynamically calculate if applicant is under 18
+    const today = new Date();
+    const maxBirthDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
     const isMinor = React.useMemo(() => {
         if (!birthDate) return false;
-        const birth = new Date(birthDate);
-        const today = new Date();
-        let age = today.getFullYear() - birth.getFullYear();
-        const m = today.getMonth() - birth.getMonth();
-        if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
+        const [birthYear, birthMonth, birthDay] = birthDate.split('-').map(Number);
+        if (!birthYear || !birthMonth || !birthDay) return false;
+        const [todayYear, todayMonth, todayDay] = maxBirthDate.split('-').map(Number);
+        let age = todayYear - birthYear;
+        const monthDifference = todayMonth - birthMonth;
+        if (monthDifference < 0 || (monthDifference === 0 && todayDay < birthDay)) {
             age--;
         }
         return age < 18;
-    }, [birthDate]);
+    }, [birthDate, maxBirthDate]);
 
     const handleRegister = async (e: React.SubmitEvent<HTMLElement>) => {
         e.preventDefault();
@@ -109,6 +116,11 @@ export const Register: React.FC = () => {
 
         if (!purok.trim()) {
             setError(t('Please enter your Purok or Zone.'));
+            return;
+        }
+
+        if (isMinor && (!guardianId.trim() || !guardianRelationship || !guardianshipEvidence)) {
+            setError(t('A guardian account, relationship, and supporting proof are required for applicants under 18.'));
             return;
         }
 
@@ -148,6 +160,12 @@ export const Register: React.FC = () => {
             }
             if (guardianId.trim()) {
                 formData.append('guardian_id', guardianId.trim());
+            }
+            if (isMinor && guardianRelationship) {
+                formData.append('guardian_relationship', guardianRelationship);
+            }
+            if (isMinor && guardianshipEvidence) {
+                formData.append('guardianship_evidence', guardianshipEvidence);
             }
             if (barangayId.trim()) {
                 const parsedId = parseInt(barangayId.trim(), 10);
@@ -214,6 +232,10 @@ export const Register: React.FC = () => {
                     setError(Array.isArray(data.contact_number) ? data.contact_number[0] : data.contact_number);
                 } else if (data.guardian_id) {
                     setError(Array.isArray(data.guardian_id) ? data.guardian_id[0] : data.guardian_id);
+                } else if (data.guardian_relationship) {
+                    setError(Array.isArray(data.guardian_relationship) ? data.guardian_relationship[0] : data.guardian_relationship);
+                } else if (data.guardianship_evidence) {
+                    setError(Array.isArray(data.guardianship_evidence) ? data.guardianship_evidence[0] : data.guardianship_evidence);
                 } else {
                     const firstKey = Object.keys(data)[0];
                     setError(Array.isArray(data[firstKey]) ? data[firstKey][0] : String(data[firstKey]));
@@ -312,6 +334,7 @@ export const Register: React.FC = () => {
                                 label={t('DATE OF BIRTH')}
                                 type="date"
                                 required
+                                max={maxBirthDate}
                                 value={birthDate}
                                 onChange={(e) => setBirthDate(e.target.value)}
                             />
@@ -345,7 +368,7 @@ export const Register: React.FC = () => {
                                         <span>{t('Parent / Legal Guardian Verification Required')}</span>
                                     </div>
                                     <p className="text-[11px] text-amber-800 leading-relaxed">
-                                        {t("Applicants under 18 must link their registration to an already registered parent or legal guardian's account.")}
+                                        {t("Applicants under 18 must link a verified adult resident and submit supporting evidence. A Barangay Admin will review it before approving the account.")}
                                     </p>
                                     <TextField
                                         label={t("GUARDIAN'S REGISTERED USERNAME *")}
@@ -355,6 +378,31 @@ export const Register: React.FC = () => {
                                         onChange={(e) => setGuardianId(e.target.value)}
                                         placeholder="e.g. resident_dupay"
                                     />
+                                    <div>
+                                        <label htmlFor="guardian-relationship" className="mb-1 block text-xs font-semibold text-amber-950">
+                                            {t('Relationship to the applicant')}
+                                        </label>
+                                        <select
+                                            id="guardian-relationship"
+                                            required
+                                            value={guardianRelationship}
+                                            onChange={(event) => setGuardianRelationship(event.target.value)}
+                                            className="min-h-11 w-full rounded-lg border border-amber-300 bg-white px-3 text-sm text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-700/30"
+                                        >
+                                            <option value="">{t('Select a relationship')}</option>
+                                            <option value="PARENT">{t('Parent')}</option>
+                                            <option value="COURT_APPOINTED">{t('Court-appointed guardian')}</option>
+                                            <option value="OTHER_AUTHORIZED">{t('Other authorized guardian')}</option>
+                                        </select>
+                                    </div>
+                                    <FileUploadZone
+                                        label={t('UPLOAD GUARDIANSHIP SUPPORTING DOCUMENT')}
+                                        file={guardianshipEvidence}
+                                        onFileChange={setGuardianshipEvidence}
+                                    />
+                                    <p className="text-[11px] text-amber-800 leading-relaxed">
+                                        {t('Examples include a birth certificate for a parent or an official guardianship document. This upload supports human review; the system does not determine legal guardianship.')}
+                                    </p>
                                 </div>
                             )}
 

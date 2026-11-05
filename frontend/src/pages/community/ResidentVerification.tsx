@@ -8,7 +8,8 @@ import {
     type Resident,
     VerificationTable,
     VerificationDossierModal,
-    RejectionConfirmationModal
+    RejectionConfirmationModal,
+    isMinorResident,
 } from "../../components/residents";
 
 type ResidentVerificationProps = {
@@ -88,9 +89,19 @@ export default function ResidentVerification({ onManualRefreshCount }: ResidentV
         };
     }, [fetchPendingResidents]);
 
-    const handleApprove = async (id: number) => {
+    const handleApprove = async (id: number, guardianReviewConfirmed = false) => {
+        const resident = pendingResidents.find((item) => item.id === id);
+        if (resident && isMinorResident(resident.birth_date) && !guardianReviewConfirmed) {
+            toast.error('Review the guardian evidence before approving this registration.');
+            return;
+        }
         try {
-            await axiosPrivate.patch(`auth/verify-resident/${id}/`);
+            const verificationUrl = `auth/verify-resident/${id}/`;
+            if (guardianReviewConfirmed) {
+                await axiosPrivate.patch(verificationUrl, { guardian_review_confirmed: true });
+            } else {
+                await axiosPrivate.patch(verificationUrl);
+            }
             setPendingResidents((prev) => prev.filter((r) => r.id !== id));
             if (residentToInspect?.id === id) {
                 setResidentToInspect(null);
@@ -98,7 +109,14 @@ export default function ResidentVerification({ onManualRefreshCount }: ResidentV
             toast.success('Resident successfully verified.');
         } catch (error) {
             console.error("Failed to verify resident", error);
-            toast.error('Error verifying resident.');
+            const responseData = (error as { response?: { data?: Record<string, unknown> } })
+                .response?.data;
+            const guardianError = responseData?.guardian;
+            toast.error(
+                typeof guardianError === 'string'
+                    ? guardianError
+                    : 'Error verifying resident.',
+            );
         }
     };
 

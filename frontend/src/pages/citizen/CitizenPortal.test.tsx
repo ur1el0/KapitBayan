@@ -94,7 +94,8 @@ describe('Resident Portal Components', () => {
                 id: 101,
                 document_type: 'Barangay Clearance',
                 purpose: 'Local Employment Application',
-                status: 'READY_FOR_PICKUP',
+                status: 'RELEASED',
+                or_number: 'OR-2026-0101',
                 admin_notes: 'Ready at Counter 2',
                 created_at: '2026-09-06T10:00:00Z',
             },
@@ -116,7 +117,7 @@ describe('Resident Portal Components', () => {
             expect(screen.getByText('Barangay Clearance')).toBeInTheDocument();
             expect(screen.getByText('Local Employment Application')).toBeInTheDocument();
             expect(screen.getByText('Ready / Released')).toBeInTheDocument();
-            expect(screen.getByRole('button', { name: /download pdf/i })).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: /download o\.r\. number/i })).toBeInTheDocument();
         });
     });
     it('renders cancel button for pending clearance and cancels upon confirmation', async () => {

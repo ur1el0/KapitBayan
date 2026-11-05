@@ -1,15 +1,15 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
     X, ShieldCheck, IdCard, Receipt, FileText, ExternalLink
 } from 'lucide-react';
-import { formatPurok, type Resident } from './types';
+import { formatPurok, guardianRelationshipLabel, isMinorResident, type Resident } from './types';
 import { usePrivateMediaUrl } from '../../hooks/usePrivateMediaUrl';
 import { useModalFocus } from '../../hooks/useModalFocus';
 
 interface VerificationDossierModalProps {
     resident: Resident;
     onClose: () => void;
-    onApprove: (id: number) => void;
+    onApprove: (id: number, guardianReviewConfirmed?: boolean) => void;
     onReject: (resident: Resident) => void;
 }
 
@@ -22,6 +22,9 @@ export const VerificationDossierModal: React.FC<VerificationDossierModalProps> =
     const philsysMedia = usePrivateMediaUrl(resident.philsys_id_photo);
     const billingMedia = usePrivateMediaUrl(resident.utility_billing_photo);
     const secondaryIdMedia = usePrivateMediaUrl(resident.secondary_id_photo);
+    const guardianMedia = usePrivateMediaUrl(resident.guardianship_evidence);
+    const [guardianReviewConfirmed, setGuardianReviewConfirmed] = useState(false);
+    const isMinor = isMinorResident(resident.birth_date);
     const dialogRef = useModalFocus<HTMLDivElement>(true, onClose);
 
     return (
@@ -79,6 +82,54 @@ export const VerificationDossierModal: React.FC<VerificationDossierModalProps> =
                             <span className="font-semibold text-slate-700 mt-0.5 block break-words">{resident.address_details || 'Not provided'}</span>
                         </div>
                     </div>
+
+                    {isMinor && (
+                        <section aria-labelledby="guardian-review-title" className="space-y-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
+                            <div>
+                                <h4 id="guardian-review-title" className="text-sm font-bold text-amber-950">Parent / guardian review</h4>
+                                <p className="mt-1 text-xs leading-relaxed text-amber-900">
+                                    Review the linked adult and the supporting document. This is a Barangay Admin review; the system does not determine legal guardianship.
+                                </p>
+                            </div>
+                            <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-3">
+                                <div><span className="block text-xs text-amber-800">Guardian</span><strong>{resident.guardian_name || 'Not provided'}</strong></div>
+                                <div><span className="block text-xs text-amber-800">Registered username</span><strong>{resident.guardian_username || 'Not provided'}</strong></div>
+                                <div><span className="block text-xs text-amber-800">Relationship</span><strong>{guardianRelationshipLabel(resident.guardian_relationship)}</strong></div>
+                            </div>
+                            <div
+                                role="status"
+                                className={`rounded-lg border p-3 text-sm font-semibold ${resident.guardian_account_eligible === true
+                                    ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
+                                    : 'border-rose-200 bg-rose-50 text-rose-900'}`}
+                            >
+                                {resident.guardian_account_eligible === true
+                                    ? 'Guardian account is active, verified, adult, and registered in this Barangay.'
+                                    : 'Guardian account is not currently eligible. It must be active, verified, age 18 or older, and registered in this Barangay.'}
+                            </div>
+                            {resident.guardianship_evidence && guardianMedia.url ? (
+                                <a href={guardianMedia.url} target="_blank" rel="noopener noreferrer" className="block w-fit rounded-lg border border-amber-300 bg-white p-2 text-sm font-semibold text-amber-950 hover:bg-amber-100">
+                                    <img src={guardianMedia.url} alt="Supporting guardianship document" className="mb-2 max-h-52 rounded-md object-contain" />
+                                    Open supporting document
+                                </a>
+                            ) : (
+                                <div role="status" className="rounded-lg border border-amber-300 bg-white p-3 text-sm text-amber-900">
+                                    {resident.guardianship_evidence
+                                        ? guardianMedia.isLoading ? 'Loading private guardian evidence…' : 'Guardian evidence could not be loaded.'
+                                        : 'No guardian evidence was submitted.'}
+                                </div>
+                            )}
+                            <label className="flex items-start gap-2 text-sm font-medium text-slate-800">
+                                <input
+                                    type="checkbox"
+                                    className="mt-0.5 h-4 w-4 accent-primary"
+                                    checked={guardianReviewConfirmed}
+                                    disabled={!guardianMedia.url || resident.guardian_account_eligible !== true}
+                                    onChange={(event) => setGuardianReviewConfirmed(event.target.checked)}
+                                />
+                                <span>I reviewed the evidence and confirmed it supports the stated guardian relationship under the Barangay’s review procedure.</span>
+                            </label>
+                        </section>
+                    )}
 
                     {/* Uploaded Documents Grid */}
                     <div className="space-y-4">
@@ -220,8 +271,9 @@ export const VerificationDossierModal: React.FC<VerificationDossierModalProps> =
                             Reject Application
                         </button>
                         <button
-                            onClick={() => onApprove(resident.id)}
-                            className="px-5 py-2 bg-primary hover:bg-primary-hover text-primary-foreground rounded-lg text-xs font-bold transition-colors shadow-sm"
+                            onClick={() => onApprove(resident.id, isMinor ? guardianReviewConfirmed : false)}
+                            disabled={isMinor && (!guardianReviewConfirmed || resident.guardian_account_eligible !== true)}
+                            className="px-5 py-2 bg-primary hover:bg-primary-hover text-primary-foreground rounded-lg text-xs font-bold transition-colors shadow-sm disabled:cursor-not-allowed disabled:opacity-50"
                         >
                             Approve Registration
                         </button>

@@ -234,13 +234,49 @@ describe('DocumentRequestRow', () => {
         expect(defaultProps.onCancel).toHaveBeenCalledTimes(1);
     });
 
-    it('triggers download PDF callback when status is READY_FOR_PICKUP', () => {
+    it('does not offer a downloadable PDF before release', () => {
         renderInTable(<DocumentRequestRow {...defaultProps} />);
 
-        const downloadBtn = screen.getByRole('button', { name: 'Download PDF' });
+        expect(screen.queryByRole('button', { name: 'Download O.R. number' })).not.toBeInTheDocument();
+    });
+
+    it('blocks a second counter ticket while this document request has an active ticket', () => {
+        const activeQueueRequest: DocumentRequest = {
+            ...baseRequest,
+            queue_ticket_active: true,
+        };
+        renderInTable(<DocumentRequestRow {...defaultProps} request={activeQueueRequest} />);
+
+        const ticketButton = screen.getByRole('button', { name: 'Get counter ticket for document request #101' });
+        expect(ticketButton).toBeDisabled();
+        expect(ticketButton).toHaveTextContent('Counter ticket already active');
+        fireEvent.click(ticketButton);
+        expect(defaultProps.onGetCounterTicket).not.toHaveBeenCalled();
+    });
+
+    it('offers the O.R. number PDF only after release and when an O.R. number exists', () => {
+        const releasedRequest: DocumentRequest = {
+            ...baseRequest,
+            status: 'RELEASED',
+            or_number: 'OR-2026-001',
+        };
+        renderInTable(<DocumentRequestRow {...defaultProps} request={releasedRequest} />);
+
+        const downloadBtn = screen.getByRole('button', { name: 'Download O.R. number' });
         fireEvent.click(downloadBtn);
 
         expect(defaultProps.onDownloadPdf).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not offer an O.R. number PDF when released without a recorded number', () => {
+        const releasedWithoutNumber: DocumentRequest = {
+            ...baseRequest,
+            status: 'RELEASED',
+            or_number: '',
+        };
+        renderInTable(<DocumentRequestRow {...defaultProps} request={releasedWithoutNumber} />);
+
+        expect(screen.queryByRole('button', { name: 'Download O.R. number' })).not.toBeInTheDocument();
     });
 
     it('renders staff-approved waiver card with reason when fee_assessment_status is WAIVED', () => {

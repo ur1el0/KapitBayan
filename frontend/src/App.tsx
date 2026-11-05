@@ -78,6 +78,9 @@ const SetPassword = lazy(() =>
 const ResidentsHub = lazy(() =>
     import("./pages/community/ResidentsHub").then(({ ResidentsHub }) => ({ default: ResidentsHub })),
 );
+const ResidentTransfers = lazy(() =>
+    import("./pages/community/ResidentTransfers").then(({ ResidentTransfers }) => ({ default: ResidentTransfers })),
+);
 const PublicQueueDisplay = lazy(() =>
     import("./pages/public/PublicQueueDisplay").then(({ PublicQueueDisplay }) => ({ default: PublicQueueDisplay })),
 );
@@ -184,6 +187,7 @@ export function App() {
                                     <Route path="/faqs" element={<Faqs />} />
                                     <Route path="/communications" element={<Communications />} />
                                     <Route path="/residents" element={<ResidentsHub />} />
+                                    <Route path="/resident-transfers" element={<ResidentTransfers />} />
                                     <Route path="/verifications" element={<Navigate to="/residents?tab=verifications" replace />} />
                                     <Route path="/reports" element={<IssueReports />} />
                                     <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>

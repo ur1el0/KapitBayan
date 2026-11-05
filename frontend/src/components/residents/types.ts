@@ -10,12 +10,38 @@ export interface Resident {
     address_details?: string | null;
     is_verified?: boolean;
     guardian?: number | null;
+    guardian_name?: string | null;
+    guardian_username?: string | null;
+    guardian_account_eligible?: boolean;
+    guardian_relationship?: string | null;
+    guardianship_evidence?: string | null;
     philsys_id_number?: string | null;
     philsys_id_photo?: string | null;
     secondary_id_type?: string | null;
     secondary_id_photo?: string | null;
     utility_billing_type?: string | null;
     utility_billing_photo?: string | null;
+}
+
+export function isMinorResident(birthDate: string): boolean {
+    const date = new Date(`${birthDate}T00:00:00`);
+    if (Number.isNaN(date.getTime())) return false;
+    const today = new Date();
+    let age = today.getFullYear() - date.getFullYear();
+    if (
+        today.getMonth() < date.getMonth() ||
+        (today.getMonth() === date.getMonth() && today.getDate() < date.getDate())
+    ) age--;
+    return age < 18;
+}
+
+export function guardianRelationshipLabel(relationship?: string | null): string {
+    switch (relationship) {
+        case 'PARENT': return 'Parent';
+        case 'COURT_APPOINTED': return 'Court-appointed guardian';
+        case 'OTHER_AUTHORIZED': return 'Other authorized guardian';
+        default: return 'Not provided';
+    }
 }
 
 export interface ImportSummary {

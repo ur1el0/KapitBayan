@@ -17,6 +17,7 @@ export interface DocumentRequest {
     offering_details_snapshot?: string;
     purpose: string;
     status: string;
+    queue_ticket_active?: boolean;
     fee_amount?: number | string | null;
     fee_assessment_status?: 'AWAITING_ASSESSMENT' | 'ASSESSED' | 'WAIVED' | 'STATUTORY_EXEMPT' | string;
     fee_assessed_by_name?: string | null;

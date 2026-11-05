@@ -1,6 +1,6 @@
 import toast from 'react-hot-toast';
 import React, { useCallback, useEffect, useState } from 'react';
-import { Bell, Shield, Key, Smartphone, Laptop, Trash2, Clock } from 'lucide-react';
+import { Bell, Shield, Key, Smartphone, Laptop, Trash2, Clock, MapPin, UserRound } from 'lucide-react';
 import { ChangePasswordModal } from '../../components/modals/ChangePasswordModal';
 import { InlineErrorState } from '../../components/ui/InlineErrorState';
 import { axiosPrivate } from '../../api/axios';
@@ -12,6 +12,15 @@ interface RefreshSession {
     created_at: string
     expires_at: string
     is_revoked: boolean
+}
+
+interface LoginEvent {
+    id: number;
+    username: string;
+    role: string;
+    ip_address: string | null;
+    user_agent: string;
+    created_at: string;
 }
 
 export const Settings: React.FC = () => {
@@ -26,6 +35,11 @@ export const Settings: React.FC = () => {
     const [isLoadingSessions, setIsLoadingSessions] = useState(true)
     const [sessionsLoadError, setSessionsLoadError] = useState(false)
     const [isRetryingSessions, setIsRetryingSessions] = useState(false)
+
+    const [loginEvents, setLoginEvents] = useState<LoginEvent[]>([])
+    const [isLoadingLoginEvents, setIsLoadingLoginEvents] = useState(true)
+    const [loginEventsLoadError, setLoginEventsLoadError] = useState(false)
+    const [isRetryingLoginEvents, setIsRetryingLoginEvents] = useState(false)
 
     const fetchProfile = useCallback(async (isRetry = false) => {
         if (isRetry) setIsRetryingProfile(true)
@@ -62,6 +76,24 @@ export const Settings: React.FC = () => {
         }
     }, [])
 
+    const fetchLoginEvents = useCallback(async (isRetry = false) => {
+        if (isRetry) setIsRetryingLoginEvents(true)
+
+        try {
+            const response = await axiosPrivate.get('/auth/login-events/')
+            const eventData = response.data.results ?? response.data
+            if (!Array.isArray(eventData)) throw new Error('Invalid sign-in history response.')
+            setLoginEvents(eventData)
+            setLoginEventsLoadError(false)
+        } catch (error) {
+            console.error("Failed to fetch sign-in history", error)
+            setLoginEventsLoadError(true)
+        } finally {
+            setIsLoadingLoginEvents(false)
+            setIsRetryingLoginEvents(false)
+        }
+    }, [])
+
     useEffect(() => {
         void fetchProfile()
     }, [fetchProfile])
@@ -69,6 +101,10 @@ export const Settings: React.FC = () => {
     useEffect(() => {
         void fetchSessions()
     }, [fetchSessions])
+
+    useEffect(() => {
+        void fetchLoginEvents()
+    }, [fetchLoginEvents])
 
     const handleToggleEmail = async () => {
         const newValue = !emailAlerts
@@ -233,6 +269,46 @@ export const Settings: React.FC = () => {
                                     </div>
                                 ))}
                             </div>
+                        )}
+                    </div>
+
+                    <div className="pt-6 mt-6 border-t border-slate-100">
+                        <h3 className="text-sm font-bold text-slate-900 mb-1">Recent sign-ins</h3>
+                        <p className="mb-4 text-xs leading-5 text-slate-500">
+                            Shows successful sign-ins for your account and, for Barangay Admins, Field Officials assigned to your Barangay. IP addresses are approximate network information, not GPS location.
+                        </p>
+                        {isLoadingLoginEvents ? (
+                            <div role="status" className="text-sm text-slate-500 animate-pulse">Loading sign-in history...</div>
+                        ) : loginEventsLoadError ? (
+                            <InlineErrorState
+                                message="Could not load sign-in history."
+                                onRetry={() => { void fetchLoginEvents(true); }}
+                                retrying={isRetryingLoginEvents}
+                            />
+                        ) : loginEvents.length === 0 ? (
+                            <div className="text-sm text-slate-500">No successful sign-ins recorded yet.</div>
+                        ) : (
+                            <ul className="space-y-3" aria-label="Recent sign-ins">
+                                {loginEvents.map((event) => (
+                                    <li key={event.id} className="rounded-xl border border-slate-100 bg-slate-50 p-3">
+                                        <div className="flex flex-wrap items-center justify-between gap-2">
+                                            <div className="flex min-w-0 items-center gap-2">
+                                                <UserRound className="h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
+                                                <span className="truncate text-sm font-semibold text-slate-700">{event.username || 'Unknown account'}</span>
+                                                <span className="rounded bg-white px-1.5 py-0.5 text-[10px] font-semibold text-slate-500">{event.role.replaceAll('_', ' ')}</span>
+                                            </div>
+                                            <span className="flex items-center text-xs text-slate-500">
+                                                <Clock className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
+                                                {new Date(event.created_at).toLocaleString()}
+                                            </span>
+                                        </div>
+                                        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
+                                            <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" aria-hidden="true" /> IP: {event.ip_address || 'Unavailable'}</span>
+                                            <span className="max-w-full truncate" title={event.user_agent || 'Unknown device'}>{event.user_agent || 'Unknown device'}</span>
+                                        </div>
+                                    </li>
+                                ))}
+                            </ul>
                         )}
                     </div>
                 </div>

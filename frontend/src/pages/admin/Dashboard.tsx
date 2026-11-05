@@ -9,6 +9,7 @@ import { ScenarioBreakdownChart } from '../../components/admin-dashboard/Scenari
 import type { ActivityItem, DashboardSummary } from '../../components/admin-dashboard/types';
 import { InlineErrorState } from '../../components/ui/InlineErrorState';
 import { useLanguage } from '../../context/language-context';
+import { BellRing } from 'lucide-react';
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
     typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -75,6 +76,7 @@ export const Dashboard: React.FC = () => {
     const [isLoadingActivities, setIsLoadingActivities] = useState(true);
     const [activitiesLoadError, setActivitiesLoadError] = useState(false);
     const [isRetryingActivities, setIsRetryingActivities] = useState(false);
+    const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
     const summaryRequestController = useRef<AbortController | null>(null);
     const activitiesRequestController = useRef<AbortController | null>(null);
 
@@ -130,6 +132,14 @@ export const Dashboard: React.FC = () => {
     useEffect(() => {
         void fetchSummary();
         void fetchActivities();
+        void axiosPrivate.get('/admin-notifications/unread_count/')
+            .then((response) => {
+                const count = response.data?.count;
+                if (typeof count === 'number' && Number.isFinite(count) && count >= 0) {
+                    setUnreadNotificationCount(count);
+                }
+            })
+            .catch(() => setUnreadNotificationCount(0));
 
         return () => {
             summaryRequestController.current?.abort();
@@ -138,6 +148,18 @@ export const Dashboard: React.FC = () => {
             activitiesRequestController.current = null;
         };
     }, [user?.role, fetchSummary, fetchActivities]);
+
+    useEffect(() => {
+        const handleUnreadCount = (event: Event) => {
+            const count = (event as CustomEvent<unknown>).detail;
+            if (typeof count === 'number' && Number.isFinite(count) && count >= 0) {
+                setUnreadNotificationCount(count);
+            }
+        };
+
+        window.addEventListener('gridy:admin-notification-count', handleUnreadCount);
+        return () => window.removeEventListener('gridy:admin-notification-count', handleUnreadCount);
+    }, []);
 
     const purokData = summaryData?.demographics?.purok_distribution
         ? Object.entries(summaryData.demographics.purok_distribution).map(([name, value]) => ({
@@ -183,6 +205,28 @@ export const Dashboard: React.FC = () => {
                     <span>{t('View Report Issue')}</span>
                 </button>
             </div>
+
+            {unreadNotificationCount > 0 && (
+                <button
+                    type="button"
+                    onClick={() => navigate('/notifications')}
+                    aria-label={`${unreadNotificationCount} unread notifications. Open notifications.`}
+                    className="flex w-full items-center gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-left text-amber-950 shadow-sm transition-colors hover:bg-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-600"
+                >
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-amber-200 text-amber-900">
+                        <BellRing className="h-5 w-5" aria-hidden="true" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-bold">
+                            {unreadNotificationCount} {t(unreadNotificationCount === 1 ? 'unread notification' : 'unread notifications')}
+                        </span>
+                        <span className="block text-sm text-amber-800">
+                            {t('Review new resident registrations, requests, and service updates.')}
+                        </span>
+                    </span>
+                    <span className="shrink-0 text-sm font-bold">{t('View')}</span>
+                </button>
+            )}
 
             {summaryLoadError && summaryData === null ? (
                 <InlineErrorState

@@ -180,9 +180,8 @@ export const DocumentRequestRow: React.FC<DocumentRequestRowProps> = ({
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
     const [isRetrying, setIsRetrying] = useState(false);
 
-    const isAvailableForDownload = ['READY_FOR_PICKUP', 'RELEASED'].includes(
-        request.status.toUpperCase(),
-    );
+    const isAvailableForDownload = request.status.toUpperCase() === 'RELEASED'
+        && Boolean(request.or_number?.trim());
 
     const isStatutoryFeeExempt = isFeeExemptDocumentType(request.document_type) || request.fee_assessment_status === 'STATUTORY_EXEMPT';
     const isStaffWaived = request.fee_assessment_status === 'WAIVED';
@@ -266,6 +265,11 @@ export const DocumentRequestRow: React.FC<DocumentRequestRowProps> = ({
                 </td>
                 <td className="py-4 px-6 space-y-2">
                     <RequestStatusBadge status={request.status} />
+                    {request.or_number && (
+                        <p className="text-xs font-semibold text-slate-700">
+                            {t('O.R. Number')}: <span className="font-mono">{request.or_number}</span>
+                        </p>
+                    )}
 
                     {/* Fee-Exempt Badge (REV-07) */}
                     {isStatutoryFeeExempt && (
@@ -466,14 +470,14 @@ export const DocumentRequestRow: React.FC<DocumentRequestRowProps> = ({
                         <button
                             type="button"
                             onClick={onGetCounterTicket}
-                            disabled={requestingCounterTicket}
+                            disabled={requestingCounterTicket || request.queue_ticket_active === true}
                             aria-label={`${t('Get counter ticket for document request')} #${request.id}`}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-800 hover:bg-blue-100 text-xs font-bold border border-blue-200 transition-all cursor-pointer disabled:opacity-60"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-800 hover:bg-blue-100 text-xs font-bold border border-blue-200 transition-all cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
                         >
                             {requestingCounterTicket
                                 ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
                                 : <Ticket className="w-3.5 h-3.5" />}
-                            <span>{t('Get counter ticket')}</span>
+                            <span>{request.queue_ticket_active ? t('Counter ticket already active') : t('Get counter ticket')}</span>
                         </button>
                         {isAvailableForDownload ? (
                             <>
@@ -491,7 +495,7 @@ export const DocumentRequestRow: React.FC<DocumentRequestRowProps> = ({
                                     ) : (
                                         <Download className="w-3.5 h-3.5" />
                                     )}
-                                    <span>{t('Download PDF')}</span>
+                                    <span>{t('Download O.R. number')}</span>
                                 </button>
                             </>
                         ) : request.status.toUpperCase() === 'PENDING' ? (

@@ -264,14 +264,14 @@ export const DocumentRequests: React.FC = () => {
             const url = window.URL.createObjectURL(new Blob([response.data]));
             const link = document.createElement('a');
             link.href = url;
-            link.setAttribute('download', `${selectedRequest.document_type.replace(/ /g, '_')}_${selectedRequest.id}.pdf`);
+            link.setAttribute('download', `official_receipt_number_${selectedRequest.id}.pdf`);
             document.body.appendChild(link);
             link.click();
             link.parentNode?.removeChild(link);
-            toast.success('Clearance certificate downloaded.');
+            toast.success('O.R. number PDF downloaded.');
         } catch (error) {
             console.error("Failed to download PDF", error);
-            toast.error('Failed to generate PDF. Make sure the document is approved or released.');
+            toast.error('Failed to generate the O.R. number PDF. Make sure the request is released and has an O.R. number.');
         }
     };
 
