@@ -248,7 +248,7 @@ class QueueTicketAPITests(ServiceAPIBaseTestCase):
             user=self.resident,
             barangay=barangay,
             document_type="Barangay Clearance",
-            status=DocumentRequest.Status.PROCESSING,
+            status=DocumentRequest.Status.READY_FOR_PICKUP,
         )
         self.client.force_login(self.resident)
         payload = {
