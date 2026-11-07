@@ -68,3 +68,30 @@
         }
     }
 }
+
+@media print {
+    body * {
+        visibility: hidden !important;
+    }
+
+    .certificate-verification-screen-only {
+        display: none !important;
+    }
+
+    .certificate-verification-print-area,
+    .certificate-verification-print-area * {
+        visibility: visible !important;
+    }
+
+    .certificate-verification-print-area {
+        position: fixed !important;
+        inset: 0 auto auto 0 !important;
+        width: 76mm !important;
+        margin: 0 !important;
+        padding: 8mm !important;
+        border: 1px solid #cbd5e1 !important;
+        box-shadow: none !important;
+        background: #fff !important;
+        color: #0f172a !important;
+    }
+}

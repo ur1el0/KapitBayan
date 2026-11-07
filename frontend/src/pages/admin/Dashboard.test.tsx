@@ -91,6 +91,39 @@ describe('Dashboard', () => {
         expect(axiosPrivate.get).toHaveBeenNthCalledWith(3, '/admin-notifications/unread_count/');
     });
 
+    it('shows honest empty states when the Barangay has no analytics data', async () => {
+        const emptySummary = {
+            ...summary,
+            total_residents: 0,
+            issue_reports: {
+                ...summary.issue_reports,
+                scenario_breakdown: {
+                    peace_and_order: 0,
+                    public_health: 0,
+                    infrastructure: 0,
+                    environment: 0,
+                    other: 0,
+                },
+            },
+            demographics: {
+                purok_distribution: {},
+                age_demographics: { youth: 0, young_adult: 0, adult: 0, senior: 0 },
+            },
+        };
+        vi.mocked(axiosPrivate.get).mockReset();
+        vi.mocked(axiosPrivate.get)
+            .mockResolvedValueOnce({ data: emptySummary } as never)
+            .mockResolvedValueOnce({ data: { results: [] } } as never)
+            .mockResolvedValueOnce({ data: { count: 0 } } as never);
+
+        renderDashboard();
+
+        expect(await screen.findByText('No incident reports are available yet.')).toBeInTheDocument();
+        expect(screen.getByText('No Purok data is available yet.')).toBeInTheDocument();
+        expect(screen.getByText('No resident age data is available yet.')).toBeInTheDocument();
+        expect(screen.queryByText('Purok 1')).not.toBeInTheDocument();
+    });
+
     it('highlights unread notifications on the dashboard', async () => {
         vi.mocked(axiosPrivate.get).mockReset();
         vi.mocked(axiosPrivate.get).mockImplementation((url: string) => Promise.resolve(

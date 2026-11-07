@@ -12,6 +12,10 @@ class StorageService {
   static const String _keyUser = 'kapitbayan_cached_user';
   static const String _keyRememberMe = 'kapitbayan_remember_me';
   static const String _keySavedUsername = 'kapitbayan_saved_username';
+  static const String _offlineCachePrefix = 'kapitbayan_offline_cache_';
+  static const Duration _offlineCacheMaxAge = Duration(days: 30);
+  static const int _offlineCacheRecordLimit = 100;
+  static const int _offlineCacheCharacterLimit = 500000;
 
   static const String _legacyKeyAccessToken = 'gridy_access_token';
   static const String _legacyKeyRefreshCookie = 'gridy_refresh_cookie';
@@ -202,6 +206,11 @@ class StorageService {
 
   /// Stores authenticated user details in platform-encrypted secure storage.
   Future<void> saveUser(UserModel user) async {
+    if (_cachedUser != null &&
+        (_cachedUser!.id != user.id ||
+            _cachedUser!.barangayId != user.barangayId)) {
+      await clearOfflineSnapshots();
+    }
     final userJsonStr = jsonEncode(user.toJson());
     await _secureStorage.write(key: _keyUser, value: userJsonStr);
     _cachedUser = user;
@@ -211,6 +220,107 @@ class StorageService {
   /// Retrieves user details loaded from encrypted storage at startup.
   UserModel? getUser() {
     return _cachedUser;
+  }
+
+  /// Keeps only small, account-scoped, read-only snapshots in encrypted storage.
+  /// Never use this for queued writes or evidence images.
+  Future<void> saveOfflineSnapshot(
+    String dataset,
+    List<Map<String, dynamic>> records, {
+    bool mergeWithExisting = false,
+  }) async {
+    final user = _cachedUser;
+    if (user == null || !user.isResident || user.id <= 0) return;
+
+    var snapshotRecords = records;
+    var truncated = records.length > _offlineCacheRecordLimit;
+    var savedAt = DateTime.now().toUtc();
+    if (mergeWithExisting) {
+      final previous = await readOfflineSnapshot(dataset);
+      if (previous != null) {
+        // A partial refresh cannot prove every retained record is fresh.
+        // Keep the older timestamp so the UI communicates the conservative age.
+        savedAt = previous.savedAt;
+        final mergedById = <String, Map<String, dynamic>>{
+          for (final record in previous.records)
+            (record['id'] ?? record['request_id']).toString(): record,
+          for (final record in records)
+            (record['id'] ?? record['request_id']).toString(): record,
+        };
+        snapshotRecords = mergedById.values.toList()
+          ..sort(
+            (a, b) => (b['created_at']?.toString() ?? '').compareTo(
+              a['created_at']?.toString() ?? '',
+            ),
+          );
+        truncated =
+            truncated ||
+            previous.isTruncated ||
+            snapshotRecords.length > _offlineCacheRecordLimit;
+      }
+    }
+
+    final key = _offlineCacheKey(dataset);
+    final value = jsonEncode({
+      'owner_id': user.id,
+      'owner_barangay_id': user.barangayId,
+      'saved_at': savedAt.toIso8601String(),
+      'truncated': truncated,
+      'records': snapshotRecords.take(_offlineCacheRecordLimit).toList(),
+    });
+    if (value.length > _offlineCacheCharacterLimit) return;
+    await _secureStorage.write(key: key, value: value);
+  }
+
+  Future<OfflineSnapshot?> readOfflineSnapshot(String dataset) async {
+    final user = _cachedUser;
+    if (user == null || !user.isResident || user.id <= 0) return null;
+
+    final value = await _secureStorage.read(key: _offlineCacheKey(dataset));
+    if (value == null || value.isEmpty) return null;
+    try {
+      final decoded = jsonDecode(value);
+      if (decoded is! Map<String, dynamic> ||
+          decoded['owner_id'] != user.id ||
+          decoded['owner_barangay_id'] != user.barangayId) {
+        return null;
+      }
+      final savedAt = DateTime.tryParse(
+        decoded['saved_at']?.toString() ?? '',
+      )?.toUtc();
+      final rawRecords = decoded['records'];
+      if (savedAt == null || rawRecords is! List) return null;
+      final age = DateTime.now().toUtc().difference(savedAt);
+      if (age.isNegative || age > _offlineCacheMaxAge) return null;
+      return OfflineSnapshot(
+        savedAt: savedAt,
+        isTruncated: decoded['truncated'] == true,
+        records: rawRecords
+            .whereType<Map>()
+            .map((record) => Map<String, dynamic>.from(record))
+            .toList(growable: false),
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  String _offlineCacheKey(String dataset) {
+    // Dataset names are internal constants supplied by the app.
+    return '$_offlineCachePrefix$dataset';
+  }
+
+  Future<void> clearOfflineSnapshots() async {
+    for (final dataset in const [
+      'announcements',
+      'document_requests',
+      'hotlines',
+      'queue_tickets',
+      'aid_requests',
+      'issue_reports',
+    ]) {
+      await _secureStorage.delete(key: _offlineCacheKey(dataset));
+    }
   }
 
   /// Saves the "Remember Me" preference and username.
@@ -250,6 +360,12 @@ class StorageService {
         _secureStorage.delete(key: _legacyKeyAccessToken),
         _secureStorage.delete(key: _legacyKeyRefreshCookie),
         _secureStorage.delete(key: _keyUser),
+        _secureStorage.delete(key: _offlineCacheKey('announcements')),
+        _secureStorage.delete(key: _offlineCacheKey('document_requests')),
+        _secureStorage.delete(key: _offlineCacheKey('hotlines')),
+        _secureStorage.delete(key: _offlineCacheKey('queue_tickets')),
+        _secureStorage.delete(key: _offlineCacheKey('aid_requests')),
+        _secureStorage.delete(key: _offlineCacheKey('issue_reports')),
       ]);
     } finally {
       // Also remove plaintext copies in both namespaces and cached user data.
@@ -275,9 +391,27 @@ class StorageService {
         _secureStorage.delete(key: _legacyKeyAccessToken),
         _secureStorage.delete(key: _legacyKeyRefreshCookie),
         _secureStorage.delete(key: _keyUser),
+        _secureStorage.delete(key: _offlineCacheKey('announcements')),
+        _secureStorage.delete(key: _offlineCacheKey('document_requests')),
+        _secureStorage.delete(key: _offlineCacheKey('hotlines')),
+        _secureStorage.delete(key: _offlineCacheKey('queue_tickets')),
+        _secureStorage.delete(key: _offlineCacheKey('aid_requests')),
+        _secureStorage.delete(key: _offlineCacheKey('issue_reports')),
       ]);
     } finally {
       await _prefs.clear();
     }
   }
+}
+
+class OfflineSnapshot {
+  final DateTime savedAt;
+  final List<Map<String, dynamic>> records;
+  final bool isTruncated;
+
+  const OfflineSnapshot({
+    required this.savedAt,
+    required this.records,
+    this.isTruncated = false,
+  });
 }

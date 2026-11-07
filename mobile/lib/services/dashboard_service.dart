@@ -11,12 +11,18 @@ import 'storage_service.dart';
 class _FetchResult<T> {
   final T? data;
   final bool failed;
+  final bool usedOfflineCache;
+  final bool offlineCacheTruncated;
+  final DateTime? cachedAt;
   final String? errorMessage;
   final int? statusCode;
 
   const _FetchResult({
     this.data,
     this.failed = false,
+    this.usedOfflineCache = false,
+    this.offlineCacheTruncated = false,
+    this.cachedAt,
     this.errorMessage,
     this.statusCode,
   });
@@ -34,6 +40,11 @@ class DashboardData {
   final String? notificationsErrorMessage;
   final bool hasAnnouncementsError;
   final bool hasDocumentRequestsError;
+  final bool isShowingOfflineSnapshot;
+  final DateTime? offlineSnapshotSavedAt;
+  final bool offlineRequestsTruncated;
+  final bool isShowingOfflineAnnouncements;
+  final DateTime? offlineAnnouncementsSavedAt;
 
   const DashboardData({
     this.user,
@@ -46,6 +57,11 @@ class DashboardData {
     this.notificationsErrorMessage,
     this.hasAnnouncementsError = false,
     this.hasDocumentRequestsError = false,
+    this.isShowingOfflineSnapshot = false,
+    this.offlineSnapshotSavedAt,
+    this.offlineRequestsTruncated = false,
+    this.isShowingOfflineAnnouncements = false,
+    this.offlineAnnouncementsSavedAt,
   });
 
   /// Count of active pending/processing document requests for this resident
@@ -126,6 +142,10 @@ class DashboardService {
       residentNotifications: residentNotificationResult.data ?? [],
     );
 
+    final offlineCacheDates = [
+      annResult.cachedAt,
+      docResult.cachedAt,
+    ].whereType<DateTime>().toList()..sort();
     return DashboardData(
       user: currentUser,
       announcements: announcements,
@@ -139,6 +159,15 @@ class DashboardService {
           : notificationErrors.join('; '),
       hasAnnouncementsError: annResult.failed,
       hasDocumentRequestsError: docResult.failed,
+      isShowingOfflineSnapshot:
+          annResult.usedOfflineCache || docResult.usedOfflineCache,
+      offlineSnapshotSavedAt: offlineCacheDates.isEmpty
+          ? null
+          : offlineCacheDates.first,
+      offlineRequestsTruncated:
+          docResult.usedOfflineCache && docResult.offlineCacheTruncated,
+      isShowingOfflineAnnouncements: annResult.usedOfflineCache,
+      offlineAnnouncementsSavedAt: annResult.cachedAt,
     );
   }
 
@@ -172,6 +201,21 @@ class DashboardService {
                   AnnouncementModel.fromJson(item as Map<String, dynamic>),
             )
             .toList();
+        try {
+          await storageService.saveOfflineSnapshot(
+            'announcements',
+            items
+                .map((item) {
+                  final record = item.toJson();
+                  // Keep text available offline without implying remote images are cached.
+                  record['image'] = null;
+                  return record;
+                })
+                .toList(growable: false),
+          );
+        } catch (_) {
+          // A cache write must not turn a successful live request into an error.
+        }
         return _FetchResult(data: items);
       } else {
         return _FetchResult(
@@ -182,6 +226,26 @@ class DashboardService {
         );
       }
     } catch (e) {
+      if (e is NetworkException) {
+        try {
+          final snapshot = await storageService.readOfflineSnapshot(
+            'announcements',
+          );
+          if (snapshot != null) {
+            return _FetchResult(
+              data: snapshot.records
+                  .map(AnnouncementModel.fromJson)
+                  .toList(growable: false),
+              failed: true,
+              usedOfflineCache: true,
+              cachedAt: snapshot.savedAt,
+              errorMessage: 'Offline snapshot',
+            );
+          }
+        } catch (_) {
+          // Fall through to the visible load error when secure storage is unavailable.
+        }
+      }
       final int? statusCode = e is ApiException ? e.statusCode : null;
       final String msg = e is ApiException && e.statusCode != null
           ? 'HTTP ${e.statusCode}'
@@ -212,6 +276,21 @@ class DashboardService {
                   DocumentRequestModel.fromJson(item as Map<String, dynamic>),
             )
             .toList();
+        try {
+          await storageService.saveOfflineSnapshot(
+            'document_requests',
+            items
+                .map((item) {
+                  final record = item.toJson();
+                  record['payment_proof_url'] = null;
+                  return record;
+                })
+                .toList(growable: false),
+            mergeWithExisting: true,
+          );
+        } catch (_) {
+          // A cache write must not turn a successful live request into an error.
+        }
         return _FetchResult(data: items);
       } else {
         return _FetchResult(
@@ -222,6 +301,27 @@ class DashboardService {
         );
       }
     } catch (e) {
+      if (e is NetworkException) {
+        try {
+          final snapshot = await storageService.readOfflineSnapshot(
+            'document_requests',
+          );
+          if (snapshot != null) {
+            return _FetchResult(
+              data: snapshot.records
+                  .map(DocumentRequestModel.fromJson)
+                  .toList(growable: false),
+              failed: true,
+              usedOfflineCache: true,
+              offlineCacheTruncated: snapshot.isTruncated,
+              cachedAt: snapshot.savedAt,
+              errorMessage: 'Offline snapshot',
+            );
+          }
+        } catch (_) {
+          // Fall through to the visible load error when secure storage is unavailable.
+        }
+      }
       final int? statusCode = e is ApiException ? e.statusCode : null;
       final String msg = e is ApiException && e.statusCode != null
           ? 'HTTP ${e.statusCode}'

@@ -5,6 +5,7 @@ class UserModel {
   final String email;
   final String role;
   final String fullName;
+  final int? barangayId;
   final bool isSuperuser;
   final bool isVerified;
   final String? contactNumber;
@@ -26,6 +27,7 @@ class UserModel {
     required this.email,
     required this.role,
     required this.fullName,
+    this.barangayId,
     this.isSuperuser = false,
     this.isVerified = true,
     this.contactNumber,
@@ -44,8 +46,10 @@ class UserModel {
   /// Factory constructor to parse both login payload and /auth/me/ profile responses
   factory UserModel.fromJson(Map<String, dynamic> json) {
     final profile = json['profile'] as Map<String, dynamic>?;
+    final barangay = json['barangay'] as Map<String, dynamic>?;
 
-    final String resolvedFullName = json['full_name'] as String? ??
+    final String resolvedFullName =
+        json['full_name'] as String? ??
         profile?['full_name'] as String? ??
         json['username'] as String? ??
         '';
@@ -60,19 +64,38 @@ class UserModel {
       email: json['email'] as String? ?? '',
       role: json['role'] as String? ?? 'RESIDENT',
       fullName: resolvedFullName,
+      barangayId: (json['barangay_id'] ?? barangay?['id']) is num
+          ? ((json['barangay_id'] ?? barangay?['id']) as num).toInt()
+          : null,
       isSuperuser: json['is_superuser'] as bool? ?? false,
       isVerified: resolvedVerification,
-      contactNumber: profile?['contact_number'] as String? ?? json['contact_number'] as String?,
+      contactNumber:
+          profile?['contact_number'] as String? ??
+          json['contact_number'] as String?,
       purok: profile?['purok']?.toString() ?? json['purok']?.toString(),
-      birthDate: profile?['birth_date'] as String? ?? json['birth_date'] as String?,
-      voterStatus: profile?['voter_status'] as bool? ?? json['voter_status'] as bool?,
+      birthDate:
+          profile?['birth_date'] as String? ?? json['birth_date'] as String?,
+      voterStatus:
+          profile?['voter_status'] as bool? ?? json['voter_status'] as bool?,
       residentId: profile?['id'] as int? ?? json['resident_id'] as int?,
-      philsysIdNumber: profile?['philsys_id_number'] as String? ?? json['philsys_id_number'] as String?,
-      philsysIdPhoto: profile?['philsys_id_photo'] as String? ?? json['philsys_id_photo'] as String?,
-      secondaryIdType: profile?['secondary_id_type'] as String? ?? json['secondary_id_type'] as String?,
-      secondaryIdPhoto: profile?['secondary_id_photo'] as String? ?? json['secondary_id_photo'] as String?,
-      utilityBillingType: profile?['utility_billing_type'] as String? ?? json['utility_billing_type'] as String?,
-      utilityBillingPhoto: profile?['utility_billing_photo'] as String? ?? json['utility_billing_photo'] as String?,
+      philsysIdNumber:
+          profile?['philsys_id_number'] as String? ??
+          json['philsys_id_number'] as String?,
+      philsysIdPhoto:
+          profile?['philsys_id_photo'] as String? ??
+          json['philsys_id_photo'] as String?,
+      secondaryIdType:
+          profile?['secondary_id_type'] as String? ??
+          json['secondary_id_type'] as String?,
+      secondaryIdPhoto:
+          profile?['secondary_id_photo'] as String? ??
+          json['secondary_id_photo'] as String?,
+      utilityBillingType:
+          profile?['utility_billing_type'] as String? ??
+          json['utility_billing_type'] as String?,
+      utilityBillingPhoto:
+          profile?['utility_billing_photo'] as String? ??
+          json['utility_billing_photo'] as String?,
     );
   }
 
@@ -84,6 +107,7 @@ class UserModel {
       'email': email,
       'role': role,
       'full_name': fullName,
+      'barangay_id': barangayId,
       'is_superuser': isSuperuser,
       'is_verified': isVerified,
       'contact_number': contactNumber,
@@ -106,6 +130,7 @@ class UserModel {
     String? email,
     String? role,
     String? fullName,
+    int? barangayId,
     bool? isSuperuser,
     bool? isVerified,
     String? contactNumber,
@@ -126,6 +151,7 @@ class UserModel {
       email: email ?? this.email,
       role: role ?? this.role,
       fullName: fullName ?? this.fullName,
+      barangayId: barangayId ?? this.barangayId,
       isSuperuser: isSuperuser ?? this.isSuperuser,
       isVerified: isVerified ?? this.isVerified,
       contactNumber: contactNumber ?? this.contactNumber,
@@ -142,9 +168,12 @@ class UserModel {
     );
   }
 
-  bool get hasPhilsysPhoto => philsysIdPhoto != null && philsysIdPhoto!.isNotEmpty;
-  bool get hasSecondaryIdPhoto => secondaryIdPhoto != null && secondaryIdPhoto!.isNotEmpty;
-  bool get hasUtilityBillingPhoto => utilityBillingPhoto != null && utilityBillingPhoto!.isNotEmpty;
+  bool get hasPhilsysPhoto =>
+      philsysIdPhoto != null && philsysIdPhoto!.isNotEmpty;
+  bool get hasSecondaryIdPhoto =>
+      secondaryIdPhoto != null && secondaryIdPhoto!.isNotEmpty;
+  bool get hasUtilityBillingPhoto =>
+      utilityBillingPhoto != null && utilityBillingPhoto!.isNotEmpty;
 
   int get proofDocumentsCount {
     int count = 0;
@@ -153,7 +182,7 @@ class UserModel {
     if (hasUtilityBillingPhoto) count++;
     return count;
   }
-  
+
   /// Convenience getter to check if the user is a resident
   bool get isResident => role.toUpperCase() == 'RESIDENT';
 
@@ -164,7 +193,9 @@ class UserModel {
       role.toUpperCase() == 'FIELD_OFFICIAL';
 
   /// Whether this client understands and can safely route the account role.
-  bool get isSupportedRole => !isSuperuser && const {
+  bool get isSupportedRole =>
+      !isSuperuser &&
+      const {
         'RESIDENT',
         'ADMIN',
         'FIELD_OFFICIAL',
@@ -172,8 +203,7 @@ class UserModel {
 
   /// Convenience getter to check specifically if user has field duties
   bool get isFieldOfficial =>
-      role.toUpperCase() == 'FIELD_OFFICIAL' ||
-      role.toUpperCase() == 'ADMIN';
+      role.toUpperCase() == 'FIELD_OFFICIAL' || role.toUpperCase() == 'ADMIN';
 
   /// Formatted role string for badges and official profile headers
   String get roleDisplay {
@@ -186,6 +216,8 @@ class UserModel {
         return 'Resident';
     }
   }
+
   @override
-  String toString() => 'UserModel(id: $id, username: $username, fullName: $fullName, role: $role)';
+  String toString() =>
+      'UserModel(id: $id, username: $username, fullName: $fullName, role: $role)';
 }

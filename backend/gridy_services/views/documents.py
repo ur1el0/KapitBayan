@@ -1,11 +1,12 @@
 import logging
 import re
 
+from django.conf import settings
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.response import Response
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import Exists, OuterRef, Q
 from django.template.loader import get_template
 from django.http import FileResponse, Http404, HttpResponse
@@ -19,7 +20,13 @@ from gridy_auth.permissions import (
     IsResident,
     IsResidentOrBarangayOfficial,
 )
-from gridy_services.models import DocumentRequest, DocumentServiceOffering, PaymentRecipient, QueueTicket
+from gridy_services.models import (
+    DocumentCertificateVerification,
+    DocumentRequest,
+    DocumentServiceOffering,
+    PaymentRecipient,
+    QueueTicket,
+)
 from gridy_services.signals import safe_delete_storage_file
 from gridy_services.serializers import (
     DocumentRequestSerializer,
@@ -40,6 +47,15 @@ from drf_spectacular.utils import extend_schema
 from ..fee_policy import FEE_EXEMPT_DOCUMENT_TYPES, check_ra11261_eligibility
 
 logger = logging.getLogger(__name__)
+
+FINANCIAL_REVIEW_FIELDS = {
+    "or_number",
+    "fee_amount",
+    "fee_waiver_reason",
+    "fee_assessment_status",
+    "statutory_exempt",
+    "is_statutory_exempt",
+}
 
 
 def _document_request_id_from_tracking_identifier(identifier):
@@ -129,7 +145,10 @@ class DocumentRequestViewSet(viewsets.ModelViewSet):
         if self.action == 'destroy':
             return [permissions.IsAuthenticated()]
 
-        if self.action in ["review_payment", "validate", "verify"]:
+        if self.action == "review_payment":
+            return [permissions.IsAuthenticated(), IsBarangayOfficial()]
+
+        if self.action in ["validate", "verify"]:
             return [permissions.IsAuthenticated(), IsBarangayOfficialOrField()]
 
         return [IsBarangayOfficial()]
@@ -552,6 +571,14 @@ class DocumentRequestViewSet(viewsets.ModelViewSet):
             document_request = DocumentRequest.objects.select_for_update().get(
                 pk=self.get_object().pk
             )
+            if (
+                request.user.role == User.Role.FIELD_OFFICIAL
+                and FINANCIAL_REVIEW_FIELDS.intersection(request.data.keys())
+            ):
+                raise PermissionDenied(
+                    "Only a Barangay Admin can assess fees, grant fee exemptions, or record an O.R. number."
+                )
+
             original_status = document_request.status
             initial_fee_assessment_status = document_request.fee_assessment_status
             serializer = DocumentRequestReviewSerializer(
@@ -730,6 +757,25 @@ class DocumentRequestViewSet(viewsets.ModelViewSet):
                         raise ValidationError({
                             "payment_method": "Record cash or a verified electronic transfer."
                         })
+
+            if (
+                original_status == DocumentRequest.Status.RELEASED
+                and document_request.status != DocumentRequest.Status.RELEASED
+            ):
+                revoked_count = DocumentCertificateVerification.objects.filter(
+                    document_request=document_request,
+                    revoked_at__isnull=True,
+                ).update(revoked_at=timezone.now())
+                if revoked_count:
+                    log_action(
+                        user=request.user,
+                        action_type=AuditLog.ActionType.DOCUMENT_ACTION,
+                        description=(
+                            f"Revoked the certificate verification QR after document request "
+                            f"#{document_request.pk} left the released status."
+                        ),
+                        request=request,
+                    )
 
             document_request.save(
                 update_fields=[
@@ -936,7 +982,7 @@ class DocumentRequestViewSet(viewsets.ModelViewSet):
     @action(
         detail=True,
         methods=["patch"],
-        permission_classes=[IsBarangayOfficialOrField],
+        permission_classes=[IsBarangayOfficial],
         url_path="payment-review",
         url_name="payment-review",
     )
@@ -1074,6 +1120,122 @@ class DocumentRequestViewSet(viewsets.ModelViewSet):
         response["Cache-Control"] = "private, no-store, max-age=0"
         response["X-Content-Type-Options"] = "nosniff"
         return response
+    @action(
+        detail=True,
+        methods=["get", "post", "delete"],
+        permission_classes=[IsBarangayOfficial],
+        url_path="certificate-verification",
+        url_name="certificate-verification",
+    )
+    def certificate_verification(self, request, pk=None):
+        """Manage an opaque public verification token for a released paper certificate."""
+        document_request = self.get_object()
+        active_record = DocumentCertificateVerification.objects.filter(
+            document_request=document_request,
+            revoked_at__isnull=True,
+        ).first()
+
+        if request.method == "GET":
+            if (
+                active_record is None
+                or document_request.status != DocumentRequest.Status.RELEASED
+            ):
+                return Response({"active": False}, status=status.HTTP_200_OK)
+            return Response(
+                self._certificate_verification_data(active_record),
+                status=status.HTTP_200_OK,
+            )
+
+        if request.method == "DELETE":
+            with transaction.atomic():
+                DocumentRequest.objects.select_for_update().get(pk=document_request.pk)
+                active_record = DocumentCertificateVerification.objects.select_for_update().filter(
+                    document_request=document_request,
+                    revoked_at__isnull=True,
+                ).first()
+                if active_record is not None:
+                    active_record.revoked_at = timezone.now()
+                    active_record.save(update_fields=["revoked_at"])
+                    log_action(
+                        user=request.user,
+                        action_type=AuditLog.ActionType.DOCUMENT_ACTION,
+                        description=(
+                            f"Revoked the public verification QR for document request #{document_request.pk}."
+                        ),
+                        request=request,
+                    )
+            return Response({"active": False}, status=status.HTTP_200_OK)
+
+        if document_request.status != DocumentRequest.Status.RELEASED:
+            return Response(
+                {"detail": "A verification QR is available only after the request is released."},
+                status=status.HTTP_409_CONFLICT,
+            )
+        if request.data.get("confirm_paper_certificate_issued") is not True:
+            raise ValidationError({
+                "confirm_paper_certificate_issued": (
+                    "Confirm that the Barangay has issued the paper certificate."
+                )
+            })
+
+        with transaction.atomic():
+            locked_request = DocumentRequest.objects.select_for_update().select_related("user").get(
+                pk=document_request.pk
+            )
+            document_barangay_id = locked_request.barangay_id
+            if document_barangay_id != request.user.barangay_id:
+                raise Http404("Document request not found.")
+            if locked_request.status != DocumentRequest.Status.RELEASED:
+                return Response(
+                    {"detail": "A verification QR is available only after the request is released."},
+                    status=status.HTTP_409_CONFLICT,
+                )
+
+            active_record = DocumentCertificateVerification.objects.filter(
+                document_request=locked_request,
+                revoked_at__isnull=True,
+            ).first()
+            if active_record is None:
+                try:
+                    with transaction.atomic():
+                        active_record = DocumentCertificateVerification.objects.create(
+                            document_request=locked_request,
+                            issued_by=request.user,
+                        )
+                except IntegrityError:
+                    # Concurrent repeated clicks converge on the same active token.
+                    active_record = DocumentCertificateVerification.objects.get(
+                        document_request=locked_request,
+                        revoked_at__isnull=True,
+                    )
+                else:
+                    log_action(
+                        user=request.user,
+                        action_type=AuditLog.ActionType.DOCUMENT_ACTION,
+                        description=(
+                            f"Recorded issuance of a paper certificate and created a verification QR "
+                            f"for document request #{locked_request.pk}."
+                        ),
+                        request=request,
+                    )
+
+        return Response(
+            self._certificate_verification_data(active_record),
+            status=status.HTTP_200_OK,
+        )
+
+    @staticmethod
+    def _certificate_verification_data(record):
+        token = str(record.token)
+        return {
+            "active": True,
+            "token": token,
+            "verification_url": (
+                f"{settings.FRONTEND_URL.rstrip('/')}/verify-certificate/{token}"
+            ),
+            "issued_at": record.issued_at,
+        }
+
     @action(detail=True, methods=['get'], url_path='generate-pdf')
     def generate_pdf(self, request, pk=None):
         document = self.get_object()

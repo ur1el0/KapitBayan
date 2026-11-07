@@ -33,6 +33,7 @@ class _RequestQueueTicketSheetState extends State<RequestQueueTicketSheet> {
 
   final _notesController = TextEditingController();
   String _serviceType = 'Document Issuance';
+  bool _submitting = false;
 
   @override
   void dispose() {
@@ -41,12 +42,17 @@ class _RequestQueueTicketSheetState extends State<RequestQueueTicketSheet> {
   }
 
   Future<void> _submit() async {
+    if (_submitting || widget.isSubmitting) return;
     final notes = _notesController.text;
-    Navigator.pop(context);
-    await widget.onSubmit(
-      serviceType: _serviceType,
-      notes: notes.isNotEmpty ? notes : null,
-    );
+    setState(() => _submitting = true);
+    try {
+      await widget.onSubmit(
+        serviceType: _serviceType,
+        notes: notes.isNotEmpty ? notes : null,
+      );
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
   }
 
   @override
@@ -103,7 +109,7 @@ class _RequestQueueTicketSheetState extends State<RequestQueueTicketSheet> {
                   ),
                 )
                 .toList(),
-            onChanged: widget.isSubmitting
+            onChanged: widget.isSubmitting || _submitting
                 ? null
                 : (value) {
                     if (value != null) setState(() => _serviceType = value);
@@ -111,7 +117,9 @@ class _RequestQueueTicketSheetState extends State<RequestQueueTicketSheet> {
           ),
           const SizedBox(height: 16),
           Text(
-            context.tr('Barangay staff verify priority lane eligibility. If you qualify, ask the service desk to review your waiting ticket.'),
+            context.tr(
+              'Barangay staff verify priority lane eligibility. If you qualify, ask the service desk to review your waiting ticket.',
+            ),
             style: TextStyle(
               color: Color(0xFF475569),
               fontSize: 13,
@@ -121,7 +129,7 @@ class _RequestQueueTicketSheetState extends State<RequestQueueTicketSheet> {
           const SizedBox(height: 12),
           TextField(
             controller: _notesController,
-            enabled: !widget.isSubmitting,
+            enabled: !widget.isSubmitting && !_submitting,
             decoration: InputDecoration(
               labelText: context.tr('Additional Notes (Optional)'),
               hintText: context.tr('e.g. Requesting 2 copies'),
@@ -140,9 +148,9 @@ class _RequestQueueTicketSheetState extends State<RequestQueueTicketSheet> {
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              onPressed: widget.isSubmitting ? null : _submit,
+              onPressed: widget.isSubmitting || _submitting ? null : _submit,
               child: Text(
-                context.tr('Get Ticket'),
+                context.tr(_submitting ? 'Submitting…' : 'Get Ticket'),
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
             ),

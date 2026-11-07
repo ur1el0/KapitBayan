@@ -66,23 +66,13 @@ class DashboardSummaryView(APIView):
         serving_now_val = serving_ticket.ticket_number if serving_ticket else None
         waiting_in_queue_val = QueueTicket.objects.filter(barangay=user.barangay, status=QueueTicket.Status.WAITING).count()
 
-        # 5. Demographics (Purok Distribution with Smart Fallback)
+        # 5. Demographics (only report values present in the Barangay registry)
         purok_stats = Resident.objects.filter(user__barangay=user.barangay, purok__isnull=False).values('purok').annotate(count=Count('purok')).order_by('purok')
 
-        if purok_stats.exists():
-            purok_distribution = {
-                item['purok'] if str(item['purok']).lower().startswith('purok') else f"Purok {item['purok']}": item['count']
-                for item in purok_stats
-            }
-        else:
-            # Fallback mock distribution for UI fidelity until real residents assign puroks
-            purok_distribution = {
-                "Purok 1": 24,
-                "Purok 2": 18,
-                "Purok 3": 15,
-                "Purok 4": 12,
-                "Purok 5": 9,
-            }
+        purok_distribution = {
+            item['purok'] if str(item['purok']).lower().startswith('purok') else f"Purok {item['purok']}": item['count']
+            for item in purok_stats
+        }
 
         # 6. Demographics (Age Distribution)
         def get_past_date(years):
@@ -102,15 +92,7 @@ class DashboardSummaryView(APIView):
             senior=Count('id', filter=Q(birth_date__lte=date_60_years_ago)),
         )
 
-        if total_res == 0:
-            age_demographics = {
-                "youth": 12,
-                "young_adult": 28,
-                "adult": 35,
-                "senior": 15,
-            }
-
-        # 7. Category / Incident Scenario Breakdown (with Smart Fallback)
+        # 7. Category / Incident Scenario Breakdown (only actual incident records)
         category_breakdown = {
             "peace_and_order": issue_stats['peace_and_order'] or 0,
             "public_health": issue_stats['public_health'] or 0,
@@ -118,16 +100,6 @@ class DashboardSummaryView(APIView):
             "environment": issue_stats['environment'] or 0,
             "other": issue_stats['other'] or 0,
         }
-
-        # If zero issue reports exist, provide sample scenario data for presentation charts
-        if (issue_stats['total'] or 0) == 0:
-            category_breakdown = {
-                "peace_and_order": 4,
-                "public_health": 8,
-                "infrastructure": 15,
-                "environment": 6,
-                "other": 2,
-            }
 
         data = {
             "total_residents": total_res,

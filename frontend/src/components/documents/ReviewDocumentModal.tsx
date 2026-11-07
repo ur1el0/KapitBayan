@@ -14,6 +14,7 @@ import { isFeeExemptDocumentType } from '../../utils/documentFees';
 import { formatPublishedFee } from './documentCatalog';
 import { useModalFocus } from '../../hooks/useModalFocus';
 import { usePrivateMediaUrl } from '../../hooks/usePrivateMediaUrl';
+import { CertificateVerificationControl } from './CertificateVerificationControl';
 
 interface ReviewDocumentModalProps {
     selectedRequest: DocumentRequest | null;
@@ -605,6 +606,13 @@ export const ReviewDocumentModal = ({
                                 </span>
                             </div>
                         </div>
+
+                        {selectedRequest.status.toLowerCase() === 'released' && (
+                            <CertificateVerificationControl
+                                requestId={selectedRequest.id}
+                                documentType={selectedRequest.document_type}
+                            />
+                        )}
 
                         {/* Modal Footer / Actions */}
                         <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between gap-3">

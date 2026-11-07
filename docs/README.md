@@ -28,6 +28,17 @@ Use this page to find current system guidance. Source code, migrations, generate
 - [Web frontend features](features/frontend_features.md) — includes the Admin Documents and Residents auto-refresh behavior.
 - [Walk-in clearances and treasury auditing](features/walkin_and_revenue_clearances.md)
 - [Post-defense service and account controls](features/post-defense-controls.md)
+- [Paper certificate QR verification](features/certificate-verification.md)
+- [Client refresh and queue polling behavior](features/client-refresh-behavior.md)
+- [Resident mobile offline behavior](features/mobile-offline-behavior.md)
+
+## Post-defense revision materials
+
+- [Adviser and panel revision action plan](revisions/adviser-panel-comments-action-plan.md) — response status for each item in the revision matrix.
+- [Flutter mobile implementation note](revisions/flutter-implementation-note.md) — implementation details and current offline/device limitations for manuscript revision.
+- [Revision verification log](revisions/revision-verification-log.md) — checks run in this working branch and their environment limits.
+- [Resident web browser compatibility checklist](revisions/browser-compatibility-checklist.md) — required browser evidence for revision-matrix item 26.
+- [KapitBayan user manual draft](manuals/KapitBayan_User_Manual.md) — role-based usage guide for adviser review.
 
 ## Developer walkthroughs
 

@@ -90,6 +90,9 @@ const PublicAnnouncements = lazy(() =>
 const PublicNoticeRedirect = lazy(() =>
     import("./pages/public/PublicNoticeRedirect").then(({ PublicNoticeRedirect }) => ({ default: PublicNoticeRedirect })),
 );
+const CertificateVerification = lazy(() =>
+    import("./pages/public/CertificateVerification").then(({ CertificateVerification }) => ({ default: CertificateVerification })),
+);
 const AidRequests = lazy(() =>
     import("./pages/citizen/AidRequests").then(({ AidRequests }) => ({ default: AidRequests })),
 );
@@ -174,6 +177,7 @@ export function App() {
                             <Route path="/public/queue/:barangayId" element={<PublicQueueDisplay />} />
                             <Route path="/public/announcements/:barangayId" element={<PublicAnnouncements />} />
                             <Route path="/notice/:id" element={<PublicNoticeRedirect />} />
+                            <Route path="/verify-certificate/:token" element={<CertificateVerification />} />
 
                             {/* Barangay Admin Workstation */}
                             <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>

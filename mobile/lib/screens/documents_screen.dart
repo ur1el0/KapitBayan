@@ -19,6 +19,7 @@ import '../widgets/empty_document_requests.dart';
 import '../widgets/request_document_dialog.dart';
 import '../widgets/request_document_grid.dart';
 import '../widgets/app_surface.dart';
+import '../widgets/offline_snapshot_banner.dart';
 import 'dashboard_screen.dart';
 import 'queue_screen.dart';
 import 'schedule_screen.dart';
@@ -28,8 +29,14 @@ import 'profile_screen.dart';
 class DocumentsScreen extends StatefulWidget {
   final DocumentService? documentService;
   final AuthService? authService;
+  final int? initialRequestId;
 
-  const DocumentsScreen({super.key, this.documentService, this.authService});
+  const DocumentsScreen({
+    super.key,
+    this.documentService,
+    this.authService,
+    this.initialRequestId,
+  });
 
   @override
   State<DocumentsScreen> createState() => _DocumentsScreenState();
@@ -44,8 +51,12 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
   bool _isLoading = true;
   bool _hasLoadedDocuments = false;
   bool _isRetrying = false;
+  bool _showingOfflineSnapshot = false;
+  DateTime? _offlineSnapshotSavedAt;
+  bool _offlineSnapshotTruncated = false;
   String? _loadErrorMessage;
   int? _requestingCounterTicketId;
+  bool _initialNotificationHandled = false;
   final int _selectedNavIndex = 2;
 
   final TextEditingController _searchController = TextEditingController();
@@ -97,10 +108,17 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
         setState(() {
           _requests = fetchedRequests;
           _hasLoadedDocuments = true;
+          _showingOfflineSnapshot =
+              _documentService!.lastRequestsUsedOfflineSnapshot;
+          _offlineSnapshotSavedAt =
+              _documentService!.lastRequestsSnapshotSavedAt;
+          _offlineSnapshotTruncated =
+              _documentService!.lastRequestsSnapshotTruncated;
           _loadErrorMessage = null;
           _isLoading = false;
           _isRetrying = false;
         });
+        _openInitialNotificationRequest();
       }
     } catch (_) {
       if (mounted) {
@@ -110,9 +128,39 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
               : "We couldn't load your document requests.";
           _isLoading = false;
           _isRetrying = false;
+          _showingOfflineSnapshot = false;
+          _offlineSnapshotSavedAt = null;
+          _offlineSnapshotTruncated = false;
         });
       }
     }
+  }
+
+  void _openInitialNotificationRequest() {
+    final requestId = widget.initialRequestId;
+    if (requestId == null || _initialNotificationHandled) return;
+
+    _initialNotificationHandled = true;
+    DocumentRequestModel? target;
+    for (final request in _requests) {
+      if (request.id == requestId) {
+        target = request;
+        break;
+      }
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (target == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('This document request is no longer available.'),
+          ),
+        );
+        return;
+      }
+      _openDetailsModal(target);
+    });
   }
 
   void _openRequestModal(String documentType) {
@@ -297,6 +345,11 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    if (_showingOfflineSnapshot)
+                      OfflineSnapshotBanner(
+                        savedAt: _offlineSnapshotSavedAt,
+                        truncated: _offlineSnapshotTruncated,
+                      ),
                     AppPageHeading(
                       eyebrow: context.tr('CENTRAL REGISTRY'),
                       title: context.tr('Documents'),

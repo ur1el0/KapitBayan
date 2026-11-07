@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
 
+import '../core/localization/app_language.dart';
+import '../core/network/api_exception.dart';
 import '../core/theme/app_colors.dart';
 import '../models/document_request_model.dart';
 import '../models/payment_recipient_model.dart';
@@ -102,8 +104,12 @@ class _DocumentDetailsDialogState extends State<DocumentDetailsDialog> {
       );
       return;
     }
-    if (_paymentMethod == null || _paymentMethod == 'CASH' || _selectedRecipientId == null) {
-      _showPaymentSubmissionMessage('Choose an e-payment method before submitting a transfer reference.');
+    if (_paymentMethod == null ||
+        _paymentMethod == 'CASH' ||
+        _selectedRecipientId == null) {
+      _showPaymentSubmissionMessage(
+        'Choose an e-payment method before submitting a transfer reference.',
+      );
       return;
     }
     if (reference.isEmpty) {
@@ -144,7 +150,15 @@ class _DocumentDetailsDialogState extends State<DocumentDetailsDialog> {
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not submit payment reference: $error')),
+        SnackBar(
+          content: Text(
+            context.tr(
+              error is NetworkException
+                  ? 'We could not confirm whether the server received your submission. Check your requests after reconnecting before trying again.'
+                  : 'Could not submit payment reference: $error',
+            ),
+          ),
+        ),
       );
     } finally {
       if (mounted) setState(() => _isSubmittingPayment = false);
@@ -181,7 +195,13 @@ class _DocumentDetailsDialogState extends State<DocumentDetailsDialog> {
       widget.onRequestUpdated?.call();
     } catch (error) {
       if (!mounted) return;
-      _showPaymentSubmissionMessage('Could not save payment choice: $error');
+      _showPaymentSubmissionMessage(
+        context.tr(
+          error is NetworkException
+              ? 'We could not confirm whether the server received your submission. Check your requests after reconnecting before trying again.'
+              : 'Could not save payment choice: $error',
+        ),
+      );
     } finally {
       if (mounted) setState(() => _isSavingPaymentChoice = false);
     }
@@ -199,8 +219,9 @@ class _DocumentDetailsDialogState extends State<DocumentDetailsDialog> {
   }
 
   void _showPaymentSubmissionMessage(String message) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   void _handleViewProof() {
@@ -314,7 +335,9 @@ class _DocumentDetailsDialogState extends State<DocumentDetailsDialog> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Could not download or open the O.R. number PDF: $message'),
+          content: Text(
+            'Could not download or open the O.R. number PDF: $message',
+          ),
           backgroundColor: const Color(0xFFEF4444),
           behavior: SnackBarBehavior.floating,
         ),
@@ -329,7 +352,8 @@ class _DocumentDetailsDialogState extends State<DocumentDetailsDialog> {
   @override
   Widget build(BuildContext context) {
     final req = widget.request;
-    final canDownload = req.isReleased && (req.orNumber?.trim().isNotEmpty ?? false);
+    final canDownload =
+        req.isReleased && (req.orNumber?.trim().isNotEmpty ?? false);
     final canChoosePayment =
         req.isReadyForPickup &&
         (req.feeAmount ?? 0) > 0 &&
@@ -341,8 +365,8 @@ class _DocumentDetailsDialogState extends State<DocumentDetailsDialog> {
     final selectedPaymentChoice = _paymentMethod == 'CASH'
         ? 'CASH'
         : hasActiveSelectedRecipient
-            ? 'RECIPIENT:${_selectedRecipientId!}'
-            : null;
+        ? 'RECIPIENT:${_selectedRecipientId!}'
+        : null;
 
     final canSubmitElectronicPayment =
         canChoosePayment &&

@@ -1,71 +1,65 @@
 import 'dart:convert';
 import '../core/network/api_client.dart';
+import '../core/network/api_exception.dart';
 import '../models/hotline_model.dart';
+import 'storage_service.dart';
 
 class HotlineService {
   final ApiClient apiClient;
+  final StorageService? storageService;
+  bool lastFetchUsedOfflineSnapshot = false;
+  bool lastFetchFailed = false;
+  DateTime? lastSnapshotSavedAt;
 
-  HotlineService({required this.apiClient});
+  HotlineService({required this.apiClient, this.storageService});
 
   /// Fetches emergency hotline directory from DRF endpoint /api/v1/hotlines/
   Future<List<HotlineModel>> fetchHotlines() async {
+    lastFetchUsedOfflineSnapshot = false;
+    lastFetchFailed = false;
+    lastSnapshotSavedAt = null;
     try {
       final response = await apiClient.get('/hotlines/', requiresAuth: true);
       final dynamic decoded = jsonDecode(utf8.decode(response.bodyBytes));
 
-      final List<dynamic> list = (decoded is Map<String, dynamic>
-          ? decoded['results'] as List<dynamic>?
-          : decoded as List<dynamic>?) ?? [];
+      final List<dynamic> list =
+          (decoded is Map<String, dynamic>
+              ? decoded['results'] as List<dynamic>?
+              : decoded as List<dynamic>?) ??
+          [];
 
       final hotlines = list
           .map((item) => HotlineModel.fromJson(item as Map<String, dynamic>))
           .toList();
 
-      if (hotlines.isNotEmpty) {
-        return hotlines;
+      try {
+        await storageService?.saveOfflineSnapshot(
+          'hotlines',
+          hotlines.map((hotline) => hotline.toJson()).toList(growable: false),
+        );
+      } catch (_) {
+        // Keep the live result even if secure cache storage is unavailable.
       }
+      return hotlines;
+    } on NetworkException {
+      lastFetchFailed = true;
+      try {
+        final snapshot = await storageService?.readOfflineSnapshot('hotlines');
+        if (snapshot != null) {
+          lastFetchUsedOfflineSnapshot = true;
+          lastSnapshotSavedAt = snapshot.savedAt;
+          return snapshot.records
+              .map(HotlineModel.fromJson)
+              .where((hotline) => hotline.isActive)
+              .toList(growable: false);
+        }
+      } catch (_) {
+        // Use the safe built-in emergency list in the screen if storage fails.
+      }
+      return const [];
     } catch (_) {
-      // Return default emergency hotlines on error or empty DB
+      lastFetchFailed = true;
+      return const [];
     }
-
-    return _getDefaultHotlines();
-  }
-
-  /// Default emergency hotline directory matching standard emergency numbers
-  static List<HotlineModel> _getDefaultHotlines() {
-    return const [
-      HotlineModel(
-        id: 1,
-        name: 'National Police Station (PNP)',
-        number: '911 / 117',
-        category: 'POLICE',
-        categoryDisplay: 'Police',
-        isActive: true,
-      ),
-      HotlineModel(
-        id: 2,
-        name: 'Bureau of Fire Protection (BFP)',
-        number: '(02) 8426-0219',
-        category: 'FIRE',
-        categoryDisplay: 'Fire Department',
-        isActive: true,
-      ),
-      HotlineModel(
-        id: 3,
-        name: 'Quezon Medical Center / DRRMO',
-        number: '(042) 710-3111',
-        category: 'MEDICAL',
-        categoryDisplay: 'Medical / Hospital',
-        isActive: true,
-      ),
-      HotlineModel(
-        id: 4,
-        name: 'Barangay Ibabang Dupay Action Desk',
-        number: '(042) 710-2345',
-        category: 'BARANGAY',
-        categoryDisplay: 'Barangay Desk',
-        isActive: true,
-      ),
-    ];
   }
 }

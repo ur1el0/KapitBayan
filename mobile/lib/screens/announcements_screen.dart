@@ -4,6 +4,7 @@ import '../models/announcement_model.dart';
 import '../services/dashboard_service.dart';
 import '../services/storage_service.dart';
 import '../core/network/api_client.dart';
+import '../widgets/offline_snapshot_banner.dart';
 
 class AnnouncementsScreen extends StatefulWidget {
   const AnnouncementsScreen({super.key});
@@ -15,6 +16,9 @@ class AnnouncementsScreen extends StatefulWidget {
 class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
   List<AnnouncementModel> _announcements = [];
   bool _isLoading = true;
+  bool _showingOfflineSnapshot = false;
+  bool _loadFailedWithoutSnapshot = false;
+  DateTime? _offlineSnapshotSavedAt;
 
   @override
   void initState() {
@@ -41,13 +45,23 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
       if (mounted) {
         setState(() {
           _announcements = data.announcements;
+          _showingOfflineSnapshot = data.isShowingOfflineAnnouncements;
+          _offlineSnapshotSavedAt = data.offlineAnnouncementsSavedAt;
+          _loadFailedWithoutSnapshot =
+              data.hasAnnouncementsError && !data.isShowingOfflineAnnouncements;
           _isLoading = false;
         });
       }
     } catch (_) {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _loadFailedWithoutSnapshot = true;
+        });
+      }
     }
   }
+
   void _showAnnouncementDetail(BuildContext context, AnnouncementModel ann) {
     showModalBottomSheet(
       context: context,
@@ -88,7 +102,8 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
                         width: double.infinity,
                         height: 200,
                         fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
+                        errorBuilder: (context, error, stackTrace) =>
+                            const SizedBox.shrink(),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -97,17 +112,28 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
-                          color: ann.isPinned ? const Color(0xFFFEF3C7) : const Color(0xFFF1F5F9),
+                          color: ann.isPinned
+                              ? const Color(0xFFFEF3C7)
+                              : const Color(0xFFF1F5F9),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
-                          context.tr(ann.isPinned ? 'PINNED ANNOUNCEMENT' : 'BARANGAY BROADCAST'),
+                          context.tr(
+                            ann.isPinned
+                                ? 'PINNED ANNOUNCEMENT'
+                                : 'BARANGAY BROADCAST',
+                          ),
                           style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
-                            color: ann.isPinned ? const Color(0xFFD97706) : const Color(0xFF64748B),
+                            color: ann.isPinned
+                                ? const Color(0xFFD97706)
+                                : const Color(0xFF64748B),
                           ),
                         ),
                       ),
@@ -115,7 +141,10 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
                         ann.createdAt != null
                             ? '${ann.createdAt!.month}/${ann.createdAt!.day}/${ann.createdAt!.year}'
                             : context.tr('Recent'),
-                        style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade500,
+                        ),
                       ),
                     ],
                   ),
@@ -151,7 +180,10 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
                       ),
                       child: Text(
                         context.tr('Close Bulletin'),
-                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),
@@ -163,7 +195,7 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
       },
     );
   }
-  
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -171,7 +203,10 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
       appBar: AppBar(
         title: Text(
           context.tr('Barangay Bulletin'),
-          style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF0F172A),
+          ),
         ),
         backgroundColor: Colors.white,
         elevation: 0,
@@ -181,32 +216,71 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
               onRefresh: _loadAnnouncements,
-              child: _announcements.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.campaign_outlined, size: 64, color: Colors.grey.shade400),
-                          const SizedBox(height: 12),
-                          Text(
-                            context.tr('No announcements broadcasted yet.'),
-                            style: TextStyle(color: Colors.grey.shade600, fontSize: 16),
+              child: _announcements.isEmpty && _loadFailedWithoutSnapshot
+                  ? ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      children: [
+                        const SizedBox(height: 80),
+                        Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Text(
+                            context.tr(
+                              'Could not load this saved information. Reconnect and refresh to get the latest data.',
+                            ),
+                            textAlign: TextAlign.center,
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
+                    )
+                  : _announcements.isEmpty
+                  ? ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.all(16),
+                      children: [
+                        if (_showingOfflineSnapshot)
+                          OfflineSnapshotBanner(
+                            savedAt: _offlineSnapshotSavedAt,
+                          ),
+                        const SizedBox(height: 60),
+                        Icon(
+                          Icons.campaign_outlined,
+                          size: 64,
+                          color: Colors.grey.shade400,
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          context.tr('No announcements broadcasted yet.'),
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.grey.shade600,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
                     )
                   : ListView.builder(
                       padding: const EdgeInsets.all(16),
-                      itemCount: _announcements.length,
+                      itemCount:
+                          _announcements.length +
+                          (_showingOfflineSnapshot ? 1 : 0),
                       itemBuilder: (context, index) {
-                        final ann = _announcements[index];
+                        if (_showingOfflineSnapshot && index == 0) {
+                          return OfflineSnapshotBanner(
+                            savedAt: _offlineSnapshotSavedAt,
+                          );
+                        }
+                        final announcementIndex =
+                            index - (_showingOfflineSnapshot ? 1 : 0);
+                        final ann = _announcements[announcementIndex];
                         return Container(
                           margin: const EdgeInsets.only(bottom: 16),
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
-                              color: ann.isPinned ? const Color(0xFFF59E0B) : Colors.grey.shade200,
+                              color: ann.isPinned
+                                  ? const Color(0xFFF59E0B)
+                                  : Colors.grey.shade200,
                               width: ann.isPinned ? 1.5 : 1.0,
                             ),
                             boxShadow: [
@@ -219,95 +293,45 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
                           ),
                           child: Material(
                             color: Colors.transparent,
-                            borderRadius: BorderRadius.circular(16),
                             child: InkWell(
+                              onTap: () =>
+                                  _showAnnouncementDetail(context, ann),
                               borderRadius: BorderRadius.circular(16),
-                              onTap: () => _showAnnouncementDetail(context, ann),
                               child: Padding(
                                 padding: const EdgeInsets.all(16),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    if (ann.image != null && ann.image!.isNotEmpty) ...[
-                                      ClipRRect(
-                                        borderRadius: BorderRadius.circular(12),
-                                        child: Image.network(
-                                          ann.image!,
-                                          width: double.infinity,
-                                          height: 140,
-                                          fit: BoxFit.cover,
-                                          errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 12),
-                                    ],
                                     Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                       children: [
-                                        if (ann.isPinned)
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                            decoration: BoxDecoration(
-                                              color: const Color(0xFFFEF3C7),
-                                              borderRadius: BorderRadius.circular(20),
-                                            ),
-                                            child: Row(
-                                              children: [
-                                                Icon(Icons.push_pin, size: 14, color: Color(0xFFD97706)),
-                                                SizedBox(width: 4),
-                                                Text(
-                                                  context.tr('PINNED ANNOUNCEMENT'),
-                                                  style: TextStyle(
-                                                    fontSize: 10,
-                                                    fontWeight: FontWeight.bold,
-                                                    color: Color(0xFFD97706),
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          )
-                                        else
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                            decoration: BoxDecoration(
-                                              color: const Color(0xFFF1F5F9),
-                                              borderRadius: BorderRadius.circular(20),
-                                            ),
-                                            child: Text(
-                                              context.tr('BROADCAST'),
-                                              style: TextStyle(
-                                                fontSize: 10,
-                                                fontWeight: FontWeight.bold,
-                                                color: Color(0xFF64748B),
-                                              ),
+                                        if (ann.isPinned) ...[
+                                          const Icon(
+                                            Icons.push_pin,
+                                            size: 14,
+                                            color: Color(0xFFD97706),
+                                          ),
+                                          const SizedBox(width: 5),
+                                        ],
+                                        Expanded(
+                                          child: Text(
+                                            ann.title,
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 16,
+                                              color: Color(0xFF0F172A),
                                             ),
                                           ),
-                                        Text(
-                                          ann.createdAt != null
-                                              ? '${ann.createdAt!.month}/${ann.createdAt!.day}/${ann.createdAt!.year}'
-                                              : context.tr('Recent'),
-                                          style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
                                         ),
                                       ],
-                                    ),
-                                    const SizedBox(height: 12),
-                                    Text(
-                                      ann.title,
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        color: Color(0xFF0F172A),
-                                      ),
                                     ),
                                     const SizedBox(height: 8),
                                     Text(
                                       ann.content,
-                                      maxLines: 3,
+                                      maxLines: 4,
                                       overflow: TextOverflow.ellipsis,
                                       style: const TextStyle(
-                                        fontSize: 14,
-                                        color: Color(0xFF334155),
-                                        height: 1.4,
+                                        color: Color(0xFF475569),
+                                        height: 1.45,
                                       ),
                                     ),
                                   ],

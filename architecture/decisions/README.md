@@ -30,6 +30,7 @@ This index lists the decision records present in this repository snapshot. Read 
 | [024](024-barangay-onboarding-email-and-authority-evidence.md) | Email verification and private authority evidence retained under ADR 025 |
 | [025](025-barangay-operator-onboarding-and-account-support.md) | Barangay Operator onboarding and bounded account support; no analytics or service-record access |
 | [026](026-resident-selected-document-payment-method.md) | Resident-selected document payment method from Barangay-configured options |
+| [027](027-paper-certificate-qr-verification.md) | QR verification for Barangay-issued paper certificates |
 
 ## Implementation notes
 

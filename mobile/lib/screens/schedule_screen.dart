@@ -16,6 +16,7 @@ import '../widgets/custom_bottom_nav.dart';
 import '../widgets/schedule_event_card.dart';
 import '../widgets/schedule_detail_dialogs.dart';
 import '../widgets/app_surface.dart';
+import '../widgets/offline_snapshot_banner.dart';
 import 'dashboard_screen.dart';
 import 'documents_screen.dart';
 import 'queue_screen.dart';
@@ -121,8 +122,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   Future<void> _onAddToCalendar(ActivityScheduleModel activity) async {
     var calendarOpened = false;
     try {
-      calendarOpened = await (widget.calendarService ?? ActivityCalendarService())
-          .addActivity(activity);
+      calendarOpened =
+          await (widget.calendarService ?? ActivityCalendarService())
+              .addActivity(activity);
     } catch (_) {
       // A device may have no calendar app or the platform handoff may fail.
     }
@@ -185,12 +187,12 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              context.tr(_errorMessage ?? 'Please check your internet connection and try again.'),
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 13.5,
-                color: Color(0xFF64748B),
+              context.tr(
+                _errorMessage ??
+                    'Please check your internet connection and try again.',
               ),
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 13.5, color: Color(0xFF64748B)),
             ),
             const SizedBox(height: 20),
             ElevatedButton.icon(
@@ -199,15 +201,27 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                   ? const SizedBox(
                       width: 16,
                       height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
                     )
                   : const Icon(Icons.refresh_rounded, size: 18),
-              label: Text(_isRetrying ? context.tr('Retrying...') : context.tr('Try again')),
+              label: Text(
+                _isRetrying
+                    ? context.tr('Retrying...')
+                    : context.tr('Try again'),
+              ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primaryNavy,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
           ],
@@ -314,316 +328,327 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
               ),
             )
           : _hasError
-              ? _buildErrorState()
-              : RefreshIndicator(
-                  onRefresh: _loadScheduleData,
-                  color: AppColors.primaryNavy,
-                  child: SingleChildScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.pageHorizontal,
-                      vertical: AppSpacing.pageVertical,
+          ? _buildErrorState()
+          : RefreshIndicator(
+              onRefresh: _loadScheduleData,
+              color: AppColors.primaryNavy,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.pageHorizontal,
+                  vertical: AppSpacing.pageVertical,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (_data.isShowingOfflineRequestSnapshot)
+                      OfflineSnapshotBanner(
+                        savedAt: _data.offlineRequestSnapshotSavedAt,
+                        truncated: _data.offlineRequestsTruncated,
+                      ),
+                    AppPageHeading(
+                      eyebrow: context.tr('COMMUNITY CALENDAR'),
+                      title: context.tr('Schedule'),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        AppPageHeading(
-                          eyebrow: context.tr('COMMUNITY CALENDAR'),
-                          title: context.tr('Schedule'),
+                    const SizedBox(height: 20),
+
+                    // 1. Calendar Day Strip Header
+                    CalendarDayStrip(
+                      selectedDate: _selectedDate,
+                      eventDates: eventDates,
+                      onDateSelected: (date) {
+                        setState(() {
+                          _selectedDate = date;
+                          _showAllEvents = false;
+                        });
+                      },
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // 2. "MY APPOINTMENTS" Section
+                    Text(
+                      context.tr('MY APPOINTMENTS'),
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF64748B),
+                        letterSpacing: 1.0,
+                      ),
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    if (_data.hasAppointmentsError)
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: const Color(0xFFFEE2E2)),
                         ),
-                        const SizedBox(height: 20),
-
-                        // 1. Calendar Day Strip Header
-                        CalendarDayStrip(
-                          selectedDate: _selectedDate,
-                          eventDates: eventDates,
-                          onDateSelected: (date) {
-                            setState(() {
-                              _selectedDate = date;
-                              _showAllEvents = false;
-                            });
-                          },
-                        ),
-
-                        const SizedBox(height: 24),
-
-                        // 2. "MY APPOINTMENTS" Section
-                        Text(
-                          context.tr('MY APPOINTMENTS'),
-                          style: TextStyle(
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w800,
-                            color: Color(0xFF64748B),
-                            letterSpacing: 1.0,
-                          ),
-                        ),
-
-                        const SizedBox(height: 12),
-
-                        if (_data.hasAppointmentsError)
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: const Color(0xFFFEE2E2)),
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(
-                                  Icons.info_outline_rounded,
-                                  color: AppColors.error,
-                                  size: 20,
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Text(
-                                    context.tr('Unable to update appointments.'),
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      color: AppColors.textPrimary,
-                                    ),
-                                  ),
-                                ),
-                                TextButton(
-                                  onPressed: _loadScheduleData,
-                                  child: Text(context.tr('Retry')),
-                                ),
-                              ],
-                            ),
-                          )
-                        else if (appointmentsForDate.isEmpty)
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(
-                              vertical: 24,
-                              horizontal: 16,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: const Color(0xFFF1F5F9),
-                                width: 1.5,
-                              ),
-                            ),
-                            child: Column(
-                              children: [
-                                Icon(
-                                  Icons.event_busy_rounded,
-                                  size: 32,
-                                  color: const Color(
-                                    0xFF94A3B8,
-                                  ).withValues(alpha: 0.8),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  context.tr('No appointments scheduled for this date'),
-                                  style: TextStyle(
-                                    fontSize: 13.5,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xFF64748B),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          )
-                        else
-                          ListView.separated(
-                            key: const Key('daily_appointments_list'),
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            itemCount: appointmentsForDate.length > 2
-                                ? 2
-                                : appointmentsForDate.length,
-                            separatorBuilder: (_, _) => const SizedBox(height: 12),
-                            itemBuilder: (context, index) {
-                              final req = appointmentsForDate[index];
-                              return AppointmentScheduleCard(
-                                key: Key('daily_request_card_${req.id}'),
-                                request: req,
-                                onTap: () => _showAppointmentDetails(req),
-                              );
-                            },
-                          ),
-
-                        // 2b. "ACTIVE ONGOING REQUESTS" (Kept in a clearly separate section)
-                        if (activeAppointments.isNotEmpty) ...[
-                          const SizedBox(height: 24),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                context.tr('ACTIVE ONGOING REQUESTS'),
-                                style: TextStyle(
-                                  fontSize: 11.5,
-                                  fontWeight: FontWeight.w800,
-                                  color: Color(0xFF64748B),
-                                  letterSpacing: 1.0,
-                                ),
-                              ),
-                              Text(
-                                '${activeAppointments.length} ${context.tr('Active')}',
-                                style: const TextStyle(
-                                  fontSize: 11.5,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.primaryNavy,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          ListView.separated(
-                            key: const Key('active_ongoing_requests_list'),
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            itemCount: activeAppointments.length,
-                            separatorBuilder: (_, _) => const SizedBox(height: 12),
-                            itemBuilder: (context, index) {
-                              final req = activeAppointments[index];
-                              return AppointmentScheduleCard(
-                                key: Key('active_request_card_${req.id}'),
-                                request: req,
-                                onTap: () => _showAppointmentDetails(req),
-                              );
-                            },
-                          ),
-                        ],
-
-                        const SizedBox(height: 26),
-
-                        // 3. "Upcoming Events" Section Header
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        child: Row(
                           children: [
-                            Text(
-                              context.tr('Upcoming Events'),
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w900,
-                                color: AppColors.textPrimary,
-                                letterSpacing: -0.3,
+                            const Icon(
+                              Icons.info_outline_rounded,
+                              color: AppColors.error,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                context.tr('Unable to update appointments.'),
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: AppColors.textPrimary,
+                                ),
                               ),
                             ),
-                            GestureDetector(
-                              onTap: () {
-                                setState(() {
-                                  _showAllEvents = !_showAllEvents;
-                                });
-                              },
-                              child: Text(
-                                context.tr(_showAllEvents ? 'Show Date' : 'View All'),
-                                style: const TextStyle(
-                                  fontSize: 13.5,
-                                  fontWeight: FontWeight.w800,
-                                  color: AppColors.primaryNavy,
-                                ),
+                            TextButton(
+                              onPressed: _loadScheduleData,
+                              child: Text(context.tr('Retry')),
+                            ),
+                          ],
+                        ),
+                      )
+                    else if (appointmentsForDate.isEmpty)
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 24,
+                          horizontal: 16,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: const Color(0xFFF1F5F9),
+                            width: 1.5,
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            Icon(
+                              Icons.event_busy_rounded,
+                              size: 32,
+                              color: const Color(
+                                0xFF94A3B8,
+                              ).withValues(alpha: 0.8),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              context.tr(
+                                'No appointments scheduled for this date',
+                              ),
+                              style: TextStyle(
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF64748B),
                               ),
                             ),
                           ],
                         ),
+                      )
+                    else
+                      ListView.separated(
+                        key: const Key('daily_appointments_list'),
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: appointmentsForDate.length > 2
+                            ? 2
+                            : appointmentsForDate.length,
+                        separatorBuilder: (_, _) => const SizedBox(height: 12),
+                        itemBuilder: (context, index) {
+                          final req = appointmentsForDate[index];
+                          return AppointmentScheduleCard(
+                            key: Key('daily_request_card_${req.id}'),
+                            request: req,
+                            onTap: () => _showAppointmentDetails(req),
+                          );
+                        },
+                      ),
 
-                        const SizedBox(height: 14),
-
-                        // Upcoming Events List
-                        if (_data.hasActivitiesError)
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: const Color(0xFFFEE2E2)),
+                    // 2b. "ACTIVE ONGOING REQUESTS" (Kept in a clearly separate section)
+                    if (activeAppointments.isNotEmpty) ...[
+                      const SizedBox(height: 24),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            context.tr('ACTIVE ONGOING REQUESTS'),
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF64748B),
+                              letterSpacing: 1.0,
                             ),
-                            child: Row(
-                              children: [
-                                const Icon(
-                                  Icons.info_outline_rounded,
-                                  color: AppColors.error,
-                                  size: 20,
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Text(
-                                    context.tr('Unable to update community events.'),
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      color: AppColors.textPrimary,
-                                    ),
-                                  ),
-                                ),
-                                TextButton(
-                                  onPressed: _loadScheduleData,
-                                  child: Text(context.tr('Retry')),
-                                ),
-                              ],
-                            ),
-                          )
-                        else if (displayedActivities.isEmpty)
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(
-                              vertical: 28,
-                              horizontal: 16,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF8FAFC),
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: const Color(0xFFE2E8F0),
-                                width: 1.0,
-                              ),
-                            ),
-                            child: Column(
-                              children: [
-                                const Icon(
-                                  Icons.calendar_today_outlined,
-                                  size: 32,
-                                  color: Color(0xFF94A3B8),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  context.tr('No community events scheduled'),
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xFF64748B),
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
-                                TextButton(
-                                  onPressed: () {
-                                    setState(() {
-                                      _showAllEvents = true;
-                                    });
-                                  },
-                                  child: Text(context.tr('View All Activities')),
-                                ),
-                              ],
-                            ),
-                          )
-                        else
-                          ListView.separated(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            itemCount: displayedActivities.length,
-                            separatorBuilder: (_, _) => const SizedBox(height: 16),
-                            itemBuilder: (context, index) {
-                              final activity = displayedActivities[index];
-                              return ScheduleEventCard(
-                                activity: activity,
-                                onAddToCalendar: () => _onAddToCalendar(activity),
-                                onTap: () => _showEventDetails(activity),
-                              );
-                            },
                           ),
+                          Text(
+                            '${activeAppointments.length} ${context.tr('Active')}',
+                            style: const TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.primaryNavy,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      ListView.separated(
+                        key: const Key('active_ongoing_requests_list'),
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: activeAppointments.length,
+                        separatorBuilder: (_, _) => const SizedBox(height: 12),
+                        itemBuilder: (context, index) {
+                          final req = activeAppointments[index];
+                          return AppointmentScheduleCard(
+                            key: Key('active_request_card_${req.id}'),
+                            request: req,
+                            onTap: () => _showAppointmentDetails(req),
+                          );
+                        },
+                      ),
+                    ],
 
-                        const SizedBox(height: 32),
+                    const SizedBox(height: 26),
+
+                    // 3. "Upcoming Events" Section Header
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          context.tr('Upcoming Events'),
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900,
+                            color: AppColors.textPrimary,
+                            letterSpacing: -0.3,
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _showAllEvents = !_showAllEvents;
+                            });
+                          },
+                          child: Text(
+                            context.tr(
+                              _showAllEvents ? 'Show Date' : 'View All',
+                            ),
+                            style: const TextStyle(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.primaryNavy,
+                            ),
+                          ),
+                        ),
                       ],
                     ),
-                  ),
+
+                    const SizedBox(height: 14),
+
+                    // Upcoming Events List
+                    if (_data.hasActivitiesError)
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: const Color(0xFFFEE2E2)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.info_outline_rounded,
+                              color: AppColors.error,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                context.tr(
+                                  'Unable to update community events.',
+                                ),
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: _loadScheduleData,
+                              child: Text(context.tr('Retry')),
+                            ),
+                          ],
+                        ),
+                      )
+                    else if (displayedActivities.isEmpty)
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 28,
+                          horizontal: 16,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: const Color(0xFFE2E8F0),
+                            width: 1.0,
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            const Icon(
+                              Icons.calendar_today_outlined,
+                              size: 32,
+                              color: Color(0xFF94A3B8),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              context.tr('No community events scheduled'),
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF64748B),
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            TextButton(
+                              onPressed: () {
+                                setState(() {
+                                  _showAllEvents = true;
+                                });
+                              },
+                              child: Text(context.tr('View All Activities')),
+                            ),
+                          ],
+                        ),
+                      )
+                    else
+                      ListView.separated(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: displayedActivities.length,
+                        separatorBuilder: (_, _) => const SizedBox(height: 16),
+                        itemBuilder: (context, index) {
+                          final activity = displayedActivities[index];
+                          return ScheduleEventCard(
+                            activity: activity,
+                            onAddToCalendar: () => _onAddToCalendar(activity),
+                            onTap: () => _showEventDetails(activity),
+                          );
+                        },
+                      ),
+
+                    const SizedBox(height: 32),
+                  ],
                 ),
+              ),
+            ),
       bottomNavigationBar: CustomBottomNav(
         currentIndex: _selectedNavIndex,
         onTap: (index) {

@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 
 import '../core/network/api_client.dart';
+import '../core/network/api_exception.dart';
 import '../models/document_request_model.dart';
 import '../models/document_offering_model.dart';
 import '../models/payment_recipient_model.dart';
@@ -13,11 +14,17 @@ import 'storage_service.dart';
 class DocumentService {
   final ApiClient apiClient;
   final StorageService storageService;
+  bool lastRequestsUsedOfflineSnapshot = false;
+  DateTime? lastRequestsSnapshotSavedAt;
+  bool lastRequestsSnapshotTruncated = false;
 
   DocumentService({required this.apiClient, required this.storageService});
 
   /// Fetches all document requests for the authenticated user from the backend API
   Future<List<DocumentRequestModel>> fetchDocumentRequests() async {
+    lastRequestsUsedOfflineSnapshot = false;
+    lastRequestsSnapshotSavedAt = null;
+    lastRequestsSnapshotTruncated = false;
     try {
       final response = await apiClient.get(
         '/document-requests/',
@@ -55,7 +62,32 @@ class DocumentService {
         current = jsonDecode(utf8.decode(nextResponse.bodyBytes));
       }
 
+      try {
+        await storageService.saveOfflineSnapshot(
+          'document_requests',
+          items
+              .map((item) {
+                final record = item.toJson();
+                record['payment_proof_url'] = null;
+                return record;
+              })
+              .toList(growable: false),
+        );
+      } catch (_) {
+        // Live data remains usable if encrypted local storage is unavailable.
+      }
       return items;
+    } on NetworkException {
+      final snapshot = await storageService.readOfflineSnapshot(
+        'document_requests',
+      );
+      if (snapshot == null) rethrow;
+      lastRequestsUsedOfflineSnapshot = true;
+      lastRequestsSnapshotSavedAt = snapshot.savedAt;
+      lastRequestsSnapshotTruncated = snapshot.isTruncated;
+      return snapshot.records
+          .map(DocumentRequestModel.fromJson)
+          .toList(growable: false);
     } catch (e) {
       rethrow;
     }

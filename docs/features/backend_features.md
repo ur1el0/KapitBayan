@@ -16,7 +16,7 @@ The document workflow includes explicit fee assessment, waiver provenance, resid
 
 ## Queue and analytics
 
-Queue tickets and live desk state are exposed through HTTP APIs and refreshed by clients. Staff operations and analytics are tenant/role scoped. The current client behavior is polling and fault-isolated retries, not a WebSocket stream.
+Queue tickets and live desk state are exposed through HTTP APIs and refreshed by clients. Staff operations and analytics are tenant/role scoped. The current client behavior is HTTP polling and fault-isolated retries, not a WebSocket stream; actual refresh intervals are listed in the [client refresh guide](client-refresh-behavior.md). Dashboard charts use only records saved for the assigned Barangay. Empty datasets return empty distributions or zero counts; the API does not supply demo values as if they were resident or incident data.
 
 ## Reports, communications, and notifications
 

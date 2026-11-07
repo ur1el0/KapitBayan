@@ -103,7 +103,8 @@ const Map<String, String> _filipino = {
   'EXECUTIVE OPERATIONS': 'MGA OPERASYON NG ADMINISTRASYON',
   'Field Operations Desk': 'Tanggapan ng Operasyon sa Field',
   'Return to Executive Console': 'Bumalik sa Konsol ng Barangay',
-  'Advance queue ticker, verify clearance QR, triage incidents': 'I-update ang pila, beripikahin ang QR ng sertipikasyon, at suriin ang mga insidente.',
+  'Advance queue ticker, verify clearance QR, triage incidents':
+      'I-update ang pila, beripikahin ang QR ng sertipikasyon, at suriin ang mga insidente.',
   'Welcome Back': 'Maligayang Pagbabalik',
   'Please enter your citizen credentials to continue':
       'Ilagay ang detalye ng iyong account upang magpatuloy.',
@@ -151,33 +152,52 @@ const Map<String, String> _filipino = {
   'Document name': 'Pangalan ng dokumento',
   'Enter the Barangay document name':
       'Ilagay ang pangalan ng dokumento ng Barangay',
-  'Confirm availability and requirements with your Barangay.': 'Kumpirmahin sa inyong Barangay kung ibinibigay ang dokumento at ano ang mga kailangan.',
+  'Confirm availability and requirements with your Barangay.':
+      'Kumpirmahin sa inyong Barangay kung ibinibigay ang dokumento at ano ang mga kailangan.',
   'Could not load your Barangay document services.':
       'Hindi ma-load ang mga serbisyo ng dokumento ng inyong Barangay.',
-  'Your Barangay has not published its document services yet. The request will need staff confirmation.': 'Hindi pa inilalathala ng inyong Barangay ang mga serbisyo nito. Kailangang kumpirmahin ng kawani ang kahilingan.',
-  'Your Barangay has not published its custom document services yet. Standard statutory requirements apply.': 'Hindi pa inilalathala ng inyong Barangay ang mga pasadyang serbisyo. Ang mga karaniwang kailangan ay ipinapakita.',
-  'Government ID or proof of residency': 'Government ID o patunay ng paninirahan',
-  'Proof of indigent status or declaration of low income': 'Katibayan ng katayuang indigent o deklarasyon ng mababang kita',
+  'Your Barangay has not published its document services yet. The request will need staff confirmation.':
+      'Hindi pa inilalathala ng inyong Barangay ang mga serbisyo nito. Kailangang kumpirmahin ng kawani ang kahilingan.',
+  'Your Barangay has not published its custom document services yet. Standard statutory requirements apply.':
+      'Hindi pa inilalathala ng inyong Barangay ang mga pasadyang serbisyo. Ang mga karaniwang kailangan ay ipinapakita.',
+  'Government ID or proof of residency':
+      'Government ID o patunay ng paninirahan',
+  'Proof of indigent status or declaration of low income':
+      'Katibayan ng katayuang indigent o deklarasyon ng mababang kita',
   'Government ID': 'Government ID',
-  'Proof of address (utility bill, lease contract, or voter certification)': 'Patunay ng tirahan (utility bill, kontrata ng upa, o voter certification)',
-  'Government ID of owner or representative': 'Government ID ng may-ari o kinatawan',
-  'DTI or SEC Certificate of Registration': 'Sertipiko ng Rehistrasyon mula sa DTI o SEC',
-  'Contract of lease or proof of property ownership': 'Kontrata ng upa o patunay ng pagmamay-ari',
-  'Standard clearance for employment, identification, and official transactions.': 'Karaniwang clearance para sa trabaho, pagkakakilanlan, at mga opisyal na transaksyon.',
-  'Statutory fee-exempt certificate for social welfare, medical, and legal assistance.': 'Libreng sertipiko ayon sa batas para sa tulong panlipunan, medikal, at legal.',
-  'Official certification verifying residency address within the Barangay.': 'Opisyal na sertipikasyon na nagpapatunay ng tirahan sa loob ng Barangay.',
-  'Clearance required for new business registration or annual business permit renewal.': 'Clearance na kailangan para sa bagong negosyo o taunang pagpapanibago ng permit.',
+  'Proof of address (utility bill, lease contract, or voter certification)':
+      'Patunay ng tirahan (utility bill, kontrata ng upa, o voter certification)',
+  'Government ID of owner or representative':
+      'Government ID ng may-ari o kinatawan',
+  'DTI or SEC Certificate of Registration':
+      'Sertipiko ng Rehistrasyon mula sa DTI o SEC',
+  'Contract of lease or proof of property ownership':
+      'Kontrata ng upa o patunay ng pagmamay-ari',
+  'Standard clearance for employment, identification, and official transactions.':
+      'Karaniwang clearance para sa trabaho, pagkakakilanlan, at mga opisyal na transaksyon.',
+  'Statutory fee-exempt certificate for social welfare, medical, and legal assistance.':
+      'Libreng sertipiko ayon sa batas para sa tulong panlipunan, medikal, at legal.',
+  'Official certification verifying residency address within the Barangay.':
+      'Opisyal na sertipikasyon na nagpapatunay ng tirahan sa loob ng Barangay.',
+  'Clearance required for new business registration or annual business permit renewal.':
+      'Clearance na kailangan para sa bagong negosyo o taunang pagpapanibago ng permit.',
   'Published fee': 'Inilathalang bayad',
   'Confirm with Barangay staff': 'Kumpirmahin sa kawani ng Barangay',
   'No fee': 'Walang bayad',
   'Bring these requirements:': 'Dalhin ang mga sumusunod na kailangan:',
-  'Your Barangay has not published requirements for this service yet.': 'Hindi pa inilalathala ng inyong Barangay ang mga kailangan para sa serbisyong ito.',
-  'Final fees are confirmed by Barangay staff during processing.': 'Kukumpirmahin ng kawani ng Barangay ang pinal na bayad habang pinoproseso ang kahilingan.',
+  'Checklist: requirements to bring': 'Checklist: mga kailangang dalhin',
+  'Check the items you have ready. Barangay staff will verify them in person.':
+      'Lagyan ng tsek ang mga nakahanda na. Beripikahin ito ng kawani ng Barangay nang personal.',
+  'Your Barangay has not published requirements for this service yet.':
+      'Hindi pa inilalathala ng inyong Barangay ang mga kailangan para sa serbisyong ito.',
+  'Final fees are confirmed by Barangay staff during processing.':
+      'Kukumpirmahin ng kawani ng Barangay ang pinal na bayad habang pinoproseso ang kahilingan.',
   'Requirements': 'Mga kailangan',
   'No requirements were listed.': 'Walang inilathalang kailangan.',
   'Additional details': 'Karagdagang detalye',
   'Published requirements and fee': 'Inilathalang mga kailangan at bayad',
-  'These are the published details saved when the request was filed. The fee assessment below records the final amount.': 'Ito ang inilathalang detalye noong ipinasa ang kahilingan. Itinatala sa ibaba ng pagtatasa ang pinal na halaga.',
+  'These are the published details saved when the request was filed. The fee assessment below records the final amount.':
+      'Ito ang inilathalang detalye noong ipinasa ang kahilingan. Itinatala sa ibaba ng pagtatasa ang pinal na halaga.',
   'Submission Date': 'Petsa ng Paghahain',
   'Current Status': 'Kasalukuyang Kalagayan',
   'Urgency Priority': 'Antas ng Pagkaapurahan',
@@ -203,15 +223,18 @@ const Map<String, String> _filipino = {
   'Switched to Citizen Resident Portal': 'Lumipat sa Portal ng Residente',
   'BIRTH DATE': 'PETSA NG KAPANGANAKAN',
   'CONTACT NUMBER': 'NUMERO NG TELEPONO',
-  'Choose how you receive queue, document, and community updates.': 'Piliin kung paano mo matatanggap ang mga update tungkol sa pila, dokumento, at barangay.',
+  'Choose how you receive queue, document, and community updates.':
+      'Piliin kung paano mo matatanggap ang mga update tungkol sa pila, dokumento, at barangay.',
   'Could not load preferences. Try again.':
       'Hindi ma-load ang mga setting. Subukan muli.',
   'FULL NAME': 'BUONG PANGALAN',
   'Citizen ID / Username': 'ID ng residente / username',
   'Receive queue calls and service updates on this device.':
       'Tumanggap ng tawag sa pila at update sa serbisyo sa device na ito.',
-  'Review your resident information, verification documents, and account details.': 'Suriin ang iyong impormasyon, mga dokumento para sa pagpapatunay, at detalye ng account.',
-  'Update your resident information and verification documents below.': 'I-update sa ibaba ang iyong impormasyon at mga dokumento para sa pagpapatunay.',
+  'Review your resident information, verification documents, and account details.':
+      'Suriin ang iyong impormasyon, mga dokumento para sa pagpapatunay, at detalye ng account.',
+  'Update your resident information and verification documents below.':
+      'I-update sa ibaba ang iyong impormasyon at mga dokumento para sa pagpapatunay.',
   'CURRENTLY AT COUNTER': 'KASALUKUYANG TINATAWAG',
   'LIVE QUEUE STATUS': 'KALAGAYAN NG PILA',
   'Live Queue Unavailable': 'Hindi Makita ang Live na Pila',
@@ -263,7 +286,8 @@ const Map<String, String> _filipino = {
       'May kalakip na dokumento (Pindutin upang tingnan o i-edit)',
   'Required: upload at least one ID or proof of residency':
       'Kailangan: mag-upload ng kahit isang ID o patunay ng paninirahan',
-  'Upload at least one image to register: a PhilSys ID, a secondary valid ID, or proof of residency such as a utility bill or lease. A typed ID number alone does not count.': 'Mag-upload ng kahit isang larawan para makapagparehistro: PhilSys ID, pangalawang balidong ID, o patunay ng paninirahan gaya ng bill o kontrata sa upa. Hindi sapat ang pag-type lamang ng numero ng ID.',
+  'Upload at least one image to register: a PhilSys ID, a secondary valid ID, or proof of residency such as a utility bill or lease. A typed ID number alone does not count.':
+      'Mag-upload ng kahit isang larawan para makapagparehistro: PhilSys ID, pangalawang balidong ID, o patunay ng paninirahan gaya ng bill o kontrata sa upa. Hindi sapat ang pag-type lamang ng numero ng ID.',
   'PHILSYS NATIONAL ID NUMBER': 'NUMERO NG PHILSYS NATIONAL ID',
   'PHILSYS ID CARD PHOTO': 'LARAWAN NG PHILSYS ID CARD',
   'Upload PhilSys ID Photo': 'I-upload ang Larawan ng PhilSys ID',
@@ -273,7 +297,8 @@ const Map<String, String> _filipino = {
   'SECONDARY VALID ID (OPTIONAL)': 'PANGALAWANG BALIDONG ID (OPSYONAL)',
   'UPLOAD SECONDARY ID': 'I-UPLOAD ANG PANGALAWANG ID',
   'Upload Secondary ID Photo': 'I-upload ang Larawan ng Pangalawang ID',
-  'I consent to provide my personal data as a resident for barangay verification, in accordance with the RA 10173 Data Privacy Act.': 'Sumasang-ayon akong ibigay ang aking personal na datos para sa pagpapatunay ng barangay, alinsunod sa RA 10173 o Data Privacy Act.',
+  'I consent to provide my personal data as a resident for barangay verification, in accordance with the RA 10173 Data Privacy Act.':
+      'Sumasang-ayon akong ibigay ang aking personal na datos para sa pagpapatunay ng barangay, alinsunod sa RA 10173 o Data Privacy Act.',
   'Address details must be 255 characters or fewer':
       'Hindi dapat lumampas sa 255 character ang detalye ng tirahan.',
   'CONFIRM PASSWORD': 'KUMPIRMAHIN ANG PASSWORD',
@@ -303,14 +328,18 @@ const Map<String, String> _filipino = {
   'Purok or Zone must be 100 characters or fewer':
       'Hindi dapat lumampas sa 100 character ang purok o sona.',
   'Registered Voter in this Barangay': 'Botante sa Barangay na ito',
-  'Residents under 18 must be registered under a verified parent or guardian.': 'Ang wala pang 18 taong gulang ay kailangang irehistro ng beripikadong magulang o tagapag-alaga.',
-  'Link a verified adult resident and upload supporting proof. A Barangay Admin will review it before approval.': 'I-ugnay ang isang beripikadong residenteng nasa hustong gulang at mag-upload ng dokumentong susuporta rito. Susuriin ito ng Barangay Admin bago aprubahan.',
+  'Residents under 18 must be registered under a verified parent or guardian.':
+      'Ang wala pang 18 taong gulang ay kailangang irehistro ng beripikadong magulang o tagapag-alaga.',
+  'Link a verified adult resident and upload supporting proof. A Barangay Admin will review it before approval.':
+      'I-ugnay ang isang beripikadong residenteng nasa hustong gulang at mag-upload ng dokumentong susuporta rito. Susuriin ito ng Barangay Admin bago aprubahan.',
   'Relationship to the applicant': 'Ugnayan sa aplikante',
   'Parent': 'Magulang',
   'Court-appointed guardian': 'Tagapag-alagang itinalaga ng hukuman',
   'Other authorized guardian': 'Iba pang awtorisadong tagapag-alaga',
-  'Upload guardianship supporting document': 'I-upload ang dokumentong sumusuporta sa pagiging tagapag-alaga',
-  'Examples: a birth certificate for a parent or an official guardianship document. This supports human review; the system does not determine legal guardianship.': 'Halimbawa: birth certificate para sa magulang o opisyal na dokumento ng guardianship. Susuriin ito ng tao; hindi ang system ang nagpapasya sa legal na guardianship.',
+  'Upload guardianship supporting document':
+      'I-upload ang dokumentong sumusuporta sa pagiging tagapag-alaga',
+  'Examples: a birth certificate for a parent or an official guardianship document. This supports human review; the system does not determine legal guardianship.':
+      'Halimbawa: birth certificate para sa magulang o opisyal na dokumento ng guardianship. Susuriin ito ng tao; hindi ang system ang nagpapasya sa legal na guardianship.',
   "GUARDIAN'S REGISTERED ID (REQUIRED)":
       'ID NG TAGAPAG-ALAGA NA NAKAREHISTRO (KINAKAILANGAN)',
   'Select your birth date': 'Piliin ang petsa ng iyong kapanganakan.',
@@ -334,10 +363,13 @@ const Map<String, String> _filipino = {
   'CENTRAL REGISTRY': 'PANGKALAHATANG TALAAN',
   'My Document Requests': 'Mga Kahilingan Kong Dokumento',
   'All topics': 'Lahat ng paksa',
-  'Check your internet connection and try again. If the problem continues, contact your Barangay using verified office information.': 'Tingnan ang koneksyon sa internet at subukan muli. Kung magpatuloy ang problema, kontakin ang barangay gamit ang beripikadong impormasyon ng tanggapan.',
+  'Check your internet connection and try again. If the problem continues, contact your Barangay using verified office information.':
+      'Tingnan ang koneksyon sa internet at subukan muli. Kung magpatuloy ang problema, kontakin ang barangay gamit ang beripikadong impormasyon ng tanggapan.',
   'Clear search': 'I-clear ang paghahanap',
-  'Do not share your password, OTP, or identity documents in personal messages. Confirm local eligibility, fees, required documents, and office hours with your Barangay.': 'Huwag ibahagi sa pribadong mensahe ang iyong password, OTP, o mga dokumento ng pagkakakilanlan. Kumpirmahin sa barangay ang kwalipikasyon, bayarin, mga kailangang dokumento, at oras ng opisina.',
-  'Find answers about your account and Barangay services. Local steps and programs can differ, so confirm current instructions with your Barangay.': 'Maghanap ng sagot tungkol sa iyong account at mga serbisyo ng barangay. Maaaring mag-iba ang proseso at programa, kaya kumpirmahin sa barangay ang kasalukuyang mga tagubilin.',
+  'Do not share your password, OTP, or identity documents in personal messages. Confirm local eligibility, fees, required documents, and office hours with your Barangay.':
+      'Huwag ibahagi sa pribadong mensahe ang iyong password, OTP, o mga dokumento ng pagkakakilanlan. Kumpirmahin sa barangay ang kwalipikasyon, bayarin, mga kailangang dokumento, at oras ng opisina.',
+  'Find answers about your account and Barangay services. Local steps and programs can differ, so confirm current instructions with your Barangay.':
+      'Maghanap ng sagot tungkol sa iyong account at mga serbisyo ng barangay. Maaaring mag-iba ang proseso at programa, kaya kumpirmahin sa barangay ang kasalukuyang mga tagubilin.',
   'For current local instructions, contact your Barangay office.':
       'Para sa kasalukuyang tagubilin, kontakin ang tanggapan ng barangay.',
   'For example: request a document': 'Halimbawa: paghingi ng dokumento',
@@ -346,24 +378,48 @@ const Map<String, String> _filipino = {
   'No FAQs are available yet.': 'Wala pang mga madalas itanong.',
   'No answers match your search.':
       'Walang sagot na tumutugma sa paghahanap mo.',
-  'Open the simple tutorial for help finding services and using your account.': 'Buksan ang gabay para matutunan kung paano hanapin ang mga serbisyo at gamitin ang iyong account.',
+  'Open the simple tutorial for help finding services and using your account.':
+      'Buksan ang gabay para matutunan kung paano hanapin ang mga serbisyo at gamitin ang iyong account.',
   'Search help questions and answers': 'Maghanap sa mga tanong at sagot',
   'Tutorial': 'Gabay',
   'Want a step-by-step guide?': 'Gusto mo ba ng sunod-sunod na gabay?',
-  'A simple resident guide': 'Simpleng gabay para sa residente',
-  'After signing in, use the menu or service cards to choose what you need. You can return to the Dashboard whenever you want.': 'Pagkatapos mag-sign in, gamitin ang menu o mga card ng serbisyo para piliin ang kailangan mo. Maaari kang bumalik sa Dashboard anumang oras.',
-  'Check queue and schedules': 'Tingnan ang pila at mga iskedyul',
-  'Find other services': 'Maghanap ng iba pang serbisyo',
+  'A simple resident guide': 'Gabay para sa residente',
+  'After signing in, use the menu or service cards to choose what you need. You can return to the Dashboard whenever you want.':
+      'Pagkatapos mag-sign in, piliin ang kailangan mo sa menu o mga serbisyo. Puwede kang bumalik sa Dashboard kahit kailan.',
+  'Already have an account? Sign in and open your Dashboard.':
+      'May account ka na? Mag-sign in at buksan ang Dashboard.',
+  'Ask your Barangay about requirements, fees, papers to bring, and office hours.':
+      'Magtanong sa Barangay tungkol sa mga kailangan, bayad, dadalhing papeles, at oras ng opisina.',
+  'Follow these steps. Come back to this guide anytime. Button names may differ a little between the app and website.':
+      'Sundin ang mga hakbang. Balikan ang gabay na ito kahit kailan. Maaaring iba nang kaunti ang tawag sa mga button sa app at website.',
+  'If a page does not load, check your internet. Check your request history before sending it again.':
+      'Kung hindi bumukas ang page, tingnan ang internet. Tingnan muna ang request history bago ipadala ulit.',
+  'If you use a screen reader, turn on TalkBack in Android Accessibility settings.':
+      'Kung gumagamit ka ng screen reader, i-on ang TalkBack sa Accessibility settings ng Android.',
+  'If your account needs review, wait or contact your Barangay. Do not make another account.':
+      'Kung sinusuri pa ang account mo, maghintay o magtanong sa Barangay. Huwag gumawa ng panibagong account.',
   'Make the app easier and safer to use':
-      'Gawing mas madali at ligtas gamitin ang app',
-  'Open Announcements to read community updates. Check the date and details, and confirm urgent information with your Barangay through a verified contact.': 'Buksan ang Mga Anunsyo para basahin ang mga update ng komunidad. Tingnan ang petsa at detalye, at kumpirmahin sa barangay ang mga agarang impormasyon gamit ang beripikadong contact.',
-  'Open Documents, choose the service you need, and follow the instructions. Review your information before sending. Return to Documents later to check the request status.': 'Buksan ang Mga Dokumento, piliin ang serbisyong kailangan mo, at sundin ang mga tagubilin. Suriin ang iyong impormasyon bago ipadala. Bumalik sa Mga Dokumento para tingnan ang kalagayan ng kahilingan.',
-  'Open Queue for queue information. If your Barangay has posted an appointment or activity schedule, check the date, time, and location before going.': 'Buksan ang Pila para sa impormasyon tungkol dito. Kung may iskedyul ng appointment o aktibidad ang barangay, tingnan ang petsa, oras, at lugar bago pumunta.',
-  'Read community updates': 'Basahin ang mga update ng komunidad',
-  'Request a document': 'Humiling ng dokumento',
+      'Mga tip para mas madaling gamitin ang app',
+  'New to KapitBayan?': 'Bago ka sa KapitBayan?',
+  'On the sign-in screen, choose Register as Resident and follow the steps.':
+      'Sa sign-in screen, piliin ang Magparehistro bilang Residente at sundin ang mga hakbang.',
+  'Someone you trust can help. Keep control of your phone. Do not share your password or the code sent to you (OTP).':
+      'Puwedeng tumulong ang taong pinagkakatiwalaan mo. Ikaw pa rin ang humawak ng phone. Huwag ibigay ang password o code na ipinadala sa iyo (OTP).',
+  "To make text larger, change the text size in your phone's settings.":
+      'Para lumaki ang text, baguhin ang text size sa settings ng phone.',
+  'Check queue and schedules': 'Tingnan ang pila at iskedyul',
+  'Find other services': 'Iba pang serbisyo',
+  'Open Announcements to read community updates. Check the date and details, and confirm urgent information with your Barangay through a verified contact.':
+      'Buksan ang Mga Anunsyo para sa mga balita. Tingnan ang petsa at detalye. Kumpirmahin sa Barangay ang mahalagang anunsyo gamit ang opisyal na contact.',
+  'Open Documents, choose the service you need, and follow the instructions. Review your information before sending. Return to Documents later to check the request status.':
+      'Buksan ang Mga Dokumento, piliin ang kailangan mo, at sundin ang nakasulat. Suriin muna ang detalye bago ipadala. Bumalik dito para tingnan ang status.',
+  'Open Queue for queue information. If your Barangay has posted an appointment or activity schedule, check the date, time, and location before going.':
+      'Buksan ang Pila para tingnan ang pila. Kung may iskedyul ng appointment o aktibidad, tingnan ang petsa, oras, at lugar bago pumunta.',
+  'Read community updates': 'Basahin ang mga balita ng Barangay',
   'Start at your Dashboard': 'Magsimula sa Dashboard',
-  'Take one step at a time. You can open this guide whenever you need it. Button names may vary a little between the mobile app and website.\n\nNew here? On the sign-in screen, choose Register as Resident and follow the instructions. If a message says your account needs review, follow the message or contact your Barangay before making another account. If you already have an account, sign in and start at your Dashboard.': 'Sundin ang mga hakbang nang paisa-isa. Maaari mong buksan ang gabay na ito anumang oras. Maaaring bahagyang magkaiba ang pangalan ng mga button sa mobile app at website.\n\nBago ka rito? Sa sign-in screen, piliin ang Magparehistro bilang Residente at sundin ang mga tagubilin. Kung may mensaheng kailangang suriin ang account mo, sundin ito o kontakin ang barangay bago gumawa ng panibagong account. Kung mayroon ka nang account, mag-sign in at magsimula sa Dashboard.',
-  'Use Assistance or Report Issue when you need those services. Follow the instructions shown. Local requirements and service availability can differ.': 'Gamitin ang Tulong o Mag-ulat ng Suliranin kung kailangan mo ang mga serbisyong ito. Sundin ang mga tagubilin. Maaaring mag-iba ang mga kinakailangan at serbisyong available sa bawat lugar.',
+  'Use Assistance or Report Issue when you need those services. Follow the instructions shown. Local requirements and service availability can differ.':
+      'Gamitin ang Tulong o Mag-ulat ng Suliranin kung kailangan mo. Sundin ang nakasulat sa screen. Maaaring mag-iba ang serbisyo sa bawat Barangay.',
+  'Request a document': 'Humiling ng dokumento',
   'ACTIVE ONGOING REQUESTS': 'MGA KASALUKUYANG KAHILINGAN',
   'Active': 'Aktibo',
   'COMMUNITY CALENDAR': 'KALENDARYO NG KOMUNIDAD',
@@ -402,7 +458,8 @@ const Map<String, String> _filipino = {
   'VIEW ALL': 'TINGNAN LAHAT',
   '1-3 Business Days': '1–3 araw ng trabaho',
   'DOCUMENT TYPE': 'URI NG DOKUMENTO',
-  'Fill in the details below to submit your official request.': 'Punan ang mga detalye sa ibaba upang ipadala ang iyong opisyal na kahilingan.',
+  'Fill in the details below to submit your official request.':
+      'Punan ang mga detalye sa ibaba upang ipadala ang iyong opisyal na kahilingan.',
   'New Document Request': 'Bagong Kahilingan para sa Dokumento',
   'PROCESSING SPEED': 'BILIS NG PAGPROSESO',
   'Regular': 'Karaniwan',
@@ -418,7 +475,8 @@ const Map<String, String> _filipino = {
   'Request New': 'Humiling ng Bago',
   'View All': 'Tingnan Lahat',
   'Additional Notes (Optional)': 'Karagdagang Tala (Opsyonal)',
-  'Barangay staff verify priority lane eligibility. If you qualify, ask the service desk to review your waiting ticket.': 'Beripikahin ng kawani ng barangay kung kuwalipikado ka sa priority lane. Kung kuwalipikado, ipasuri sa service desk ang iyong numero sa pila.',
+  'Barangay staff verify priority lane eligibility. If you qualify, ask the service desk to review your waiting ticket.':
+      'Beripikahin ng kawani ng barangay kung kuwalipikado ka sa priority lane. Kung kuwalipikado, ipasuri sa service desk ang iyong numero sa pila.',
   'Close': 'Isara',
   'Request Queue Ticket': 'Kumuha ng Numero sa Pila',
   'e.g. Requesting 2 copies': 'hal. Humihingi ng 2 kopya',
@@ -477,12 +535,15 @@ const Map<String, String> _filipino = {
   'Image unavailable': 'Hindi makita ang larawan',
   'My Report History': 'Kasaysayan ng mga Ulat Ko',
   'No reports submitted yet.': 'Wala ka pang naipapasang ulat.',
-  'Could not enable push alerts. Allow notifications and check your connection, then try again.': 'Hindi ma-enable ang push notification. Payagan ang mga notification, tingnan ang koneksyon, at subukan muli.',
+  'Could not enable push alerts. Allow notifications and check your connection, then try again.':
+      'Hindi ma-enable ang push notification. Payagan ang mga notification, tingnan ang koneksyon, at subukan muli.',
   'Could not save notification preference.':
       'Hindi na-save ang setting ng notification.',
   'How to use KapitBayan': 'Paano gamitin ang KapitBayan',
-  '• To make text larger, use your phone’s text or display size setting.\n': '• Para palakihin ang teksto, gamitin ang setting ng laki ng teksto o display ng iyong telepono.\n',
-  'Advisory Category: {category}\n\nOfficial notice regarding "{title}". Check your document requests or community bulletin for real-time status updates.': 'Kategorya ng Paalala: {category}\n\nOpisyal na paalala tungkol sa "{title}". Tingnan ang iyong mga kahilingan sa dokumento o mga anunsyo ng barangay para sa kasalukuyang update.',
+  '• To make text larger, use your phone’s text or display size setting.\n':
+      '• Para palakihin ang teksto, gamitin ang setting ng laki ng teksto o display ng iyong telepono.\n',
+  'Advisory Category: {category}\n\nOfficial notice regarding "{title}". Check your document requests or community bulletin for real-time status updates.':
+      'Kategorya ng Paalala: {category}\n\nOpisyal na paalala tungkol sa "{title}". Tingnan ang iyong mga kahilingan sa dokumento o mga anunsyo ng barangay para sa kasalukuyang update.',
   'Dismiss': 'Isara',
   'No recent notifications': 'Walang bagong notification',
   'Notification Center': 'Sentro ng mga Notification',
@@ -512,7 +573,8 @@ const Map<String, String> _filipino = {
   'Pending review': 'Naghihintay ng pagsusuri',
   'Barangay Assistance': 'Tulong ng Barangay',
   'Request assistance': 'Humiling ng tulong',
-  'Barangay staff will review your request manually. Submission does not guarantee approval.': 'Manu-manong susuriin ng kawani ng barangay ang iyong kahilingan. Hindi garantiya ng pag-apruba ang pagpapasa nito.',
+  'Barangay staff will review your request manually. Submission does not guarantee approval.':
+      'Manu-manong susuriin ng kawani ng barangay ang iyong kahilingan. Hindi garantiya ng pag-apruba ang pagpapasa nito.',
   'Type of assistance': 'Uri ng tulong',
   'Reason for request': 'Dahilan ng kahilingan',
   'Submitting…': 'Ipinapadala…',
@@ -530,8 +592,10 @@ const Map<String, String> _filipino = {
   'Password Recovery': 'Pagbawi ng Password',
   'Set a new password': 'Magtakda ng bagong password',
   'Recover your account': 'Ibalik ang access sa account',
-  'If the address is registered, a reset link was sent. Open it in your browser, or copy the complete link and paste it below to finish in this app.': 'Kung nakarehistro ang email, nagpadala kami ng link para magpalit ng password. Buksan ito sa browser o kopyahin ang buong link at idikit sa ibaba upang matapos sa app na ito.',
-  'Enter the email address associated with your account. We will send reset instructions if it is registered.': 'Ilagay ang email address ng iyong account. Magpapadala kami ng tagubilin kung nakarehistro ito.',
+  'If the address is registered, a reset link was sent. Open it in your browser, or copy the complete link and paste it below to finish in this app.':
+      'Kung nakarehistro ang email, nagpadala kami ng link para magpalit ng password. Buksan ito sa browser o kopyahin ang buong link at idikit sa ibaba upang matapos sa app na ito.',
+  'Enter the email address associated with your account. We will send reset instructions if it is registered.':
+      'Ilagay ang email address ng iyong account. Magpapadala kami ng tagubilin kung nakarehistro ito.',
   'Enter your email address.': 'Ilagay ang iyong email address.',
   'Enter a valid email address.': 'Maglagay ng wastong email address.',
   'Registered email': 'Nakarehistrong email',
@@ -572,12 +636,14 @@ const Map<String, String> _filipino = {
       'Hindi na-update ang serbisyo ng dokumentong ito.',
   'Could not load document services.':
       'Hindi ma-load ang mga serbisyo ng dokumento.',
-  'Add each document your Barangay offers, then save its requirements, fee, and details for residents.': 'Idagdag ang mga dokumentong iniaalok ng Barangay at i-save ang mga kinakailangan, bayad, at detalye para sa mga residente.',
+  'Add each document your Barangay offers, then save its requirements, fee, and details for residents.':
+      'Idagdag ang mga dokumentong iniaalok ng Barangay at i-save ang mga kinakailangan, bayad, at detalye para sa mga residente.',
   'Requirements, one per line': 'Mga kinakailangan, tig-isa bawat linya',
   'Requirements are specific to this document and Barangay.':
       'Naaayon sa dokumento at Barangay na ito ang mga kinakailangan.',
   'Published fee amount (PHP)': 'Nakalathalang halaga (PHP)',
-  'Leave blank if it varies or is not published. A value of 0 means no fee.': 'Iwanang blangko kung nag-iiba o hindi nakalathala. Ang 0 ay nangangahulugang walang bayad.',
+  'Leave blank if it varies or is not published. A value of 0 means no fee.':
+      'Iwanang blangko kung nag-iiba o hindi nakalathala. Ang 0 ay nangangahulugang walang bayad.',
   'Add preparation, schedule, or payment details':
       'Magdagdag ng detalye tungkol sa paghahanda, iskedyul, o bayad',
   'Available to residents': 'Makikita ng mga residente',
@@ -585,9 +651,33 @@ const Map<String, String> _filipino = {
   'No requirements listed.': 'Walang nakalistang kinakailangan.',
   'Enter a document name up to 100 characters.':
       'Maglagay ng pangalan ng dokumentong hanggang 100 karakter.',
-  'Enter up to 30 requirements, each no longer than 250 characters.': 'Maglagay ng hanggang 30 kinakailangan na hindi lalampas sa 250 karakter bawat isa.',
+  'Enter up to 30 requirements, each no longer than 250 characters.':
+      'Maglagay ng hanggang 30 kinakailangan na hindi lalampas sa 250 karakter bawat isa.',
   'Enter a valid fee amount, or leave it blank if it varies.':
       'Maglagay ng wastong halaga o iwanang blangko kung nag-iiba ito.',
   'Refresh': 'I-refresh',
+  'Offline: showing saved information that may be out of date.':
+      'Walang koneksyon: ipinapakita ang naka-save na impormasyong maaaring luma na.',
+  'Saved copy updated': 'Huling na-update ang naka-save na kopya',
+  'Only the 100 most recent requests are saved for offline viewing.':
+      'Ang pinakabagong 100 kahilingan lamang ang naka-save para makita offline.',
+  'Offline: showing your saved ticket only. Live queue position and status may have changed.':
+      'Walang koneksyon: ipinapakita lamang ang naka-save mong tiket. Maaaring nagbago na ang puwesto at estado sa pila.',
+  'Could not refresh report history. Reconnect and refresh before relying on saved statuses.':
+      'Hindi ma-update ang kasaysayan ng mga ulat. Kumonekta at mag-refresh bago umasa sa mga naka-save na estado.',
+  'Could not update your requests. Reconnect and refresh before submitting again.':
+      'Hindi ma-update ang iyong mga kahilingan. Kumonekta at mag-refresh bago muling magpadala.',
+  'Saved request history is unavailable while offline.':
+      'Hindi makita offline ang naka-save na kasaysayan ng kahilingan.',
+  'Could not load your request history. Refresh and try again.':
+      'Hindi ma-load ang kasaysayan ng kahilingan. I-refresh at subukan muli.',
+  'Could not refresh Barangay contacts. Only national emergency numbers are shown.':
+      'Hindi ma-update ang mga contact ng Barangay. Mga pambansang emergency number lamang ang ipinapakita.',
+  'Your submission was not sent because there is no internet connection. Your form is still here; reconnect and submit it again.':
+      'Hindi naipadala ang iyong kahilingan dahil walang koneksyon sa internet. Nananatili rito ang form; kumonekta muli bago ito ipadala.',
+  'We could not confirm whether the server received your submission. Check your requests after reconnecting before trying again.':
+      'Hindi namin makumpirma kung natanggap ng server ang iyong kahilingan. Suriin muna ang iyong mga kahilingan kapag nakakonekta na bago muling magpadala.',
+  'Could not load this saved information. Reconnect and refresh to get the latest data.':
+      'Hindi ma-load ang naka-save na impormasyon. Kumonekta muli at i-refresh para makuha ang pinakabagong datos.',
   'OK': 'Sige',
 };

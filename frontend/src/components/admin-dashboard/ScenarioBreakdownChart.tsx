@@ -43,15 +43,21 @@ export const ScenarioBreakdownChart: React.FC<ScenarioBreakdownChartProps> = ({
         <div className="bg-surface rounded-large p-6 shadow-xs border border-border/80 hover:-translate-y-1 hover:shadow-md transition-all duration-300">
             <h2 className="text-base font-bold text-neutral-primary mb-6">{t('Local Incident Scenarios')}</h2>
             <div className="h-[250px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--kapitbayan-color-border)" />
-                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--kapitbayan-color-text-muted)' }} />
-                        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--kapitbayan-color-text-muted)' }} />
-                        <Tooltip cursor={{ fill: 'rgba(239,68,68,0.05)' }} />
-                        <Bar dataKey="count" fill="var(--kapitbayan-color-danger)" radius={[4, 4, 0, 0]} maxBarSize={40} />
-                    </BarChart>
-                </ResponsiveContainer>
+                {data.every(({ count }) => count === 0) ? (
+                    <p role="status" className="flex h-full items-center justify-center text-sm text-neutral-muted">
+                        {t('No incident reports are available yet.')}
+                    </p>
+                ) : (
+                    <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--kapitbayan-color-border)" />
+                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--kapitbayan-color-text-muted)' }} />
+                            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--kapitbayan-color-text-muted)' }} />
+                            <Tooltip cursor={{ fill: 'rgba(239,68,68,0.05)' }} />
+                            <Bar dataKey="count" fill="var(--kapitbayan-color-danger)" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                        </BarChart>
+                    </ResponsiveContainer>
+                )}
             </div>
         </div>
     );

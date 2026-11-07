@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import '../core/localization/app_language.dart';
 import '../core/network/api_client.dart';
+import '../core/network/api_exception.dart';
 import '../services/issue_service.dart';
 import '../services/storage_service.dart';
+import '../widgets/offline_snapshot_banner.dart';
 
 class MyIssuesScreen extends StatefulWidget {
   const MyIssuesScreen({super.key});
@@ -29,7 +31,10 @@ class _MyIssuesScreenState extends State<MyIssuesScreen> {
       apiClient.setAuthCredentials(accessToken: token);
     }
     setState(() {
-      _issueService = IssueService(apiClient: apiClient);
+      _issueService = IssueService(
+        apiClient: apiClient,
+        storageService: storage,
+      );
       _issuesFuture = _issueService!.getMyIssues();
     });
   }
@@ -60,7 +65,20 @@ class _MyIssuesScreenState extends State<MyIssuesScreen> {
   String _formatDate(String isoString) {
     try {
       final date = DateTime.parse(isoString).toLocal();
-      final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      final months = [
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec',
+      ];
       return "${months[date.month - 1]} ${date.day}, ${date.year}";
     } catch (e) {
       return isoString;
@@ -74,14 +92,21 @@ class _MyIssuesScreenState extends State<MyIssuesScreen> {
       appBar: AppBar(
         title: Text(
           context.tr('My Report History'),
-          style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0F172A), fontSize: 20),
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF0F172A),
+            fontSize: 20,
+          ),
         ),
         backgroundColor: Colors.white,
         elevation: 0,
         iconTheme: const IconThemeData(color: Color(0xFF0F172A)),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
-          child: Container(color: const Color(0xFFE2E8F0), height: 1), // subtle bottom border
+          child: Container(
+            color: const Color(0xFFE2E8F0),
+            height: 1,
+          ), // subtle bottom border
         ),
       ),
       body: _issueService == null
@@ -93,28 +118,75 @@ class _MyIssuesScreenState extends State<MyIssuesScreen> {
                 future: _issuesFuture,
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator(color: Color(0xFF2563EB)));
-                  } else if (snapshot.hasError) {
-                    return Center(child: Text('${context.tr('Could not load reports.')}: ${snapshot.error}', style: const TextStyle(color: Colors.red)));
-                  } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.assignment_outlined, size: 64, color: Color(0xFFCBD5E1)),
-                          const SizedBox(height: 16),
-                          Text(context.tr('No reports submitted yet.'), style: TextStyle(color: Color(0xFF64748B), fontSize: 16)),
-                        ],
+                    return const Center(
+                      child: CircularProgressIndicator(
+                        color: Color(0xFF2563EB),
                       ),
+                    );
+                  } else if (snapshot.hasError) {
+                    return ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.all(16),
+                      children: [
+                        if (snapshot.error is NetworkException)
+                          OfflineSnapshotBanner(
+                            message:
+                                'Could not refresh report history. Reconnect and refresh before relying on saved statuses.',
+                          ),
+                        Text(
+                          context.tr('Could not load reports.'),
+                          style: const TextStyle(color: Colors.red),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    );
+                  } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                    return ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.all(16),
+                      children: [
+                        if (_issueService!.lastIssuesUsedOfflineSnapshot)
+                          OfflineSnapshotBanner(
+                            savedAt: _issueService!.lastSnapshotSavedAt,
+                          ),
+                        const SizedBox(height: 60),
+                        Icon(
+                          Icons.assignment_outlined,
+                          size: 64,
+                          color: Color(0xFFCBD5E1),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          context.tr('No reports submitted yet.'),
+                          style: TextStyle(
+                            color: Color(0xFF64748B),
+                            fontSize: 16,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
                     );
                   }
 
                   final issues = snapshot.data!;
                   return ListView.builder(
                     padding: const EdgeInsets.all(16),
-                    itemCount: issues.length,
+                    itemCount:
+                        issues.length +
+                        (_issueService!.lastIssuesUsedOfflineSnapshot ? 1 : 0),
                     itemBuilder: (context, index) {
-                      final issue = issues[index];
+                      if (_issueService!.lastIssuesUsedOfflineSnapshot &&
+                          index == 0) {
+                        return OfflineSnapshotBanner(
+                          savedAt: _issueService!.lastSnapshotSavedAt,
+                        );
+                      }
+                      final issueIndex =
+                          index -
+                          (_issueService!.lastIssuesUsedOfflineSnapshot
+                              ? 1
+                              : 0);
+                      final issue = issues[issueIndex];
                       final statusColor = _getStatusColor(issue.status);
 
                       return Container(
@@ -125,7 +197,9 @@ class _MyIssuesScreenState extends State<MyIssuesScreen> {
                           border: Border.all(color: const Color(0xFFE2E8F0)),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFF0F172A).withValues(alpha: 0.04),
+                              color: const Color(
+                                0xFF0F172A,
+                              ).withValues(alpha: 0.04),
                               blurRadius: 12,
                               offset: const Offset(0, 4),
                             ),
@@ -138,7 +212,8 @@ class _MyIssuesScreenState extends State<MyIssuesScreen> {
                             children: [
                               // Top Row: Date and Status Badge
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
                                     _formatDate(issue.createdAt),
@@ -150,36 +225,58 @@ class _MyIssuesScreenState extends State<MyIssuesScreen> {
                                     ),
                                   ),
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 4,
+                                    ),
                                     decoration: BoxDecoration(
                                       color: statusColor.withValues(alpha: 0.1),
                                       borderRadius: BorderRadius.circular(20),
-                                      border: Border.all(color: statusColor.withValues(alpha: 0.2)),
+                                      border: Border.all(
+                                        color: statusColor.withValues(
+                                          alpha: 0.2,
+                                        ),
+                                      ),
                                     ),
                                     child: Text(
-                                      context.tr(issue.status.replaceAll('_', ' ')),
-                                      style: TextStyle(color: statusColor, fontWeight: FontWeight.bold, fontSize: 10),
+                                      context.tr(
+                                        issue.status.replaceAll('_', ' '),
+                                      ),
+                                      style: TextStyle(
+                                        color: statusColor,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 10,
+                                      ),
                                     ),
                                   ),
                                 ],
                               ),
                               const SizedBox(height: 12),
-                              
+
                               // Title
                               Text(
                                 issue.title,
-                                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF0F172A),
+                                ),
                               ),
                               const SizedBox(height: 6),
-                              
+
                               // Description
                               Text(
                                 issue.description,
-                                style: const TextStyle(color: Color(0xFF475569), height: 1.4, fontSize: 14),
+                                style: const TextStyle(
+                                  color: Color(0xFF475569),
+                                  height: 1.4,
+                                  fontSize: 14,
+                                ),
                               ),
-                              
-                                                            // Optional Image
-                              if (issue.imageUrl != null && issue.imageUrl!.isNotEmpty) ...[
+
+                              // Optional Image
+                              if (issue.imageUrl != null &&
+                                  issue.imageUrl!.isNotEmpty) ...[
                                 const SizedBox(height: 16),
                                 ClipRRect(
                                   borderRadius: BorderRadius.circular(12),
@@ -193,15 +290,25 @@ class _MyIssuesScreenState extends State<MyIssuesScreen> {
                                       return Container(
                                         height: 160,
                                         width: double.infinity,
-                                        color: const Color(0xFFF1F5F9), // slate-100
+                                        color: const Color(
+                                          0xFFF1F5F9,
+                                        ), // slate-100
                                         child: Column(
-                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
                                           children: [
-                                            Icon(Icons.broken_image_outlined, color: Color(0xFF94A3B8), size: 32),
+                                            Icon(
+                                              Icons.broken_image_outlined,
+                                              color: Color(0xFF94A3B8),
+                                              size: 32,
+                                            ),
                                             const SizedBox(height: 8),
                                             Text(
                                               context.tr('Image unavailable'),
-                                              style: TextStyle(color: Color(0xFF64748B), fontSize: 12),
+                                              style: TextStyle(
+                                                color: Color(0xFF64748B),
+                                                fontSize: 12,
+                                              ),
                                             ),
                                           ],
                                         ),
@@ -210,20 +317,31 @@ class _MyIssuesScreenState extends State<MyIssuesScreen> {
                                   ),
                                 ),
                               ],
-                              
+
                               const SizedBox(height: 16),
-                              const Divider(color: Color(0xFFF1F5F9), height: 1),
+                              const Divider(
+                                color: Color(0xFFF1F5F9),
+                                height: 1,
+                              ),
                               const SizedBox(height: 12),
-                              
+
                               // Footer: Location
                               Row(
                                 children: [
-                                  const Icon(Icons.location_on_outlined, size: 16, color: Color(0xFF64748B)),
+                                  const Icon(
+                                    Icons.location_on_outlined,
+                                    size: 16,
+                                    color: Color(0xFF64748B),
+                                  ),
                                   const SizedBox(width: 6),
                                   Expanded(
                                     child: Text(
                                       issue.location,
-                                      style: const TextStyle(color: Color(0xFF64748B), fontSize: 13, fontWeight: FontWeight.w500),
+                                      style: const TextStyle(
+                                        color: Color(0xFF64748B),
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w500,
+                                      ),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                     ),

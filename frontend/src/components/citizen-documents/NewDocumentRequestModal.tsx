@@ -43,6 +43,12 @@ export const NewDocumentRequestModal: React.FC<NewDocumentRequestModalProps> = (
     const dialogTitleId = React.useId();
     const dialogRef = useModalFocus<HTMLDivElement>(true, onClose);
     const selectedOffering = offerings.find((offering) => offering.id === offeringId);
+    const requirements = selectedOffering?.requirements ?? [];
+    const requirementsKey = requirements.join('\u0000');
+    const [checkedRequirements, setCheckedRequirements] = React.useState<Set<number>>(() => new Set());
+    React.useEffect(() => {
+        setCheckedRequirements(new Set());
+    }, [selectedOffering?.id, requirementsKey]);
     const isOtherSelected = selectedOffering
         ? false
         : documentType !== undefined
@@ -106,10 +112,28 @@ export const NewDocumentRequestModal: React.FC<NewDocumentRequestModalProps> = (
                         </p>
                         {selectedOffering.requirements.length > 0 ? (
                             <div>
-                                <p className="font-semibold">{t('Bring these requirements')}:</p>
-                                <ul className="list-disc pl-5 mt-1 space-y-0.5">
-                                    {selectedOffering.requirements.map((requirement, index) => (
-                                        <li key={`${index}-${requirement}`}>{t(requirement)}</li>
+                                <p className="font-semibold">{t('Checklist: requirements to bring')}</p>
+                                <p className="mt-1 text-slate-600">{t('Check the items you have ready. Barangay staff will verify them in person.')}</p>
+                                <ul className="mt-1 space-y-1">
+                                    {requirements.map((requirement, index) => (
+                                        <li key={`${index}-${requirement}`}>
+                                            <label className="flex cursor-pointer items-start gap-2 rounded-md py-1">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={checkedRequirements.has(index)}
+                                                    onChange={(event) => {
+                                                        setCheckedRequirements((current) => {
+                                                            const next = new Set(current);
+                                                            if (event.target.checked) next.add(index);
+                                                            else next.delete(index);
+                                                            return next;
+                                                        });
+                                                    }}
+                                                    className="mt-0.5 h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"
+                                                />
+                                                <span>{t(requirement)}</span>
+                                            </label>
+                                        </li>
                                     ))}
                                 </ul>
                             </div>

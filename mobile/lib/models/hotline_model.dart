@@ -22,10 +22,20 @@ class HotlineModel {
       name: json['name'] as String? ?? '',
       number: json['number'] as String? ?? '',
       category: cat,
-      categoryDisplay: json['category_display'] as String? ?? _getCategoryDisplay(cat),
+      categoryDisplay:
+          json['category_display'] as String? ?? _getCategoryDisplay(cat),
       isActive: json['is_active'] as bool? ?? true,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'name': name,
+    'number': number,
+    'category': category,
+    'category_display': categoryDisplay,
+    'is_active': isActive,
+  };
 
   static String _getCategoryDisplay(String cat) {
     switch (cat.toUpperCase()) {

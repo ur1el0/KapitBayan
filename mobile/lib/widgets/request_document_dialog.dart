@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/default_document_requirements.dart';
 import '../core/document_types.dart';
 import '../core/localization/app_language.dart';
+import '../core/network/api_exception.dart';
 import '../core/theme/app_colors.dart';
 import '../models/document_request_model.dart';
 import '../models/document_offering_model.dart';
@@ -34,6 +35,7 @@ class _RequestDocumentDialogState extends State<RequestDocumentDialog> {
   String _selectedUrgency = 'REGULAR';
   bool _isSubmitting = false;
   String? _errorMessage;
+  final Set<int> _checkedRequirementIndexes = <int>{};
 
   @override
   void initState() {
@@ -214,7 +216,11 @@ class _RequestDocumentDialogState extends State<RequestDocumentDialog> {
       if (mounted) {
         setState(() {
           _isSubmitting = false;
-          _errorMessage = e.toString().replaceAll('Exception:', '').trim();
+          _errorMessage = e is NetworkException
+              ? context.tr(
+                  'We could not confirm whether the server received your submission. Check your requests after reconnecting before trying again.',
+                )
+              : e.toString().replaceAll('Exception:', '').trim();
         });
       }
     }
@@ -343,6 +349,7 @@ class _RequestDocumentDialogState extends State<RequestDocumentDialog> {
                     setState(() {
                       _selectedType = val;
                       _errorMessage = null;
+                      _checkedRequirementIndexes.clear();
                     });
                   }
                 },
@@ -417,19 +424,44 @@ class _RequestDocumentDialogState extends State<RequestDocumentDialog> {
                   const SizedBox(height: 6),
                   if (_effectiveRequirements.isNotEmpty) ...[
                     Text(
-                      context.tr('Bring these requirements:'),
+                      context.tr('Checklist: requirements to bring'),
                       style: const TextStyle(
                         fontWeight: FontWeight.w700,
                         fontSize: 12,
                       ),
                     ),
                     const SizedBox(height: 3),
-                    ..._effectiveRequirements.map(
-                      (item) => Padding(
-                        padding: const EdgeInsets.only(bottom: 2),
-                        child: Text(
-                          '• ${context.tr(item)}',
-                          style: const TextStyle(fontSize: 12),
+                    Text(
+                      context.tr(
+                        'Check the items you have ready. Barangay staff will verify them in person.',
+                      ),
+                      style: const TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 11,
+                      ),
+                    ),
+                    ..._effectiveRequirements.asMap().entries.map(
+                      (entry) => Material(
+                        color: Colors.transparent,
+                        child: CheckboxListTile(
+                          dense: true,
+                          visualDensity: VisualDensity.compact,
+                          contentPadding: EdgeInsets.zero,
+                          controlAffinity: ListTileControlAffinity.leading,
+                          value: _checkedRequirementIndexes.contains(entry.key),
+                          title: Text(
+                            context.tr(entry.value),
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                          onChanged: (checked) {
+                            setState(() {
+                              if (checked == true) {
+                                _checkedRequirementIndexes.add(entry.key);
+                              } else {
+                                _checkedRequirementIndexes.remove(entry.key);
+                              }
+                            });
+                          },
                         ),
                       ),
                     ),

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../core/localization/app_language.dart';
 import '../core/network/api_client.dart';
+import '../core/network/api_exception.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_tokens.dart';
 import '../models/queue_ticket_model.dart';
@@ -16,6 +17,7 @@ import '../widgets/queue_metric_cards.dart';
 import '../widgets/recent_completions_section.dart';
 import '../widgets/request_queue_ticket_sheet.dart';
 import '../widgets/user_ticket_card.dart';
+import '../widgets/offline_snapshot_banner.dart';
 import '../widgets/app_surface.dart';
 import 'dashboard_screen.dart';
 import 'documents_screen.dart';
@@ -26,8 +28,14 @@ import 'profile_screen.dart';
 class QueueScreen extends StatefulWidget {
   final QueueService? queueService;
   final AuthService? authService;
+  final int? initialTicketId;
 
-  const QueueScreen({super.key, this.queueService, this.authService});
+  const QueueScreen({
+    super.key,
+    this.queueService,
+    this.authService,
+    this.initialTicketId,
+  });
 
   @override
   State<QueueScreen> createState() => _QueueScreenState();
@@ -46,6 +54,8 @@ class _QueueScreenState extends State<QueueScreen> with WidgetsBindingObserver {
   bool _isRequestingTicket = false;
   bool _isLoadingQueueData = false;
   Timer? _queueRefreshTimer;
+  QueueTicketModel? _notificationTicket;
+  bool _notificationTicketLoadingFailed = false;
 
   void _showRequestTicketModal() {
     showModalBottomSheet<void>(
@@ -76,16 +86,27 @@ class _QueueScreenState extends State<QueueScreen> with WidgetsBindingObserver {
         notes: notes,
       );
       if (mounted) {
+        Navigator.of(context).pop();
         messenger.showSnackBar(
-          SnackBar(content: Text('${context.tr('Ticket generated!')} ${ticket.ticketNumber}')),
+          SnackBar(
+            content: Text(
+              '${context.tr('Ticket generated!')} ${ticket.ticketNumber}',
+            ),
+          ),
         );
         _loadQueueData();
       }
     } catch (error) {
       if (mounted) {
-        messenger.showSnackBar(
-          SnackBar(content: Text('Failed to get ticket: $error')),
-        );
+        final message = error is NetworkException
+            ? context.tr(
+                'We could not confirm whether the server received your submission. Check your requests after reconnecting before trying again.',
+              )
+            : 'Failed to get ticket: $error';
+        messenger.showSnackBar(SnackBar(content: Text(message)));
+        if (error is NetworkException) {
+          await _loadQueueData();
+        }
       }
     } finally {
       if (mounted) setState(() => _isRequestingTicket = false);
@@ -114,7 +135,28 @@ class _QueueScreenState extends State<QueueScreen> with WidgetsBindingObserver {
     );
 
     await _loadQueueData();
+    if (widget.initialTicketId != null) {
+      await _loadNotificationTicket();
+    }
     _startQueuePolling();
+  }
+
+  Future<void> _loadNotificationTicket() async {
+    final ticketId = widget.initialTicketId;
+    final service = _queueService;
+    if (ticketId == null || service == null) return;
+
+    try {
+      final ticket = await service.fetchTicket(ticketId);
+      if (!mounted) return;
+      setState(() {
+        _notificationTicket = ticket;
+        _notificationTicketLoadingFailed = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _notificationTicketLoadingFailed = true);
+    }
   }
 
   void _startQueuePolling() {
@@ -282,77 +324,95 @@ class _QueueScreenState extends State<QueueScreen> with WidgetsBindingObserver {
               ),
             )
           : _hasError
-              ? _buildErrorState()
-              : RefreshIndicator(
-                  onRefresh: _loadQueueData,
-                  color: AppColors.primaryNavy,
-                  child: SingleChildScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.pageHorizontal,
-                      vertical: AppSpacing.pageVertical,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        AppPageHeading(
-                          eyebrow: context.tr('LIVE QUEUE STATUS'),
-                          title: context.tr("Today's Queue"),
-                        ),
-
-                        const SizedBox(height: 20),
-
-                        // 1. Hero Card: Currently at Counter or Live Status Error Notice
-                        if (_queueStatus.hasLiveStatusError) ...[
-                          _buildLiveStatusErrorCard(),
-                          const SizedBox(height: 18),
-                        ] else ...[
-                          QueueHeroCard(
-                            currentTicket: _queueStatus.currentTicket,
-                            serviceType: _queueStatus.currentService,
-                          ),
-                          const SizedBox(height: 18),
-                        ],
-
-                        // 2. User's Active Ticket Card
-                        UserTicketCard(
-                          ticket: _queueStatus.userTicket,
-                          hasError: _queueStatus.hasUserTicketsError,
-                          errorMessage: _queueStatus.userTicketsErrorMessage ?? _queueStatus.errorMessage,
-                          onRetry: () => _loadQueueData(isRetry: true),
-                        ),
-
-                        const SizedBox(height: 18),
-
-                        // 3. Side-by-Side Metric Cards: Estimated Call & Live Capacity
-                        if (!_queueStatus.hasLiveStatusError) ...[
-                          QueueMetricCards(
-                            estimatedCallTime:
-                                _queueStatus.estimatedCallTimeFormatted,
-                            liveCapacity: _queueStatus.capacityLabel,
-                          ),
-
-                          const SizedBox(height: 28),
-
-                          // 4. Recent Completions List
-                          RecentCompletionsSection(
-                            completedTickets: _queueStatus.recentCompleted,
-                            onViewAll: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(context.tr('Viewing complete queue history')),
-                                  behavior: SnackBarBehavior.floating,
-                                ),
-                              );
-                            },
-                          ),
-
-                          const SizedBox(height: 32),
-                        ],
-                      ],
-                    ),
-                  ),
+          ? _buildErrorState()
+          : RefreshIndicator(
+              onRefresh: _loadQueueData,
+              color: AppColors.primaryNavy,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.pageHorizontal,
+                  vertical: AppSpacing.pageVertical,
                 ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (_queueStatus.isShowingOfflineTicketSnapshot)
+                      OfflineSnapshotBanner(
+                        savedAt: _queueStatus.offlineTicketSnapshotSavedAt,
+                        truncated: _queueStatus.offlineTicketsTruncated,
+                        message:
+                            'Offline: showing your saved ticket only. Live queue position and status may have changed.',
+                      ),
+
+                    AppPageHeading(
+                      eyebrow: context.tr('LIVE QUEUE STATUS'),
+                      title: context.tr("Today's Queue"),
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    if (_notificationTicket != null ||
+                        _notificationTicketLoadingFailed) ...[
+                      _buildNotificationTicketCard(),
+                      const SizedBox(height: 18),
+                    ],
+
+                    // 1. Hero Card: Currently at Counter or Live Status Error Notice
+                    if (_queueStatus.hasLiveStatusError) ...[
+                      _buildLiveStatusErrorCard(),
+                      const SizedBox(height: 18),
+                    ] else ...[
+                      QueueHeroCard(
+                        currentTicket: _queueStatus.currentTicket,
+                        serviceType: _queueStatus.currentService,
+                      ),
+                      const SizedBox(height: 18),
+                    ],
+
+                    // 2. User's Active Ticket Card
+                    UserTicketCard(
+                      ticket: _queueStatus.userTicket,
+                      hasError: _queueStatus.hasUserTicketsError,
+                      errorMessage:
+                          _queueStatus.userTicketsErrorMessage ??
+                          _queueStatus.errorMessage,
+                      onRetry: () => _loadQueueData(isRetry: true),
+                    ),
+
+                    const SizedBox(height: 18),
+
+                    // 3. Side-by-Side Metric Cards: Estimated Call & Live Capacity
+                    if (!_queueStatus.hasLiveStatusError) ...[
+                      QueueMetricCards(
+                        estimatedCallTime:
+                            _queueStatus.estimatedCallTimeFormatted,
+                        liveCapacity: _queueStatus.capacityLabel,
+                      ),
+
+                      const SizedBox(height: 28),
+
+                      // 4. Recent Completions List
+                      RecentCompletionsSection(
+                        completedTickets: _queueStatus.recentCompleted,
+                        onViewAll: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                context.tr('Viewing complete queue history'),
+                              ),
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                        },
+                      ),
+
+                      const SizedBox(height: 32),
+                    ],
+                  ],
+                ),
+              ),
+            ),
       bottomNavigationBar: CustomBottomNav(
         currentIndex: _selectedNavIndex,
         onTap: (index) {
@@ -383,6 +443,66 @@ class _QueueScreenState extends State<QueueScreen> with WidgetsBindingObserver {
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
       ),
+    );
+  }
+
+  Widget _buildNotificationTicketCard() {
+    final ticket = _notificationTicket;
+    return Container(
+      key: const ValueKey('notification-ticket-detail'),
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFBFDBFE)),
+      ),
+      child: ticket == null
+          ? Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    'This ticket update could not be loaded. Check your connection and retry.',
+                    style: TextStyle(color: Color(0xFF475569)),
+                  ),
+                ),
+                IconButton(
+                  onPressed: _loadNotificationTicket,
+                  tooltip: context.tr('Retry loading ticket'),
+                  icon: const Icon(Icons.refresh_rounded),
+                ),
+              ],
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  context.tr('OPENED FROM NOTIFICATION'),
+                  style: const TextStyle(
+                    color: Color(0xFF64748B),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.7,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  ticket.ticketNumber,
+                  style: const TextStyle(
+                    color: AppColors.primaryNavy,
+                    fontSize: 26,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text('${ticket.serviceType} · ${ticket.status}'),
+                if (ticket.documentRequestId != null)
+                  Text(
+                    '${context.tr('Document request')} #${ticket.documentRequestId}',
+                    style: const TextStyle(color: Color(0xFF475569)),
+                  ),
+              ],
+            ),
     );
   }
 
@@ -430,7 +550,8 @@ class _QueueScreenState extends State<QueueScreen> with WidgetsBindingObserver {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  _queueStatus.liveStatusErrorMessage ?? context.tr('Unable to connect to live queue desk.'),
+                  _queueStatus.liveStatusErrorMessage ??
+                      context.tr('Unable to connect to live queue desk.'),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -502,7 +623,8 @@ class _QueueScreenState extends State<QueueScreen> with WidgetsBindingObserver {
               Semantics(
                 liveRegion: true,
                 child: Text(
-                  _errorMessage ?? context.tr('Unable to connect to queue system.'),
+                  _errorMessage ??
+                      context.tr('Unable to connect to queue system.'),
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     fontSize: 13.5,
@@ -513,7 +635,9 @@ class _QueueScreenState extends State<QueueScreen> with WidgetsBindingObserver {
               ),
               const SizedBox(height: 20),
               OutlinedButton.icon(
-                onPressed: _isRetrying ? null : () => _loadQueueData(isRetry: true),
+                onPressed: _isRetrying
+                    ? null
+                    : () => _loadQueueData(isRetry: true),
                 icon: _isRetrying
                     ? const SizedBox(
                         width: 18,
@@ -521,7 +645,11 @@ class _QueueScreenState extends State<QueueScreen> with WidgetsBindingObserver {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.refresh_rounded),
-                label: Text(_isRetrying ? context.tr('Retrying…') : context.tr('Try again')),
+                label: Text(
+                  _isRetrying
+                      ? context.tr('Retrying…')
+                      : context.tr('Try again'),
+                ),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppColors.primaryNavy,
                   side: const BorderSide(color: AppColors.primaryNavy),

@@ -5,7 +5,12 @@ import { axiosPrivate } from '../../api/axios';
 import { getSafeApiErrorMessage } from '../../api/error-message';
 import { useModalFocus } from '../../hooks/useModalFocus';
 import { useLanguage } from '../../context/language-context';
-import type { DocumentServiceOffering } from './documentCatalog';
+import {
+    COMMON_DOCUMENT_REQUIREMENTS,
+    combineDocumentRequirements,
+    splitDocumentRequirements,
+    type DocumentServiceOffering,
+} from './documentCatalog';
 
 interface DocumentCatalogManagerModalProps {
     offerings: DocumentServiceOffering[];
@@ -22,7 +27,8 @@ export const DocumentCatalogManagerModal: React.FC<DocumentCatalogManagerModalPr
     const dialogRef = useModalFocus<HTMLDivElement>(true, onClose);
     const [selectedId, setSelectedId] = useState<number | null>(null);
     const [documentType, setDocumentType] = useState('');
-    const [requirementsText, setRequirementsText] = useState('');
+    const [selectedCommonRequirements, setSelectedCommonRequirements] = useState<string[]>([]);
+    const [additionalRequirementsText, setAdditionalRequirementsText] = useState('');
     const [publishedFee, setPublishedFee] = useState('');
     const [details, setDetails] = useState('');
     const [isActive, setIsActive] = useState(true);
@@ -34,7 +40,8 @@ export const DocumentCatalogManagerModal: React.FC<DocumentCatalogManagerModalPr
     const clearForm = () => {
         setSelectedId(null);
         setDocumentType('');
-        setRequirementsText('');
+        setSelectedCommonRequirements([]);
+        setAdditionalRequirementsText('');
         setPublishedFee('');
         setDetails('');
         setIsActive(true);
@@ -43,7 +50,9 @@ export const DocumentCatalogManagerModal: React.FC<DocumentCatalogManagerModalPr
     useEffect(() => {
         if (!selectedOffering) return;
         setDocumentType(selectedOffering.document_type);
-        setRequirementsText(selectedOffering.requirements.join('\n'));
+        const splitRequirements = splitDocumentRequirements(selectedOffering.requirements);
+        setSelectedCommonRequirements(splitRequirements.selectedCommon);
+        setAdditionalRequirementsText(splitRequirements.customRequirements.join('\n'));
         setPublishedFee(selectedOffering.published_fee_amount ?? '');
         setDetails(selectedOffering.details ?? '');
         setIsActive(selectedOffering.is_active);
@@ -52,10 +61,10 @@ export const DocumentCatalogManagerModal: React.FC<DocumentCatalogManagerModalPr
     const handleSave = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         const name = documentType.trim();
-        const requirements = requirementsText
-            .split('\n')
-            .map((requirement) => requirement.trim())
-            .filter(Boolean);
+        const requirements = combineDocumentRequirements(
+            selectedCommonRequirements,
+            additionalRequirementsText,
+        );
         const fee = publishedFee.trim();
         if (!name || name.length > 100 || requirements.length > 30 || requirements.some((item) => item.length > 250)) {
             toast.error(t('Enter a document name and up to 30 requirements, each no longer than 250 characters.'));
@@ -157,9 +166,29 @@ export const DocumentCatalogManagerModal: React.FC<DocumentCatalogManagerModalPr
                             <input id="catalog-document-type" required maxLength={100} value={documentType} onChange={(event) => setDocumentType(event.target.value)} className="min-h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm" />
                         </div>
                         <div>
-                            <label htmlFor="catalog-requirements" className="mb-1 block text-xs font-semibold text-slate-700">{t('Requirements, one per line')}</label>
-                            <textarea id="catalog-requirements" value={requirementsText} onChange={(event) => setRequirementsText(event.target.value)} maxLength={8000} rows={7} placeholder={t('Example: Government ID or proof of residency')} className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm" />
-                            <p className="mt-1 text-[11px] text-slate-500">{t('Requirements are specific to this document and Barangay. Add each item on a new line.')}</p>
+                            <fieldset>
+                                <legend className="mb-1 block text-xs font-semibold text-slate-700">{t('Common requirements (select only what applies)')}</legend>
+                                <div className="grid gap-2 rounded-lg border border-slate-200 bg-white p-3 sm:grid-cols-2">
+                                    {COMMON_DOCUMENT_REQUIREMENTS.map((requirement) => (
+                                        <label key={requirement} className="flex items-start gap-2 text-xs leading-5 text-slate-700">
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedCommonRequirements.includes(requirement)}
+                                                onChange={(event) => setSelectedCommonRequirements((current) => (
+                                                    event.target.checked
+                                                        ? [...current, requirement]
+                                                        : current.filter((selected) => selected !== requirement)
+                                                ))}
+                                                className="mt-1"
+                                            />
+                                            <span>{t(requirement)}</span>
+                                        </label>
+                                    ))}
+                                </div>
+                            </fieldset>
+                            <label htmlFor="catalog-additional-requirements" className="mb-1 mt-3 block text-xs font-semibold text-slate-700">{t('Additional requirements, one per line')}</label>
+                            <textarea id="catalog-additional-requirements" value={additionalRequirementsText} onChange={(event) => setAdditionalRequirementsText(event.target.value)} maxLength={8000} rows={4} placeholder={t('Add a requirement not listed above')} className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm" />
+                            <p className="mt-1 text-[11px] text-slate-500">{t('Choose only requirements that this document service actually needs. These saved items will appear in new resident requests.')}</p>
                         </div>
                         <div>
                             <label htmlFor="catalog-published-fee" className="mb-1 block text-xs font-semibold text-slate-700">{t('Published fee amount (PHP)')}</label>
