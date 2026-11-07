@@ -488,7 +488,9 @@ export const ReviewDocumentModal = ({
                                                     className="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary/20"
                                                 />
                                                 <span>
-                                                    Waive fee for {selectedRequest.is_walkin ? 'walk-in resident' : 'resident'} (₱0.00)
+                                                    {selectedRequest.is_walkin
+                                                        ? 'Waive fee for walk-in resident (₱0.00)'
+                                                        : 'Waive clearance fee for resident (₱0.00)'}
                                                 </span>
                                             </label>
 
