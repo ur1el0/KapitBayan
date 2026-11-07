@@ -1019,8 +1019,16 @@ class _AdminDocumentRequestDetailsScreenState
               children: [
                 _detail('Resident', _requesterName()),
                 _detail('Purok', purok),
-                _detail('Purpose', _request.purpose),
-                _detail('Urgency', _request.urgencyTag),
+                _detail(
+                  'Purpose',
+                  _request.purpose?.trim().isNotEmpty == true
+                      ? _request.purpose!.trim()
+                      : 'Not provided',
+                ),
+                _detail(
+                  'Requested processing speed',
+                  _request.urgencyTag == 'URGENT' ? 'Urgent' : 'Regular',
+                ),
                 _detail('Requested', _request.formattedRequestedDate),
                 _detail('Current status', _request.status.replaceAll('_', ' ')),
                 _detail('Fee', _request.formattedFee),

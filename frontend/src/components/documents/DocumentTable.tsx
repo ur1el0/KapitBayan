@@ -21,6 +21,7 @@ export const DocumentTable = ({ requests, openModal, getStatusBadge, onDelete, l
                             <th scope="col" className="px-6 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Applicant</th>
                             <th scope="col" className="px-6 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Purok</th>
                             <th scope="col" className="px-6 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Clearance Type</th>
+                            <th scope="col" className="px-6 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Requested Speed</th>
                             <th scope="col" className="px-6 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">O.R. No.</th>
                             <th scope="col" className="px-6 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Date</th>
                             <th scope="col" className="px-6 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
@@ -29,7 +30,7 @@ export const DocumentTable = ({ requests, openModal, getStatusBadge, onDelete, l
                     <tbody className="bg-white divide-y divide-slate-100">
                         {loadError && (
                             <tr>
-                                <td colSpan={7} className="px-4 py-4">
+                                <td colSpan={8} className="px-4 py-4">
                                     <InlineErrorState
                                         message={loadError.message}
                                         onRetry={loadError.onRetry}
@@ -40,7 +41,7 @@ export const DocumentTable = ({ requests, openModal, getStatusBadge, onDelete, l
                         )}
                         {!loadError && requests.length === 0 ? (
                             <tr>
-                                <td colSpan={7} className="px-6 py-12 text-center text-sm text-slate-500">
+                                <td colSpan={8} className="px-6 py-12 text-center text-sm text-slate-500">
                                     No clearance requests recorded yet.
                                 </td>
                             </tr>
@@ -71,6 +72,17 @@ export const DocumentTable = ({ requests, openModal, getStatusBadge, onDelete, l
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-800 font-medium">
                                         {req.document_type}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        {req.urgency_tag === 'URGENT' ? (
+                                            <span className="inline-flex rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-800">
+                                                Urgent (requested)
+                                            </span>
+                                        ) : (
+                                            <span className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-600">
+                                                Regular
+                                            </span>
+                                        )}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 font-mono">
                                         {req.or_number ? req.or_number : <span className="text-slate-400 italic">None</span>}

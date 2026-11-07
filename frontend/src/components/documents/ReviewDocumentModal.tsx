@@ -372,9 +372,19 @@ export const ReviewDocumentModal = ({
                             </div>
 
                             <div>
+                                <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Requested Processing Speed</h4>
+                                <span className={`mt-1 inline-flex rounded-full border px-2.5 py-1 text-xs font-bold ${selectedRequest.urgency_tag === 'URGENT'
+                                    ? 'border-amber-200 bg-amber-50 text-amber-800'
+                                    : 'border-slate-200 bg-slate-50 text-slate-600'
+                                }`}>
+                                    {selectedRequest.urgency_tag === 'URGENT' ? 'Urgent (requested)' : 'Regular'}
+                                </span>
+                            </div>
+
+                            <div>
                                 <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Purpose Statement</h4>
                                 <p className="mt-1 text-sm text-slate-800 bg-slate-50 p-3.5 rounded-xl border border-slate-200 leading-relaxed">
-                                    {selectedRequest.purpose || 'For legal and general identification purposes.'}
+                                    {selectedRequest.purpose?.trim() || 'Not provided'}
                                 </p>
                             </div>
 
