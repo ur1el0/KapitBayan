@@ -10,11 +10,25 @@ This guide describes the controls added after the defense feedback. It complemen
 
 ## Queue tickets
 
-A document request can have only one active counter ticket while its ticket is `WAITING` or `SERVING`. The API/database guard is authoritative; the web portal also disables the ticket action while one is active. A new ticket is available after the prior ticket leaves those active states. This does not prevent a resident from creating a separate document request.
+A document request can have only one active counter ticket while its ticket is `WAITING` or `SERVING`. The API/database guard is authoritative; the web portal also disables the ticket action while one is active. A new ticket is available after the prior ticket leaves those active states. This does not prevent a resident from creating a separate document request. Queue number allocation and serving are serialized per Barangay inside database transactions; the concurrent advance tests run only on database backends that support `SELECT FOR UPDATE`, so SQLite alone is not evidence of production concurrency behavior.
 
 ## O.R. number PDF
 
 The download is an O.R.-number slip, not the requested certificate or clearance. It is available only after the request is `RELEASED` and staff have recorded an O.R. number. It contains the O.R. label and value only, and is served as private, non-cacheable content. A Barangay still issues the actual paper or digital document through its own process.
+
+## Document requirements
+
+The Admin document catalog offers common requirement checkboxes and a custom text area for local additions. Admins select only the items that apply to each particular document service; the preset choices do not imply that every document has the same requirements. Custom requirements already saved on an offering remain in the custom field when it is edited. Each offering saves its own list, and a request snapshots the list at submission, so a later catalog edit does not rewrite an earlier resident request.
+
+Resident web and mobile show the published items as a checklist for preparing to visit the Barangay. Checking an item is local to the form and does not upload a file or attest that staff reviewed the physical evidence.
+
+## Paper certificate QR verification
+
+The Barangay issues and signs its own paper certificate. After a document request is marked `RELEASED`, a Barangay Admin may affirm that the paper was physically issued, create a separate QR label, print it, and attach it. The public scan page confirms the active issuance record using only the Barangay name, certificate type, issue date, and validity. It reveals no resident name, O.R. number, address, or request ID. A QR is not the certificate itself and does not establish the holder's identity or prove that the paper has not been altered. Admins can revoke a label; a revoked or unknown code returns the same generic invalid result. The implementation is in this branch and is not live until its migration and deployment are complete.
+
+## Payment and fee review
+
+Only Barangay Admin accounts can verify electronic payment references, assess or waive fees, or record an O.R. number. Field Officials may continue service-processing steps, but the API rejects financial-review fields from their document updates. The current role model has no separate Treasurer role, so the Barangay Admin is the authorized reviewer. The API permission dispatch explicitly applies this restriction to the payment-review action, and fee/O.R. fields are rejected if sent through the general document-validation action.
 
 ## Resident Barangay transfer
 
