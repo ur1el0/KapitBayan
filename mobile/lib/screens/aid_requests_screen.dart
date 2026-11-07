@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../core/network/api_client.dart';
+import '../core/network/api_exception.dart';
 import '../core/theme/app_colors.dart';
 import '../core/localization/app_language.dart';
 import '../services/aid_request_service.dart';
 import '../services/storage_service.dart';
+import '../widgets/offline_snapshot_banner.dart';
 
 class AidRequestsScreen extends StatefulWidget {
   final AidRequestService? aidRequestService;
@@ -30,6 +32,10 @@ class _AidRequestsScreenState extends State<AidRequestsScreen> {
   String _assistanceType = _assistanceTypes.first;
   bool _isLoading = true;
   bool _isSubmitting = false;
+  bool _showingOfflineSnapshot = false;
+  bool _couldNotRefreshRequests = false;
+  bool _requestsLoadFailed = false;
+  DateTime? _offlineSnapshotSavedAt;
 
   @override
   void initState() {
@@ -50,7 +56,10 @@ class _AidRequestsScreenState extends State<AidRequestsScreen> {
       final apiClient = ApiClient();
       final token = storage.getAccessToken();
       if (token != null) apiClient.setAuthCredentials(accessToken: token);
-      _service = AidRequestService(apiClient: apiClient);
+      _service = AidRequestService(
+        apiClient: apiClient,
+        storageService: storage,
+      );
     }
     await _loadRequests();
   }
@@ -58,9 +67,26 @@ class _AidRequestsScreenState extends State<AidRequestsScreen> {
   Future<void> _loadRequests() async {
     try {
       final requests = await _service!.fetchRequests();
-      if (mounted) setState(() => _requests = requests);
-    } catch (_) {
-      if (mounted) _showMessage(context.tr('Could not load assistance requests.'));
+      if (mounted) {
+        setState(() {
+          _requests = requests;
+          _requestsLoadFailed = false;
+          _showingOfflineSnapshot = _service!.lastRequestsUsedOfflineSnapshot;
+          _couldNotRefreshRequests =
+              _service!.lastFetchFailed &&
+              !_service!.lastRequestsUsedOfflineSnapshot;
+          _offlineSnapshotSavedAt = _service!.lastSnapshotSavedAt;
+        });
+      }
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _requestsLoadFailed = true;
+          _couldNotRefreshRequests = error is NetworkException;
+          _showingOfflineSnapshot = false;
+        });
+        _showMessage(context.tr('Could not load assistance requests.'));
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -77,9 +103,21 @@ class _AidRequestsScreenState extends State<AidRequestsScreen> {
       );
       _reasonController.clear();
       await _loadRequests();
-      if (mounted) _showMessage(context.tr('Request submitted for barangay staff review.'));
-    } catch (_) {
-      if (mounted) _showMessage(context.tr('Could not submit your assistance request.'));
+      if (mounted) {
+        _showMessage(
+          context.tr('Request submitted for barangay staff review.'),
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        _showMessage(
+          context.tr(
+            error is NetworkException
+                ? 'We could not confirm whether the server received your submission. Check your requests after reconnecting before trying again.'
+                : 'Could not submit your assistance request.',
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -120,6 +158,13 @@ class _AidRequestsScreenState extends State<AidRequestsScreen> {
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
+                  if (_showingOfflineSnapshot)
+                    OfflineSnapshotBanner(savedAt: _offlineSnapshotSavedAt),
+                  if (_couldNotRefreshRequests && !_showingOfflineSnapshot)
+                    OfflineSnapshotBanner(
+                      message:
+                          'Could not update your requests. Reconnect and refresh before submitting again.',
+                    ),
                   Card(
                     child: Padding(
                       padding: const EdgeInsets.all(16),
@@ -135,7 +180,9 @@ class _AidRequestsScreenState extends State<AidRequestsScreen> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            context.tr('Barangay staff will review your request manually. Submission does not guarantee approval.'),
+                            context.tr(
+                              'Barangay staff will review your request manually. Submission does not guarantee approval.',
+                            ),
                             style: TextStyle(
                               color: AppColors.textMuted,
                               height: 1.35,
@@ -201,11 +248,26 @@ class _AidRequestsScreenState extends State<AidRequestsScreen> {
                     style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
-                  if (_requests.isEmpty)
+                  if (_requests.isEmpty && _requestsLoadFailed)
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(18),
+                        child: Text(
+                          context.tr(
+                            'Could not load your request history. Refresh and try again.',
+                          ),
+                        ),
+                      ),
+                    )
+                  else if (_requests.isEmpty)
                     Card(
                       child: Padding(
                         padding: EdgeInsets.all(18),
-                        child: Text(context.tr('No assistance requests have been submitted.')),
+                        child: Text(
+                          context.tr(
+                            'No assistance requests have been submitted.',
+                          ),
+                        ),
                       ),
                     ),
                   ..._requests.map(
@@ -229,7 +291,8 @@ class _AidRequestsScreenState extends State<AidRequestsScreen> {
                                   ),
                                 ),
                                 Text(
-                                  _statusLabel(context,
+                                  _statusLabel(
+                                    context,
                                     request['status']?.toString() ?? 'PENDING',
                                   ),
                                 ),

@@ -148,6 +148,7 @@ class DocumentRequestModel {
       'requirements_snapshot': requirementsSnapshot,
       'published_fee_amount_snapshot': publishedFeeAmountSnapshot,
       'offering_details_snapshot': offeringDetailsSnapshot,
+      'purpose': purpose,
       'urgency_tag': urgencyTag,
       'status': status,
       'admin_notes': adminNotes,

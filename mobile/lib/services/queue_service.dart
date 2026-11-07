@@ -20,11 +20,40 @@ class QueueServiceException implements Exception {
 class QueueService {
   final ApiClient apiClient;
   final StorageService storageService;
+  bool _lastTicketsUsedOfflineSnapshot = false;
+  DateTime? _lastTicketsSnapshotSavedAt;
+  bool _lastTicketsSnapshotTruncated = false;
 
   QueueService({required this.apiClient, required this.storageService});
 
+  /// Loads one of the authenticated resident's tickets for a push notification.
+  /// The API scopes this detail lookup to the signed-in resident.
+  Future<QueueTicketModel> fetchTicket(int ticketId) async {
+    final response = await apiClient.get(
+      '/tickets/$ticketId/',
+      requiresAuth: true,
+    );
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw QueueServiceException(
+        'Unable to load this queue ticket (HTTP ${response.statusCode}).',
+        statusCode: response.statusCode,
+      );
+    }
+
+    final data = jsonDecode(utf8.decode(response.bodyBytes));
+    if (data is! Map<String, dynamic>) {
+      throw const QueueServiceException(
+        'The queue ticket response was invalid.',
+      );
+    }
+    return QueueTicketModel.fromJson(data);
+  }
+
   /// Fetches real-time queue live status and user active tickets concurrently
   Future<QueueLiveStatusModel> fetchQueueStatus() async {
+    _lastTicketsUsedOfflineSnapshot = false;
+    _lastTicketsSnapshotSavedAt = null;
+    _lastTicketsSnapshotTruncated = false;
     Map<String, dynamic>? liveStatusJson;
     List<QueueTicketModel> userTickets = [];
     bool liveStatusFailed = false;
@@ -41,9 +70,9 @@ class QueueService {
           requiresAuth: true,
         );
         if (liveStatusRes.statusCode == 200) {
-          liveStatusJson = jsonDecode(
-            utf8.decode(liveStatusRes.bodyBytes),
-          ) as Map<String, dynamic>;
+          liveStatusJson =
+              jsonDecode(utf8.decode(liveStatusRes.bodyBytes))
+                  as Map<String, dynamic>;
         } else {
           liveStatusFailed = true;
           liveStatusStatusCode = liveStatusRes.statusCode;
@@ -81,10 +110,44 @@ class QueueService {
                     QueueTicketModel.fromJson(item as Map<String, dynamic>),
               )
               .toList();
+          try {
+            await storageService.saveOfflineSnapshot(
+              'queue_tickets',
+              userTickets
+                  .map((ticket) {
+                    final record = ticket.toJson();
+                    record['resident_name'] = null;
+                    return record;
+                  })
+                  .toList(growable: false),
+            );
+          } catch (_) {
+            // Keep the live queue usable if encrypted storage cannot be written.
+          }
         } else {
           userTicketsFailed = true;
           userTicketsStatusCode = userTicketsRes.statusCode;
           userTicketsErrorMessage = 'HTTP ${userTicketsRes.statusCode}';
+        }
+      } on NetworkException catch (e) {
+        userTicketsFailed = true;
+        userTicketsErrorMessage = e.message;
+        try {
+          final snapshot = await storageService.readOfflineSnapshot(
+            'queue_tickets',
+          );
+          if (snapshot != null) {
+            userTickets = snapshot.records
+                .map(QueueTicketModel.fromJson)
+                .toList(growable: false);
+            userTicketsFailed = false;
+            userTicketsErrorMessage = null;
+            _lastTicketsUsedOfflineSnapshot = true;
+            _lastTicketsSnapshotSavedAt = snapshot.savedAt;
+            _lastTicketsSnapshotTruncated = snapshot.isTruncated;
+          }
+        } catch (_) {
+          // Keep the normal retryable error if encrypted storage is unavailable.
         }
       } catch (e) {
         userTicketsFailed = true;
@@ -119,6 +182,9 @@ class QueueService {
       userTicketsErrorMessage: userTicketsFailed
           ? userTicketsErrorMessage
           : null,
+      isShowingOfflineTicketSnapshot: _lastTicketsUsedOfflineSnapshot,
+      offlineTicketSnapshotSavedAt: _lastTicketsSnapshotSavedAt,
+      offlineTicketsTruncated: _lastTicketsSnapshotTruncated,
       errorMessage: userTicketsFailed
           ? 'Unable to load active tickets ($userTicketsErrorMessage)'
           : (liveStatusFailed

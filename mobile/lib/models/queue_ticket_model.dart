@@ -106,6 +106,9 @@ class QueueLiveStatusModel {
   final String? errorMessage;
   final String? liveStatusErrorMessage;
   final String? userTicketsErrorMessage;
+  final bool isShowingOfflineTicketSnapshot;
+  final DateTime? offlineTicketSnapshotSavedAt;
+  final bool offlineTicketsTruncated;
 
   const QueueLiveStatusModel({
     this.currentTicket,
@@ -119,6 +122,9 @@ class QueueLiveStatusModel {
     this.errorMessage,
     this.liveStatusErrorMessage,
     this.userTicketsErrorMessage,
+    this.isShowingOfflineTicketSnapshot = false,
+    this.offlineTicketSnapshotSavedAt,
+    this.offlineTicketsTruncated = false,
   });
 
   /// Derives human-friendly live capacity label
@@ -150,6 +156,9 @@ class QueueLiveStatusModel {
     String? errorMessage,
     String? liveStatusErrorMessage,
     String? userTicketsErrorMessage,
+    bool isShowingOfflineTicketSnapshot = false,
+    DateTime? offlineTicketSnapshotSavedAt,
+    bool offlineTicketsTruncated = false,
   }) {
     final recentList =
         (liveStatusJson['recent_completed'] as List<dynamic>?)
@@ -182,6 +191,9 @@ class QueueLiveStatusModel {
           errorMessage ?? userTicketsErrorMessage ?? liveStatusErrorMessage,
       liveStatusErrorMessage: liveStatusErrorMessage,
       userTicketsErrorMessage: userTicketsErrorMessage,
+      isShowingOfflineTicketSnapshot: isShowingOfflineTicketSnapshot,
+      offlineTicketSnapshotSavedAt: offlineTicketSnapshotSavedAt,
+      offlineTicketsTruncated: offlineTicketsTruncated,
     );
   }
 }

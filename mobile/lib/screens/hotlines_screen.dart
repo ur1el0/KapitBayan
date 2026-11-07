@@ -8,6 +8,7 @@ import '../models/hotline_model.dart';
 import '../services/hotline_caller.dart';
 import '../services/hotline_services.dart';
 import '../services/storage_service.dart';
+import '../widgets/offline_snapshot_banner.dart';
 
 class HotlinesScreen extends StatefulWidget {
   const HotlinesScreen({super.key});
@@ -23,6 +24,9 @@ class _HotlinesScreenState extends State<HotlinesScreen> {
   String _selectedCategory = 'ALL';
   String _searchQuery = '';
   bool _isLoading = true;
+  bool _showingOfflineSnapshot = false;
+  bool _hotlinesCouldNotRefresh = false;
+  DateTime? _offlineSnapshotSavedAt;
 
   // National emergency defaults so residents are NEVER without help
   static final List<HotlineModel> _nationalFallbacks = [
@@ -74,7 +78,7 @@ class _HotlinesScreenState extends State<HotlinesScreen> {
       if (token != null) {
         client.setAuthCredentials(accessToken: token);
       }
-      _service = HotlineService(apiClient: client);
+      _service = HotlineService(apiClient: client, storageService: storage);
       await _loadHotlines();
     } catch (_) {
       if (mounted) {
@@ -93,6 +97,11 @@ class _HotlinesScreenState extends State<HotlinesScreen> {
       if (mounted) {
         setState(() {
           _hotlines = data.isNotEmpty ? data : _nationalFallbacks;
+          _showingOfflineSnapshot = _service!.lastFetchUsedOfflineSnapshot;
+          _hotlinesCouldNotRefresh =
+              _service!.lastFetchFailed &&
+              !_service!.lastFetchUsedOfflineSnapshot;
+          _offlineSnapshotSavedAt = _service!.lastSnapshotSavedAt;
           _isLoading = false;
         });
       }
@@ -100,6 +109,7 @@ class _HotlinesScreenState extends State<HotlinesScreen> {
       if (mounted) {
         setState(() {
           _hotlines = _nationalFallbacks;
+          _hotlinesCouldNotRefresh = true;
           _isLoading = false;
         });
       }
@@ -153,8 +163,11 @@ class _HotlinesScreenState extends State<HotlinesScreen> {
 
   List<HotlineModel> get _filteredHotlines {
     return _hotlines.where((h) {
-      final matchesCategory = _selectedCategory == 'ALL' || h.category.toUpperCase() == _selectedCategory;
-      final matchesSearch = _searchQuery.isEmpty ||
+      final matchesCategory =
+          _selectedCategory == 'ALL' ||
+          h.category.toUpperCase() == _selectedCategory;
+      final matchesSearch =
+          _searchQuery.isEmpty ||
           h.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           h.number.contains(_searchQuery);
       return matchesCategory && matchesSearch;
@@ -170,7 +183,10 @@ class _HotlinesScreenState extends State<HotlinesScreen> {
       appBar: AppBar(
         title: Text(
           context.tr('Emergency Hotlines'),
-          style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF0F172A),
+          ),
         ),
         backgroundColor: Colors.white,
         elevation: 0,
@@ -178,6 +194,16 @@ class _HotlinesScreenState extends State<HotlinesScreen> {
       ),
       body: Column(
         children: [
+          if (_showingOfflineSnapshot || _hotlinesCouldNotRefresh)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: OfflineSnapshotBanner(
+                savedAt: _offlineSnapshotSavedAt,
+                message: _hotlinesCouldNotRefresh && !_showingOfflineSnapshot
+                    ? 'Could not refresh Barangay contacts. Only national emergency numbers are shown.'
+                    : null,
+              ),
+            ),
           // Search & Filters Header
           Container(
             color: Colors.white,
@@ -194,15 +220,25 @@ class _HotlinesScreenState extends State<HotlinesScreen> {
                     onChanged: (val) => setState(() => _searchQuery = val),
                     decoration: InputDecoration(
                       hintText: context.tr('Search hotlines, departments...'),
-                      hintStyle: TextStyle(fontSize: 13, color: Color(0xFF94A3B8)),
-                      prefixIcon: Icon(Icons.search, size: 20, color: Color(0xFF64748B)),
+                      hintStyle: TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF94A3B8),
+                      ),
+                      prefixIcon: Icon(
+                        Icons.search,
+                        size: 20,
+                        color: Color(0xFF64748B),
+                      ),
                       border: InputBorder.none,
-                      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                     ),
                   ),
                 ),
                 const SizedBox(height: 12),
-                
+
                 // Category Filter Chips
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
@@ -217,13 +253,16 @@ class _HotlinesScreenState extends State<HotlinesScreen> {
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
-                              color: isSelected ? Colors.white : const Color(0xFF475569),
+                              color: isSelected
+                                  ? Colors.white
+                                  : const Color(0xFF475569),
                             ),
                           ),
                           selected: isSelected,
                           selectedColor: AppColors.primaryNavy,
                           backgroundColor: const Color(0xFFF1F5F9),
-                          onSelected: (_) => setState(() => _selectedCategory = cat),
+                          onSelected: (_) =>
+                              setState(() => _selectedCategory = cat),
                         ),
                       );
                     }).toList(),
@@ -238,92 +277,120 @@ class _HotlinesScreenState extends State<HotlinesScreen> {
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _filteredHotlines.isEmpty
-                    ? Center(
-                        child: Text(
-                          context.tr('No matching emergency contacts found.'),
-                          style: TextStyle(color: Colors.grey.shade500, fontSize: 14),
-                        ),
-                      )
-                    : ListView.separated(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: _filteredHotlines.length,
-                        separatorBuilder: (_, _) => const SizedBox(height: 12),
-                        itemBuilder: (context, index) {
-                          final h = _filteredHotlines[index];
-                          final color = _categoryColor(h.category);
-                          return Container(
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: const Color(0xFFE2E8F0)),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.02),
-                                  blurRadius: 6,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
+                ? Center(
+                    child: Text(
+                      context.tr('No matching emergency contacts found.'),
+                      style: TextStyle(
+                        color: Colors.grey.shade500,
+                        fontSize: 14,
+                      ),
+                    ),
+                  )
+                : ListView.separated(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: _filteredHotlines.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: 12),
+                    itemBuilder: (context, index) {
+                      final h = _filteredHotlines[index];
+                      final color = _categoryColor(h.category);
+                      return Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.02),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
                             ),
-                            child: ListTile(
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                              leading: Container(
-                                width: 44,
-                                height: 44,
-                                decoration: BoxDecoration(
-                                  color: color.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Icon(_categoryIcon(h.category), color: color, size: 22),
-                              ),
-                              title: Text(
-                                h.name,
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF0F172A)),
-                              ),
-                              subtitle: Text(
-                                context.tr(h.categoryDisplay),
-                                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                              ),
-                              trailing: Material(
-                                color: Colors.transparent,
-                                child: InkWell(
-                                  onTap: () => _makePhoneCall(h.number),
-                                  onLongPress: () {
-                                    Clipboard.setData(ClipboardData(text: h.number));
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text(context.tr('Number copied to clipboard'))),
-                                    );
-                                  },
-                                  borderRadius: BorderRadius.circular(10),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                    decoration: BoxDecoration(
-                                      color: color.withValues(alpha: 0.08),
-                                      borderRadius: BorderRadius.circular(10),
-                                      border: Border.all(color: color.withValues(alpha: 0.2)),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(Icons.call, color: color, size: 16),
-                                        const SizedBox(width: 6),
-                                        Text(
-                                          h.number,
-                                          style: TextStyle(
-                                            color: color,
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 14,
-                                            fontFamily: 'monospace',
-                                          ),
-                                        ),
-                                      ],
+                          ],
+                        ),
+                        child: ListTile(
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          leading: Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: color.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(
+                              _categoryIcon(h.category),
+                              color: color,
+                              size: 22,
+                            ),
+                          ),
+                          title: Text(
+                            h.name,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                              color: Color(0xFF0F172A),
+                            ),
+                          ),
+                          subtitle: Text(
+                            context.tr(h.categoryDisplay),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                          trailing: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: () => _makePhoneCall(h.number),
+                              onLongPress: () {
+                                Clipboard.setData(
+                                  ClipboardData(text: h.number),
+                                );
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      context.tr('Number copied to clipboard'),
                                     ),
                                   ),
+                                );
+                              },
+                              borderRadius: BorderRadius.circular(10),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 8,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: color.withValues(alpha: 0.08),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: color.withValues(alpha: 0.2),
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.call, color: color, size: 16),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      h.number,
+                                      style: TextStyle(
+                                        color: color,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                        fontFamily: 'monospace',
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ),
-                          );
-                        },
-                      ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
           ),
         ],
       ),

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../core/localization/app_language.dart';
 import '../core/network/api_client.dart';
+import '../core/network/api_exception.dart';
 import '../services/issue_service.dart';
 import '../services/storage_service.dart';
 
@@ -25,13 +26,15 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
   String _selectedUrgency = 'MINOR';
 
   final List<String> _categories = [
-    'PEACE_AND_ORDER', 'PUBLIC_HEALTH', 'INFRASTRUCTURE', 'ENVIRONMENT', 'OTHER'
+    'PEACE_AND_ORDER',
+    'PUBLIC_HEALTH',
+    'INFRASTRUCTURE',
+    'ENVIRONMENT',
+    'OTHER',
   ];
-  final List<String> _urgencies = [
-    'MINOR', 'MODERATE', 'HAZARD', 'EMERGENCY'
-  ];
+  final List<String> _urgencies = ['MINOR', 'MODERATE', 'HAZARD', 'EMERGENCY'];
   bool _isLoading = false;
-  
+
   IssueService? _issueService;
 
   @override
@@ -93,9 +96,14 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        final message = e is NetworkException
+            ? context.tr(
+                'We could not confirm whether the server received your submission. Check your requests after reconnecting before trying again.',
+              )
+            : 'Error: $e';
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(message)));
       }
     } finally {
       if (mounted) {
@@ -110,7 +118,10 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
       appBar: AppBar(
         title: Text(
           context.tr('Report an Issue'),
-          style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF0F172A),
+          ),
         ),
         backgroundColor: Colors.white,
         elevation: 0,
@@ -120,7 +131,9 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const MyIssuesScreen()), // Assuming you import it!
+                MaterialPageRoute(
+                  builder: (_) => const MyIssuesScreen(),
+                ), // Assuming you import it!
               );
             },
             icon: const Icon(Icons.history, size: 18),
@@ -145,11 +158,12 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
                       controller: _titleController,
                       decoration: InputDecoration(
                         labelText: context.tr('Issue Title'),
-                hintText: context.tr('e.g. Broken Streetlight'),
+                        hintText: context.tr('e.g. Broken Streetlight'),
                         border: OutlineInputBorder(),
                       ),
-                      validator: (value) =>
-                          value!.isEmpty ? context.tr('Please enter a title') : null,
+                      validator: (value) => value!.isEmpty
+                          ? context.tr('Please enter a title')
+                          : null,
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
@@ -159,21 +173,27 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
                         hintText: context.tr('e.g. Main St. corner Elm St.'),
                         border: OutlineInputBorder(),
                       ),
-                      validator: (value) =>
-                          value!.isEmpty ? context.tr('Please enter a location') : null,
+                      validator: (value) => value!.isEmpty
+                          ? context.tr('Please enter a location')
+                          : null,
                     ),
                     const SizedBox(height: 16),
-                      DropdownButtonFormField<String>(
+                    DropdownButtonFormField<String>(
                       initialValue: _selectedCategory,
                       decoration: InputDecoration(
                         labelText: context.tr('Category'),
                         border: OutlineInputBorder(),
                       ),
-                      items: _categories.map((c) => DropdownMenuItem(
-                        value: c, 
-                        child: Text(context.tr(c.replaceAll('_', ' ')))
-                      )).toList(),
-                      onChanged: (val) => setState(() => _selectedCategory = val!),
+                      items: _categories
+                          .map(
+                            (c) => DropdownMenuItem(
+                              value: c,
+                              child: Text(context.tr(c.replaceAll('_', ' '))),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (val) =>
+                          setState(() => _selectedCategory = val!),
                     ),
                     const SizedBox(height: 16),
                     DropdownButtonFormField<String>(
@@ -182,11 +202,16 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
                         labelText: context.tr('Urgency'),
                         border: OutlineInputBorder(),
                       ),
-                      items: _urgencies.map((u) => DropdownMenuItem(
-                        value: u, 
-                        child: Text(context.tr(u))
-                      )).toList(),
-                      onChanged: (val) => setState(() => _selectedUrgency = val!),
+                      items: _urgencies
+                          .map(
+                            (u) => DropdownMenuItem(
+                              value: u,
+                              child: Text(context.tr(u)),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (val) =>
+                          setState(() => _selectedUrgency = val!),
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
@@ -197,11 +222,12 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
                         hintText: context.tr('Describe the issue in detail...'),
                         border: OutlineInputBorder(),
                       ),
-                      validator: (value) =>
-                          value!.isEmpty ? context.tr('Please enter a description') : null,
+                      validator: (value) => value!.isEmpty
+                          ? context.tr('Please enter a description')
+                          : null,
                     ),
                     const SizedBox(height: 24),
-                    
+
                     // Image Picker Section
                     Container(
                       padding: const EdgeInsets.all(16),
@@ -217,7 +243,9 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
                                 ? Icons.add_a_photo_outlined
                                 : Icons.check_circle_outline,
                             size: 40,
-                            color: _selectedImage == null ? Colors.grey : Colors.green,
+                            color: _selectedImage == null
+                                ? Colors.grey
+                                : Colors.green,
                           ),
                           const SizedBox(height: 8),
                           Text(
@@ -231,13 +259,17 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
                           OutlinedButton.icon(
                             onPressed: _pickImage,
                             icon: const Icon(Icons.image),
-                            label: Text(_selectedImage == null ? context.tr('Attach Photo') : context.tr('Change Photo')),
+                            label: Text(
+                              _selectedImage == null
+                                  ? context.tr('Attach Photo')
+                                  : context.tr('Change Photo'),
+                            ),
                           ),
                         ],
                       ),
                     ),
                     const SizedBox(height: 32),
-                    
+
                     // Submit Button
                     SizedBox(
                       height: 50,
@@ -248,8 +280,16 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
                           foregroundColor: Colors.white,
                         ),
                         child: _isLoading
-                            ? const CircularProgressIndicator(color: Colors.white)
-                            : Text(context.tr('Submit Report'), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                            ? const CircularProgressIndicator(
+                                color: Colors.white,
+                              )
+                            : Text(
+                                context.tr('Submit Report'),
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                       ),
                     ),
                   ],

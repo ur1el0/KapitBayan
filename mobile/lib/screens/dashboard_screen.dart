@@ -4,6 +4,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 
 import '../core/navigation/app_navigation_keys.dart';
+import '../core/navigation/notification_target.dart';
 import '../core/localization/app_language.dart';
 import 'hotlines_screen.dart';
 import 'report_issue_screen.dart';
@@ -23,6 +24,7 @@ import '../widgets/metric_summary_card.dart';
 import '../widgets/quick_services_section.dart';
 import '../widgets/recent_notifications_section.dart';
 import '../widgets/resident_hero_card.dart';
+import '../widgets/offline_snapshot_banner.dart';
 import 'documents_screen.dart';
 import 'queue_screen.dart';
 import 'schedule_screen.dart';
@@ -38,23 +40,26 @@ void _openNotificationDestination(RemoteMessage message) {
   if (navigator == null) return;
 
   final data = message.data;
-  final type =
-      data['type']?.toString() ??
-      (data.containsKey('ticket_id')
-          ? 'queue'
-          : data.containsKey('request_id')
-          ? 'document'
-          : data.containsKey('report_id')
-          ? 'issue'
-          : data.containsKey('announcement_id')
-          ? 'announcement'
-          : '');
+  final target = ResidentNotificationTarget.tryParse(data);
+  final type = data['type']?.toString().toLowerCase();
   final Widget? destination = switch (type) {
-    'queue' => const QueueScreen(),
-    'document' => const DocumentsScreen(),
+    'queue' when target?.type == ResidentNotificationTargetType.queueTicket =>
+      QueueScreen(initialTicketId: target!.id),
+    'document'
+        when target?.type == ResidentNotificationTargetType.documentRequest =>
+      DocumentsScreen(initialRequestId: target!.id),
     'issue' => const MyIssuesScreen(),
     'announcement' => const AnnouncementsScreen(),
-    _ => null,
+    _ when target?.type == ResidentNotificationTargetType.queueTicket =>
+      QueueScreen(initialTicketId: target!.id),
+    _ when target?.type == ResidentNotificationTargetType.documentRequest =>
+      DocumentsScreen(initialRequestId: target!.id),
+    _ =>
+      data['report_id'] != null
+          ? const MyIssuesScreen()
+          : data['announcement_id'] != null
+          ? const AnnouncementsScreen()
+          : null,
   };
   if (destination == null) return;
 
@@ -128,7 +133,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
 
     // Keep push listeners alive while the resident navigates through the app.
-    _pushNotificationService = PushNotificationService.shared(apiClient: apiClient);
+    _pushNotificationService = PushNotificationService.shared(
+      apiClient: apiClient,
+    );
     unawaited(
       _pushNotificationService!.initialize(
         onNotificationOpened: _openNotificationDestination,
@@ -270,6 +277,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    if (_data.isShowingOfflineSnapshot)
+                      OfflineSnapshotBanner(
+                        savedAt: _data.offlineSnapshotSavedAt,
+                        truncated: _data.offlineRequestsTruncated,
+                      ),
                     // 1. Verified Resident Hero Banner Card
                     ResidentHeroCard(
                       user: _data.user,
@@ -393,7 +405,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 Text(
                                   activity.description.isNotEmpty
                                       ? activity.description
-                                      : context.tr('No additional details provided.'),
+                                      : context.tr(
+                                          'No additional details provided.',
+                                        ),
                                 ),
                               ],
                             ),

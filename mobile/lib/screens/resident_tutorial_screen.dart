@@ -89,8 +89,36 @@ class ResidentTutorialScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    context.tr('Take one step at a time. You can open this guide whenever you need it. Button names may vary a little between the mobile app and website.\n\nNew here? On the sign-in screen, choose Register as Resident and follow the instructions. If a message says your account needs review, follow the message or contact your Barangay before making another account. If you already have an account, sign in and start at your Dashboard.'),
+                    context.tr(
+                      'Follow these steps. Come back to this guide anytime. Button names may differ a little between the app and website.',
+                    ),
                     style: TextStyle(fontSize: 16, height: 1.5),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    context.tr('New to KapitBayan?'),
+                    style: const TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    context.tr(
+                      'On the sign-in screen, choose Register as Resident and follow the steps.',
+                    ),
+                    style: const TextStyle(fontSize: 16, height: 1.5),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    context.tr(
+                      'If your account needs review, wait or contact your Barangay. Do not make another account.',
+                    ),
+                    style: const TextStyle(fontSize: 16, height: 1.5),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    context.tr(
+                      'Already have an account? Sign in and open your Dashboard.',
+                    ),
+                    style: const TextStyle(fontSize: 16, height: 1.5),
                   ),
                 ],
               ),
@@ -101,35 +129,45 @@ class ResidentTutorialScreen extends StatelessWidget {
             context: context,
             number: 1,
             title: context.tr('Start at your Dashboard'),
-            description: context.tr('After signing in, use the menu or service cards to choose what you need. You can return to the Dashboard whenever you want.'),
+            description: context.tr(
+              'After signing in, use the menu or service cards to choose what you need. You can return to the Dashboard whenever you want.',
+            ),
             icon: Icons.dashboard_outlined,
           ),
           _step(
             context: context,
             number: 2,
             title: context.tr('Request a document'),
-            description: context.tr('Open Documents, choose the service you need, and follow the instructions. Review your information before sending. Return to Documents later to check the request status.'),
+            description: context.tr(
+              'Open Documents, choose the service you need, and follow the instructions. Review your information before sending. Return to Documents later to check the request status.',
+            ),
             icon: Icons.description_outlined,
           ),
           _step(
             context: context,
             number: 3,
             title: context.tr('Check queue and schedules'),
-            description: context.tr('Open Queue for queue information. If your Barangay has posted an appointment or activity schedule, check the date, time, and location before going.'),
+            description: context.tr(
+              'Open Queue for queue information. If your Barangay has posted an appointment or activity schedule, check the date, time, and location before going.',
+            ),
             icon: Icons.access_time,
           ),
           _step(
             context: context,
             number: 4,
             title: context.tr('Read community updates'),
-            description: context.tr('Open Announcements to read community updates. Check the date and details, and confirm urgent information with your Barangay through a verified contact.'),
+            description: context.tr(
+              'Open Announcements to read community updates. Check the date and details, and confirm urgent information with your Barangay through a verified contact.',
+            ),
             icon: Icons.campaign_outlined,
           ),
           _step(
             context: context,
             number: 5,
             title: context.tr('Find other services'),
-            description: context.tr('Use Assistance or Report Issue when you need those services. Follow the instructions shown. Local requirements and service availability can differ.'),
+            description: context.tr(
+              'Use Assistance or Report Issue when you need those services. Follow the instructions shown. Local requirements and service availability can differ.',
+            ),
             icon: Icons.volunteer_activism_outlined,
           ),
           Card(
@@ -146,12 +184,24 @@ class ResidentTutorialScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    context.tr('• To make text larger, use your phone’s text or display size setting.\n'
-                    '• If you use a screen reader, turn on TalkBack in Android Accessibility settings and listen to button labels.\n'
-                    '• A trusted person may help you read or navigate while you stay in control. Never share your password or one-time code (OTP).\n'
-                    '• If something does not load, check your connection and try again. Check request status before sending the same request again.\n'
-                    '• Confirm local eligibility, fees, required documents, and office hours with your Barangay.'),
-                    style: TextStyle(fontSize: 16, height: 1.6),
+                    '• ${context.tr("To make text larger, change the text size in your phone's settings.")}',
+                    style: const TextStyle(fontSize: 16, height: 1.6),
+                  ),
+                  Text(
+                    '• ${context.tr('If you use a screen reader, turn on TalkBack in Android Accessibility settings.')}',
+                    style: const TextStyle(fontSize: 16, height: 1.6),
+                  ),
+                  Text(
+                    '• ${context.tr('Someone you trust can help. Keep control of your phone. Do not share your password or the code sent to you (OTP).')}',
+                    style: const TextStyle(fontSize: 16, height: 1.6),
+                  ),
+                  Text(
+                    '• ${context.tr('If a page does not load, check your internet. Check your request history before sending it again.')}',
+                    style: const TextStyle(fontSize: 16, height: 1.6),
+                  ),
+                  Text(
+                    '• ${context.tr('Ask your Barangay about requirements, fees, papers to bring, and office hours.')}',
+                    style: const TextStyle(fontSize: 16, height: 1.6),
                   ),
                 ],
               ),
