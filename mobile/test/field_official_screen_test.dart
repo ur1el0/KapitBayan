@@ -38,20 +38,24 @@ class MockFieldOfficialService extends FieldOfficialService {
   int? urgencyUpdatedReportId;
   String? updatedUrgency;
   String? lastVerifiedIdentifier;
+  String currentTicket = 'T003';
+  int totalWaiting = 5;
 
   @override
   Future<Map<String, dynamic>> fetchLiveQueueStatus() async {
     return {
-      'current_ticket': 'T003',
-      'total_waiting': 5,
+      'current_ticket': currentTicket,
+      'total_waiting': totalWaiting,
     };
   }
 
   @override
   Future<Map<String, dynamic>> callNextTicket({bool releaseDocument = false}) async {
+    currentTicket = 'T004';
+    totalWaiting = 4;
     return {
-      'current_ticket': 'T004',
-      'remaining_waiting': 4,
+      'current_ticket': currentTicket,
+      'remaining_waiting': totalWaiting,
     };
   }
 

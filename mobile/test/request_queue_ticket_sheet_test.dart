@@ -36,13 +36,13 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byType(DropdownButtonFormField<String>));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Business Permit').last);
+    await tester.tap(find.text('Other in-person service').last);
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), 'Two copies');
     await tester.tap(find.text('Get Ticket'));
     await tester.pumpAndSettle();
 
-    expect(submittedService, 'Business Permit');
+    expect(submittedService, 'Other in-person service');
     expect(submittedNotes, 'Two copies');
   });
 }
