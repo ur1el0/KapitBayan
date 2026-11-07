@@ -48,7 +48,7 @@ class MockFieldOfficialService extends FieldOfficialService {
   }
 
   @override
-  Future<Map<String, dynamic>> callNextTicket() async {
+  Future<Map<String, dynamic>> callNextTicket({bool releaseDocument = false}) async {
     return {
       'current_ticket': 'T004',
       'remaining_waiting': 4,
