@@ -19,6 +19,7 @@ from .aid import (
 
 from .queue import (
     QueueTicketSerializer,
+    QueueTicketCompletionSerializer,
     QueueTicketPrioritySerializer,
     PublicQueueStatusSerializer,
 )
@@ -43,6 +44,7 @@ __all__ = [
     'AidRequestSerializer',
     'AidRequestReviewSerializer',
     'QueueTicketSerializer',
+    'QueueTicketCompletionSerializer',
     'QueueTicketPrioritySerializer',
     'PublicQueueStatusSerializer',
     'DocumentStatsSerializer',

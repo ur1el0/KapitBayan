@@ -6,6 +6,7 @@ from ..models import DocumentRequest, QueueTicket
 class QueueTicketSerializer(serializers.ModelSerializer):
     ticket_id = serializers.IntegerField(source='id', read_only=True)
     resident_name = serializers.SerializerMethodField()
+    has_resident_account = serializers.SerializerMethodField()
     document_request_id = serializers.PrimaryKeyRelatedField(
         source='document_request',
         queryset=DocumentRequest.objects.select_related('user').all(),
@@ -16,6 +17,17 @@ class QueueTicketSerializer(serializers.ModelSerializer):
         source='document_request.document_type',
         read_only=True,
         allow_null=True,
+    )
+    document_request_status = serializers.CharField(
+        source='document_request.status',
+        read_only=True,
+        allow_null=True,
+    )
+    notes = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        allow_null=True,
+        max_length=500,
     )
     priority_reason = serializers.CharField(
         write_only=True,
@@ -31,9 +43,11 @@ class QueueTicketSerializer(serializers.ModelSerializer):
             'ticket_number',
             'resident_name',
             'walkin_name',
+            'has_resident_account',
             'service_type',
             'document_request_id',
             'document_request_type',
+            'document_request_status',
             'priority_status',
             'is_priority',
             'priority_reason',
@@ -165,10 +179,17 @@ class QueueTicketSerializer(serializers.ModelSerializer):
         validated_data.pop('priority_reason', None)
         return super().create(validated_data)
 
+    def get_has_resident_account(self, obj):
+        return bool(obj.user_id and obj.user.role == User.Role.RESIDENT)
+
     def get_resident_name(self, obj) -> str:
         if obj.user:
             return getattr(obj.user.profile, 'full_name', obj.user.username) if hasattr(obj.user, 'profile') else obj.user.username
         return obj.walkin_name if obj.walkin_name else "Walk-in Resident"
+
+
+class QueueTicketCompletionSerializer(serializers.Serializer):
+    release_document = serializers.BooleanField(required=False, default=False)
 
 
 class QueueTicketPrioritySerializer(serializers.Serializer):

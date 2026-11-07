@@ -8,6 +8,8 @@ export interface DigitalQueueTicketModalProps {
     onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
     serviceType: string;
     setServiceType: (type: string) => void;
+    notes?: string;
+    setNotes?: (notes: string) => void;
     serviceTypes: string[];
     submitting: boolean;
 }
@@ -17,6 +19,8 @@ export const DigitalQueueTicketModal: React.FC<DigitalQueueTicketModalProps> = (
     onSubmit,
     serviceType,
     setServiceType,
+    notes = '',
+    setNotes,
     serviceTypes,
     submitting,
 }) => {
@@ -67,9 +71,32 @@ export const DigitalQueueTicketModal: React.FC<DigitalQueueTicketModalProps> = (
                         </select>
                     </div>
 
+                    <div>
+                        <label htmlFor="queue-visit-notes" className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                            {t('What is this visit about? (Optional)')}
+                        </label>
+                        <textarea
+                            id="queue-visit-notes"
+                            value={notes}
+                            onChange={(event) => setNotes?.(event.target.value)}
+                            maxLength={500}
+                            rows={2}
+                            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-[#F8FAFD] text-sm text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/20"
+                            placeholder={t('Briefly describe the service you need')}
+                        />
+                        <p className="mt-1 text-xs text-slate-500">
+                            {t('Do not include sensitive personal or medical details.')}
+                        </p>
+                    </div>
+
                     <p className="text-xs leading-relaxed text-slate-600">
                         {t('Barangay staff verify priority lane eligibility. If you qualify, ask the service desk to review your waiting ticket.')}
                     </p>
+
+                    <div className="rounded-xl border border-blue-100 bg-blue-50 px-3.5 py-3 text-xs leading-relaxed text-blue-900">
+                        <p>{t('This ticket is linked to your account and selected service, not to a document request.')}</p>
+                        <p className="mt-1">{t('For a document pickup, open Documents and get a ticket from the request after it is marked ready.')}</p>
+                    </div>
 
                     <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
                         <button

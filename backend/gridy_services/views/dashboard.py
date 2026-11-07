@@ -8,7 +8,7 @@ from rest_framework.views import APIView
 from gridy_auth.models import Resident, User
 from gridy_auth.permissions import IsBarangayOfficial
 from gridy_reports.models import IssueReport
-from gridy_services.models import DocumentRequest, QueueTicket
+from gridy_services.models import DocumentRequest, QueueTicket, manila_day_bounds
 from gridy_services.serializers import DashboardSummarySerializer
 
 
@@ -62,9 +62,15 @@ class DashboardSummaryView(APIView):
         )
 
         # 4. Live Queue Summary
-        serving_ticket = QueueTicket.objects.filter(barangay=user.barangay, status=QueueTicket.Status.SERVING).first()
+        queue_day_start, queue_next_day_start = manila_day_bounds()
+        today_queue = QueueTicket.objects.filter(
+            barangay=user.barangay,
+            created_at__gte=queue_day_start,
+            created_at__lt=queue_next_day_start,
+        )
+        serving_ticket = today_queue.filter(status=QueueTicket.Status.SERVING).order_by("-created_at", "-id").first()
         serving_now_val = serving_ticket.ticket_number if serving_ticket else None
-        waiting_in_queue_val = QueueTicket.objects.filter(barangay=user.barangay, status=QueueTicket.Status.WAITING).count()
+        waiting_in_queue_val = today_queue.filter(status=QueueTicket.Status.WAITING).count()
 
         # 5. Demographics (only report values present in the Barangay registry)
         purok_stats = Resident.objects.filter(user__barangay=user.barangay, purok__isnull=False).values('purok').annotate(count=Count('purok')).order_by('purok')

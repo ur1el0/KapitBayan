@@ -27,6 +27,7 @@ interface UserTicket {
     ticket_id?: number;
     ticket_number: string;
     service_type: string;
+    notes?: string | null;
     document_request_id?: number | null;
     document_request_type?: string | null;
     status: string;
@@ -35,10 +36,10 @@ interface UserTicket {
 }
 
 const SERVICE_TYPES = [
-    'Document Processing & Clearances',
-    'Barangay ID Application',
-    'Certificate of Indigency',
-    'General Inquiries & Complaints',
+    'General service visit',
+    'General inquiry',
+    'Follow-up or assistance',
+    'Other in-person service',
 ];
 
 export const CitizenQueue: React.FC = () => {
@@ -57,6 +58,7 @@ export const CitizenQueue: React.FC = () => {
 
     // Form State
     const [serviceType, setServiceType] = useState(SERVICE_TYPES[0]);
+    const [ticketNotes, setTicketNotes] = useState('');
 
     const fetchQueueData = async (showLoading = false) => {
         if (showLoading) setLoading(true);
@@ -94,9 +96,11 @@ export const CitizenQueue: React.FC = () => {
             setSubmitting(true);
             const res = await axiosPrivate.post('/tickets/', {
                 service_type: serviceType,
+                ...(ticketNotes.trim() ? { notes: ticketNotes.trim() } : {}),
             });
             toast.success(`${t('Ticket generated!')} ${res.data.ticket_number}`);
             setIsModalOpen(false);
+            setTicketNotes('');
             fetchQueueData();
         } catch (err) {
             toast.error(getSafeApiErrorMessage(
@@ -257,6 +261,16 @@ export const CitizenQueue: React.FC = () => {
                                 <p className="text-xs text-slate-500 mt-1">
                                     {t('Service')}: <span className="font-semibold text-slate-700 break-words">{t(activeTicket.service_type)}</span>
                                 </p>
+                                {activeTicket.notes?.trim() && (
+                                    <p className="text-xs text-slate-600 mt-1 break-words">
+                                        {t('Visit note')}: {activeTicket.notes}
+                                    </p>
+                                )}
+                                {!activeTicket.document_request_id && (
+                                    <p className="text-xs text-slate-500 mt-1">
+                                        {t('This ticket is linked to your account and service, not to a document request.')}
+                                    </p>
+                                )}
                                 {activeTicket.document_request_id && (
                                     <p className="text-xs text-blue-700 mt-1">
                                         {t('Linked document request')} #{activeTicket.document_request_id}
@@ -323,6 +337,8 @@ export const CitizenQueue: React.FC = () => {
                     onSubmit={handleTakeTicket}
                     serviceType={serviceType}
                     setServiceType={setServiceType}
+                    notes={ticketNotes}
+                    setNotes={setTicketNotes}
                     serviceTypes={SERVICE_TYPES}
                     submitting={submitting}
                 />

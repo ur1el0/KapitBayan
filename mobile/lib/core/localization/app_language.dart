@@ -144,6 +144,14 @@ const Map<String, String> _filipino = {
   'Estimated Call': 'Tinatayang Oras ng Tawag',
   'Live Capacity': 'Dami ng Naghihintay',
   'Get Ticket': 'Kumuha ng Numero',
+  'General service visit': 'Pangkalahatang serbisyo',
+  'General inquiry': 'Pangkalahatang tanong',
+  'Follow-up or assistance': 'Follow-up o tulong',
+  'Other in-person service': 'Iba pang serbisyo sa barangay',
+  'This ticket is linked to your account and selected service, not to a document request.':
+      'Nakaugnay ang tiket na ito sa iyong account at piniling serbisyo, hindi sa kahilingan ng dokumento.',
+  'For a document pickup, open Documents and get a ticket from the request after it is marked ready.':
+      'Para kumuha ng dokumento, buksan ang Mga Dokumento at kunin ang tiket kapag handa na ito.',
   'Recent Completions': 'Mga Katatapos na Serbisyo',
   'No completed queue tickets yet': 'Wala pang natatapos na serbisyo sa pila.',
   'Request Document': 'Humiling ng Dokumento',

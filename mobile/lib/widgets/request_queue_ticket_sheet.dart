@@ -24,15 +24,14 @@ class RequestQueueTicketSheet extends StatefulWidget {
 
 class _RequestQueueTicketSheetState extends State<RequestQueueTicketSheet> {
   static const _services = [
-    'Document Issuance',
-    'Barangay Clearance',
-    'Business Permit',
-    'Tax Clearance',
-    'General Inquiry',
+    'General service visit',
+    'General inquiry',
+    'Follow-up or assistance',
+    'Other in-person service',
   ];
 
   final _notesController = TextEditingController();
-  String _serviceType = 'Document Issuance';
+  String _serviceType = 'General service visit';
   bool _submitting = false;
 
   @override
@@ -116,6 +115,28 @@ class _RequestQueueTicketSheetState extends State<RequestQueueTicketSheet> {
                   },
           ),
           const SizedBox(height: 16),
+          Text(
+            context.tr(
+              'This ticket is linked to your account and selected service, not to a document request.',
+            ),
+            style: const TextStyle(
+              color: Color(0xFF475569),
+              fontSize: 13,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            context.tr(
+              'For a document pickup, open Documents and get a ticket from the request after it is marked ready.',
+            ),
+            style: const TextStyle(
+              color: Color(0xFF475569),
+              fontSize: 13,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 12),
           Text(
             context.tr(
               'Barangay staff verify priority lane eligibility. If you qualify, ask the service desk to review your waiting ticket.',

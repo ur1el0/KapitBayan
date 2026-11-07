@@ -48,6 +48,8 @@ class _FieldOfficialScreenState extends State<FieldOfficialScreen>
   String? _currentTicket;
   int _totalWaiting = 0;
   bool _isCallingTicket = false;
+  int? _currentTicketDocumentRequestId;
+  String? _currentTicketDocumentRequestStatus;
 
   // Clearance Validation State
   final TextEditingController _trackingIdController = TextEditingController();
@@ -110,6 +112,10 @@ class _FieldOfficialScreenState extends State<FieldOfficialScreen>
         setState(() {
           _currentTicket = data['current_ticket'] as String?;
           _totalWaiting = data['total_waiting'] as int? ?? 0;
+          _currentTicketDocumentRequestId =
+              data['current_ticket_document_request_id'] as int?;
+          _currentTicketDocumentRequestStatus =
+              data['current_ticket_document_request_status'] as String?;
         });
       }
     } catch (_) {}
@@ -117,19 +123,60 @@ class _FieldOfficialScreenState extends State<FieldOfficialScreen>
 
   Future<void> _callNextTicket() async {
     if (_service == null || _isCallingTicket) return;
+
+    var releaseDocument = false;
+    final documentRequestId = _currentTicketDocumentRequestId;
+    if (documentRequestId != null &&
+        _currentTicketDocumentRequestStatus == 'READY_FOR_PICKUP') {
+      final decision = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Document ready for pickup'),
+          content: Text(
+            'The current ticket is linked to document request #$documentRequestId. '
+            'Choose release only if the paper document was handed to the resident. '
+            'Release is blocked if a required fee assessment, O.R., or payment verification is incomplete.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(null),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Keep ready and call next'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Release and call next'),
+            ),
+          ],
+        ),
+      );
+      if (decision == null || !mounted) return;
+      releaseDocument = decision;
+    }
+
     setState(() => _isCallingTicket = true);
 
     try {
-      final result = await _service!.callNextTicket();
+      final result = await _service!.callNextTicket(
+        releaseDocument: releaseDocument,
+      );
       if (mounted) {
         setState(() {
           _currentTicket = result['current_ticket'] as String?;
           _totalWaiting = result['remaining_waiting'] as int? ?? 0;
         });
+        await _loadQueueStatus();
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Now serving: $_currentTicket'),
+            content: Text(
+              releaseDocument
+                  ? 'Document request #$documentRequestId released. Now serving: $_currentTicket'
+                  : 'Now serving: $_currentTicket',
+            ),
             backgroundColor: const Color(0xFF10B981),
             behavior: SnackBarBehavior.floating,
           ),

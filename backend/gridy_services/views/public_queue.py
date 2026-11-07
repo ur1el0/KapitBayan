@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from gridy_auth.models import Barangay
-from gridy_services.models import QueueTicket
+from gridy_services.models import QueueTicket, manila_day_bounds
 from gridy_services.serializers import PublicQueueStatusSerializer
 
 class PublicQueueStatusView(APIView):
@@ -25,8 +25,11 @@ class PublicQueueStatusView(APIView):
             Barangay.objects.only("id", "name", "primary_color"),
             pk=barangay_id,
         )
+        day_start, next_day_start = manila_day_bounds()
         barangay_tickets = QueueTicket.objects.filter(
             barangay_id=barangay.pk,
+            created_at__gte=day_start,
+            created_at__lt=next_day_start,
         )
         current_ticket = (
             barangay_tickets

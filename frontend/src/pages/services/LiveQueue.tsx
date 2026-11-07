@@ -23,6 +23,7 @@ export const LiveQueue: React.FC = () => {
     const [hasLoadedQueue, setHasLoadedQueue] = useState(false);
     const [retrying, setRetrying] = useState(false);
     const [isUpdating, setIsUpdating] = useState<boolean>(false);
+    const [pendingQueueAction, setPendingQueueAction] = useState<'advance' | 'complete' | null>(null);
 
     // Modals & Form state
     const [isManualModalOpen, setIsManualModalOpen] = useState<boolean>(false);
@@ -166,36 +167,68 @@ export const LiveQueue: React.FC = () => {
         return `${displayHour}:00 ${period}`;
     }, [tickets]);
 
-    // Handle Call Next / Advance Queue
-    const handleNextQueue = async () => {
-        if (waitingTickets.length === 0) return;
+    const servingDocumentReady = Boolean(
+        servingTicket?.document_request_id &&
+        servingTicket.document_request_status === 'READY_FOR_PICKUP'
+    );
+
+    const runQueueAction = async (
+        action: 'advance' | 'complete',
+        releaseDocument = false,
+    ) => {
+        if (action === 'advance' && waitingTickets.length === 0) return;
+        if (action === 'complete' && !servingTicket) return;
         setIsUpdating(true);
         try {
-            const response = await axiosPrivate.post('/tickets/next/');
+            const releasePayload = releaseDocument ? { release_document: true } : undefined;
+            const response = action === 'advance'
+                ? releaseDocument
+                    ? await axiosPrivate.post('/tickets/next/', releasePayload)
+                    : await axiosPrivate.post('/tickets/next/')
+                : releaseDocument
+                    ? await axiosPrivate.post(`/tickets/${servingTicket!.ticket_id}/complete/`, releasePayload)
+                    : await axiosPrivate.post(`/tickets/${servingTicket!.ticket_id}/complete/`);
             await fetchTickets();
-            showNotification(`Now serving ticket ${response.data.current_ticket}`);
+            setPendingQueueAction(null);
+            if (action === 'advance') {
+                showNotification(`Now serving ticket ${response.data.current_ticket}`);
+            } else {
+                showNotification(
+                    releaseDocument
+                        ? `Ticket ${servingTicket!.ticket_number} completed and document request #${servingTicket!.document_request_id} released.`
+                        : `Ticket ${servingTicket!.ticket_number} marked as completed.`,
+                );
+            }
         } catch (err) {
-            console.error('Failed to advance queue:', err);
-            toast.error('Failed to advance queue.');
+            console.error(`Failed to ${action === 'advance' ? 'advance' : 'complete'} queue:`, err);
+            toast.error(getSafeApiErrorMessage(
+                err,
+                action === 'advance'
+                    ? 'Failed to advance queue.'
+                    : 'Failed to complete ticket.',
+            ));
         } finally {
             setIsUpdating(false);
         }
     };
 
-    // Handle Mark Current as Done
-    const handleMarkAsDone = async () => {
-        if (!servingTicket) return;
-        setIsUpdating(true);
-        try {
-            await axiosPrivate.post(`/tickets/${servingTicket.ticket_id}/complete/`);
-            await fetchTickets();
-            showNotification(`Ticket ${servingTicket.ticket_number} marked as completed.`);
-        } catch (err) {
-            console.error('Failed to complete ticket:', err);
-            toast.error('Failed to complete ticket.');
-        } finally {
-            setIsUpdating(false);
+    // Advancing also completes the current ticket; ask before releasing its linked document.
+    const handleNextQueue = () => {
+        if (waitingTickets.length === 0) return;
+        if (servingDocumentReady) {
+            setPendingQueueAction('advance');
+            return;
         }
+        void runQueueAction('advance');
+    };
+
+    const handleMarkAsDone = () => {
+        if (!servingTicket) return;
+        if (servingDocumentReady) {
+            setPendingQueueAction('complete');
+            return;
+        }
+        void runQueueAction('complete');
     };
 
     const handleNotifyResident = async () => {
@@ -501,6 +534,54 @@ export const LiveQueue: React.FC = () => {
                     setNotes={setNotes}
                     isSubmittingNew={isSubmittingNew}
                 />
+            )}
+
+            {pendingQueueAction && servingTicket && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4">
+                    <section
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="queue-document-release-title"
+                        className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl"
+                    >
+                        <div className="flex items-start justify-between gap-4">
+                            <div>
+                                <h2 id="queue-document-release-title" className="text-lg font-bold text-slate-900">
+                                    Document ready for pickup
+                                </h2>
+                                <p className="mt-2 text-sm leading-6 text-slate-600">
+                                    Ticket {servingTicket.ticket_number} is linked to document request #{servingTicket.document_request_id}. Choose whether the paper document was handed to the resident. Release is blocked if a required fee assessment, O.R., or payment verification is incomplete.
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setPendingQueueAction(null)}
+                                aria-label="Close release choice"
+                                className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"
+                            >
+                                <X className="h-5 w-5" />
+                            </button>
+                        </div>
+                        <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                            <button
+                                type="button"
+                                disabled={isUpdating}
+                                onClick={() => void runQueueAction(pendingQueueAction, false)}
+                                className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-800 hover:bg-slate-50 disabled:opacity-50"
+                            >
+                                {pendingQueueAction === 'advance' ? 'Complete ticket and call next' : 'Complete queue only'}
+                            </button>
+                            <button
+                                type="button"
+                                disabled={isUpdating}
+                                onClick={() => void runQueueAction(pendingQueueAction, true)}
+                                className="rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground hover:bg-primary-hover disabled:opacity-50"
+                            >
+                                {pendingQueueAction === 'advance' ? 'Release document and call next' : 'Release document and complete'}
+                            </button>
+                        </div>
+                    </section>
+                </div>
             )}
 
             {/* Modal: Queue History */}
