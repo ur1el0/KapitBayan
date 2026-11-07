@@ -153,7 +153,7 @@ class QueueConcurrencyTests(TransactionTestCase):
         manila = ZoneInfo("Asia/Manila")
         previous_day_call = datetime(2026, 10, 8, 23, 59, tzinfo=manila)
         next_day_call = datetime(2026, 10, 9, 0, 1, tzinfo=manila)
-        QueueTicket.objects.create(
+        previous_day_ticket = QueueTicket.objects.create(
             barangay=self.barangay,
             ticket_number="R000",
             service_type="DOCUMENT",
@@ -161,20 +161,29 @@ class QueueConcurrencyTests(TransactionTestCase):
             status=QueueTicket.Status.COMPLETED,
             called_at=previous_day_call,
         )
-        QueueTicket.objects.create(
+        QueueTicket.objects.filter(pk=previous_day_ticket.pk).update(
+            created_at=previous_day_call
+        )
+        regular_ticket = QueueTicket.objects.create(
             barangay=self.barangay,
             ticket_number="R001",
             service_type="DOCUMENT",
             is_priority=False,
             status=QueueTicket.Status.WAITING,
         )
-        QueueTicket.objects.create(
+        QueueTicket.objects.filter(pk=regular_ticket.pk).update(
+            created_at=next_day_call
+        )
+        priority_ticket = QueueTicket.objects.create(
             barangay=self.barangay,
             ticket_number="P001",
             service_type="DOCUMENT",
             is_priority=True,
             priority_status=QueueTicket.Priority.PRIORITY,
             status=QueueTicket.Status.WAITING,
+        )
+        QueueTicket.objects.filter(pk=priority_ticket.pk).update(
+            created_at=next_day_call
         )
         request = APIRequestFactory().post("/api/v1/tickets/next/")
         force_authenticate(request, user=self.official)
