@@ -137,6 +137,7 @@ jobs:
               "gridy_auth.0027_resident_guardianship_review",
               "gridy_communications.0012_alter_adminnotification_notification_type",
               "gridy_communications.0013_alter_residentnotification_notification_type",
+              "gridy_services.0020_documentcertificateverification",
           }
 
           if os.environ.get("CONFIRM_PRODUCTION", "").lower() != "true":
