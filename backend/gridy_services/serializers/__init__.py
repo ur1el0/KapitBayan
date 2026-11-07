@@ -9,6 +9,7 @@ from .payments import (
     PaymentChoiceSerializer,
     PaymentReferenceSerializer,
     PaymentReviewSerializer,
+    WalkInCashPaymentConfirmationSerializer,
 )
 
 from .aid import (
@@ -38,6 +39,7 @@ __all__ = [
     'PaymentChoiceSerializer',
     'PaymentReferenceSerializer',
     'PaymentReviewSerializer',
+    'WalkInCashPaymentConfirmationSerializer',
     'AidRequestSerializer',
     'AidRequestReviewSerializer',
     'QueueTicketSerializer',

@@ -201,7 +201,39 @@ export const DocumentRequests: React.FC = () => {
             closeModal();
         } catch (err) {
             console.error("Failed to update status", err);
-            toast.error('Failed to update status. Please check permissions or try again.');
+            toast.error(getSafeApiErrorMessage(
+                err,
+                'Failed to update status. Check the request details and your permissions, then try again.',
+            ));
+        } finally {
+            setIsUpdating(false);
+        }
+    };
+
+    const handleRecordWalkinCashPayment = async () => {
+        if (!selectedRequest) return;
+        setIsUpdating(true);
+        try {
+            const response = await axiosPrivate.post(
+                `/document-requests/${selectedRequest.id}/record-cash-payment/`,
+                { confirm_cash_received: true },
+            );
+            setRequests((current) => current.map((request) =>
+                request.id === selectedRequest.id
+                    ? { ...request, ...response.data }
+                    : request,
+            ));
+            setSelectedRequest((current) => current
+                ? { ...current, ...response.data }
+                : current,
+            );
+            toast.success('Walk-in cash payment recorded. You can now release the document.');
+        } catch (err) {
+            console.error('Failed to record walk-in cash payment', err);
+            toast.error(getSafeApiErrorMessage(
+                err,
+                'Could not record the cash payment. Confirm the request is ready and the assessed fee is unpaid.',
+            ));
         } finally {
             setIsUpdating(false);
         }
@@ -402,6 +434,7 @@ export const DocumentRequests: React.FC = () => {
                     handleStatusUpdate={handleStatusUpdate}
                     handlePaymentReview={handlePaymentReview}
                     handleSaveOrNumber={handleSaveOrNumber}
+                    handleRecordWalkinCashPayment={handleRecordWalkinCashPayment}
                     isUpdating={isUpdating}
                     handleDownloadPDF={handleDownloadPDF}
                 />
