@@ -16,7 +16,7 @@ from gridy_auth.permissions import IsBarangayOfficial, IsBarangayOfficialOrField
 from gridy_communications.models import ResidentNotification
 from gridy_communications.admin_notifications import notify_barangay_admins
 from gridy_communications.tasks import send_notification_to_user_task
-from gridy_services.models import MANILA_TIME_ZONE, QueueTicket
+from gridy_services.models import DocumentRequest, MANILA_TIME_ZONE, QueueTicket
 from gridy_services.serializers import (
     QueueTicketPrioritySerializer,
     QueueTicketSerializer,
@@ -62,6 +62,23 @@ class QueueTicketViewSet(viewsets.ModelViewSet):
         with transaction.atomic():
             document_request = serializer.validated_data.get('document_request')
             if document_request is not None:
+                # Recheck the request under a row lock: its status could have
+                # changed after serializer validation but before ticket creation.
+                document_request = DocumentRequest.objects.select_for_update().get(
+                    pk=document_request.pk
+                )
+                if (
+                    user.role == User.Role.RESIDENT
+                    and document_request.status
+                    != DocumentRequest.Status.READY_FOR_PICKUP
+                ):
+                    raise ValidationError({
+                        'document_request_id': (
+                            'A pickup queue ticket is available only when the '
+                            'document is ready for pickup.'
+                        )
+                    })
+
                 Barangay.objects.select_for_update().get(pk=user.barangay_id)
                 has_active_ticket = QueueTicket.objects.filter(
                     document_request=document_request,
@@ -78,13 +95,18 @@ class QueueTicketViewSet(viewsets.ModelViewSet):
                     })
 
             if user.role == User.Role.ADMIN:
-                ticket = serializer.save(user=None, barangay=user.barangay)
+                ticket = serializer.save(
+                    user=None,
+                    barangay=user.barangay,
+                    document_request=document_request,
+                )
             elif user.role == User.Role.RESIDENT:
                 ticket = serializer.save(
                     user=user,
                     barangay=user.barangay,
                     priority_status=QueueTicket.Priority.REGULAR,
                     is_priority=False,
+                    document_request=document_request,
                 )
                 notify_barangay_admins(
                     barangay_id=user.barangay_id,
