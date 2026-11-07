@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { DocumentRequest } from '../../pages/services/DocumentRequests';
 import { NewDocumentRequestModal } from '../citizen-documents/NewDocumentRequestModal';
@@ -50,6 +50,39 @@ describe('accessible modal names', () => {
         );
 
         expect(screen.getByRole('dialog', { name: 'Request a document' })).toBeInTheDocument();
+    });
+
+    it('shows individually checkable published requirements to residents', () => {
+        render(
+            <NewDocumentRequestModal
+                offerings={[{
+                    id: 5,
+                    document_type: 'Barangay Clearance',
+                    requirements: ['Government ID', 'Proof of residency'],
+                    published_fee_amount: '50.00',
+                    details: '',
+                    is_active: true,
+                }]}
+                offeringId={5}
+                purpose="Employment"
+                otherDocumentType=""
+                submitting={false}
+                onOtherDocumentTypeChange={vi.fn()}
+                onDocumentTypeChange={vi.fn()}
+                onPurposeChange={vi.fn()}
+                onClose={vi.fn()}
+                onSubmit={vi.fn()}
+            />,
+        );
+
+        const idChecklist = screen.getByRole('checkbox', { name: 'Government ID' });
+        const residencyChecklist = screen.getByRole('checkbox', { name: 'Proof of residency' });
+        expect(idChecklist).not.toBeChecked();
+        expect(residencyChecklist).not.toBeChecked();
+
+        fireEvent.click(idChecklist);
+        expect(idChecklist).toBeChecked();
+        expect(residencyChecklist).not.toBeChecked();
     });
 
     it('names the document review dialog', () => {
