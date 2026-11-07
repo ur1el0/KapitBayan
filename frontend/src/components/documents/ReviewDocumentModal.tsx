@@ -28,6 +28,7 @@ interface ReviewDocumentModalProps {
     ) => void;
     handlePaymentReview: (status: 'VERIFIED' | 'REJECTED', note: string, orNumber?: string) => void;
     handleSaveOrNumber?: (orNumber: string) => Promise<void> | void;
+    handleRecordWalkinCashPayment?: () => Promise<void> | void;
     isUpdating: boolean;
     handleDownloadPDF: () => void;
 }
@@ -171,6 +172,7 @@ export const ReviewDocumentModal = ({
     handleStatusUpdate,
     handlePaymentReview,
     handleSaveOrNumber,
+    handleRecordWalkinCashPayment,
     isUpdating,
     handleDownloadPDF,
 }: ReviewDocumentModalProps) => {
@@ -179,7 +181,34 @@ export const ReviewDocumentModal = ({
     const [isWaived, setIsWaived] = useState(false);
     const [feeWaiverReason, setFeeWaiverReason] = useState('');
     const [paymentReviewNote, setPaymentReviewNote] = useState('');
+    const [cashReceiptConfirmed, setCashReceiptConfirmed] = useState(false);
     const isFeeExempt = isFeeExemptDocumentType(selectedRequest?.document_type) || selectedRequest?.fee_assessment_status === 'STATUTORY_EXEMPT';
+    const hasPositiveAssessedFee = Boolean(
+        selectedRequest
+        && !isFeeExempt
+        && selectedRequest.fee_assessment_status === 'ASSESSED'
+        && Number(selectedRequest.fee_amount ?? feeAmount) > 0,
+    );
+    const canRecordWalkinCashPayment = Boolean(
+        selectedRequest?.is_walkin
+        && selectedRequest.status.toLowerCase() === 'ready_for_pickup'
+        && hasPositiveAssessedFee
+        && (!selectedRequest.payment_method || selectedRequest.payment_method === 'CASH')
+        && selectedRequest.payment_status !== 'VERIFIED'
+        && ['UNPAID', 'REJECTED'].includes(selectedRequest.payment_status || '')
+        && handleRecordWalkinCashPayment,
+    );
+    const walkinCashPaymentIsRequired = Boolean(
+        selectedRequest?.is_walkin
+        && hasPositiveAssessedFee
+        && (
+            !selectedRequest.payment_method
+            || (
+                selectedRequest.payment_method === 'CASH'
+                && selectedRequest.payment_status !== 'VERIFIED'
+            )
+        ),
+    );
     const dialogTitleId = useId();
     const dialogRef = useModalFocus<HTMLDivElement>(Boolean(selectedRequest), closeModal);
 
@@ -187,6 +216,7 @@ export const ReviewDocumentModal = ({
         if (selectedRequest) {
             setOrNumber(selectedRequest.or_number || '');
             setPaymentReviewNote('');
+            setCashReceiptConfirmed(false);
 
             const isStatutory = isFeeExemptDocumentType(selectedRequest.document_type) || selectedRequest.fee_assessment_status === 'STATUTORY_EXEMPT';
             if (isStatutory) {
@@ -457,7 +487,9 @@ export const ReviewDocumentModal = ({
                                                     }}
                                                     className="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary/20"
                                                 />
-                                                <span>Waive clearance fee for resident (₱0.00)</span>
+                                                <span>
+                                                    Waive fee for {selectedRequest.is_walkin ? 'walk-in resident' : 'resident'} (₱0.00)
+                                                </span>
                                             </label>
 
                                             {isWaived && (
@@ -479,9 +511,14 @@ export const ReviewDocumentModal = ({
                                             )}
                                         </div>
                                     )}
-                                    {!isFeeExempt && (
+                                    {!isFeeExempt && !selectedRequest.is_walkin && (
                                         <p className="col-span-2 text-xs text-slate-500">
                                             The resident chooses how to pay after the request is ready. Manage the Barangay's e-payment options in Barangay Settings.
+                                        </p>
+                                    )}
+                                    {!isFeeExempt && selectedRequest.is_walkin && (
+                                        <p className="col-span-2 text-xs text-slate-500">
+                                            For a walk-in, record cash only after the fee has been collected in person at the Barangay Treasurer desk.
                                         </p>
                                     )}
                                 </div>
@@ -489,8 +526,48 @@ export const ReviewDocumentModal = ({
 
                             {selectedRequest.payment_method === 'CASH' && !isFeeExempt && Number(selectedRequest.fee_amount ?? feeAmount) > 0 && (
                                 <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 space-y-1 text-xs text-amber-900">
-                                    <p className="font-bold">Resident selected: Cash</p>
-                                    <p>Cash payment will be settled in person at the Barangay Treasurer desk upon pickup.</p>
+                                    <p className="font-bold">
+                                        {selectedRequest.is_walkin
+                                            ? selectedRequest.payment_status === 'VERIFIED'
+                                                ? 'Walk-in cash payment recorded'
+                                                : 'Walk-in payment method: Cash'
+                                            : 'Resident selected: Cash'}
+                                    </p>
+                                    <p>
+                                        {selectedRequest.is_walkin
+                                            ? selectedRequest.payment_status === 'VERIFIED'
+                                                ? 'Cash was recorded as received in person at the Barangay Treasurer desk.'
+                                                : 'Collect the payment at the Barangay Treasurer desk, then record it below.'
+                                            : 'Cash payment will be settled in person at the Barangay Treasurer desk upon pickup.'}
+                                    </p>
+                                </div>
+                            )}
+
+                            {canRecordWalkinCashPayment && (
+                                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 space-y-3 text-sm text-emerald-950">
+                                    <div>
+                                        <h4 className="font-bold">Record walk-in cash received</h4>
+                                        <p className="mt-1 text-xs text-emerald-800">
+                                            Confirm only after the Treasurer has physically received ₱{Number(selectedRequest.fee_amount ?? feeAmount).toFixed(2)} for this request.
+                                        </p>
+                                    </div>
+                                    <label className="flex items-start gap-2 text-xs font-semibold cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={cashReceiptConfirmed}
+                                            onChange={(event) => setCashReceiptConfirmed(event.target.checked)}
+                                            className="mt-0.5 h-4 w-4 rounded border-emerald-300 text-emerald-700 focus:ring-emerald-600/20"
+                                        />
+                                        <span>I confirm the walk-in payment has been received.</span>
+                                    </label>
+                                    <button
+                                        type="button"
+                                        onClick={() => void handleRecordWalkinCashPayment?.()}
+                                        disabled={isUpdating || !cashReceiptConfirmed}
+                                        className="rounded-lg bg-emerald-700 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                        {isUpdating ? 'Recording payment…' : 'Record cash received'}
+                                    </button>
                                 </div>
                             )}
 
@@ -639,7 +716,7 @@ export const ReviewDocumentModal = ({
                                 
                                 {selectedRequest.status.toLowerCase() === 'pending' && (
                                     <>
-                                        <button 
+                                        <button
                                             type="button"
                                             onClick={() => onUpdate('REJECTED')}
                                             disabled={isUpdating}
@@ -670,14 +747,21 @@ export const ReviewDocumentModal = ({
                                 )}
 
                                 {selectedRequest.status.toLowerCase() === 'ready_for_pickup' && (
-                                    <button 
-                                        type="button"
-                                        onClick={handleRelease}
-                                        disabled={isUpdating}
-                                        className="px-4 py-2 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 rounded-xl transition-all shadow-sm cursor-pointer"
-                                    >
-                                        Release to Resident
-                                    </button>
+                                    <>
+                                        <button
+                                            type="button"
+                                            onClick={handleRelease}
+                                            disabled={isUpdating || walkinCashPaymentIsRequired}
+                                            className="px-4 py-2 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 rounded-xl transition-all shadow-sm cursor-pointer"
+                                        >
+                                            Release to Resident
+                                        </button>
+                                        {walkinCashPaymentIsRequired && (
+                                            <p className="basis-full text-right text-xs text-amber-800">
+                                                Record the received walk-in payment before releasing this document.
+                                            </p>
+                                        )}
+                                    </>
                                 )}
                             </div>
                         </div>

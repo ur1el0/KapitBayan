@@ -99,3 +99,14 @@ class PaymentReviewSerializer(serializers.Serializer):
                 "note": "A reason is required when rejecting a transfer."
             })
         return attrs
+
+
+class WalkInCashPaymentConfirmationSerializer(serializers.Serializer):
+    confirm_cash_received = serializers.BooleanField(required=True)
+
+    def validate_confirm_cash_received(self, value):
+        if not value:
+            raise serializers.ValidationError(
+                "Confirm that the walk-in resident's cash payment was received."
+            )
+        return value

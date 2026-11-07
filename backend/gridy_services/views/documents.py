@@ -35,6 +35,7 @@ from gridy_services.serializers import (
     PaymentChoiceSerializer,
     PaymentReferenceSerializer,
     PaymentReviewSerializer,
+    WalkInCashPaymentConfirmationSerializer,
 )
 from gridy_communications.tasks import send_notification_to_user_task
 from gridy_communications.admin_notifications import notify_barangay_admins
@@ -403,6 +404,124 @@ class DocumentRequestViewSet(viewsets.ModelViewSet):
             status=status.HTTP_200_OK,
         )
 
+    @action(
+        detail=True,
+        methods=["post"],
+        permission_classes=[IsBarangayOfficial],
+        url_path="record-cash-payment",
+        url_name="record-cash-payment",
+    )
+    def record_cash_payment(self, request, pk=None):
+        """Record cash received for a walk-in request that has no resident account."""
+        confirmation = WalkInCashPaymentConfirmationSerializer(data=request.data)
+        confirmation.is_valid(raise_exception=True)
+
+        with transaction.atomic():
+            document_request = DocumentRequest.objects.select_for_update().get(
+                pk=self.get_object().pk,
+                barangay_id=request.user.barangay_id,
+            )
+            if not document_request.is_walkin:
+                raise ValidationError({
+                    "detail": "This cash-receipt action is only for walk-in requests."
+                })
+            if document_request.status != DocumentRequest.Status.READY_FOR_PICKUP:
+                raise ValidationError({
+                    "detail": "The request must be ready for pickup before recording payment."
+                })
+            if (
+                document_request.fee_amount <= 0
+                or document_request.fee_assessment_status
+                != DocumentRequest.FeeAssessmentStatus.ASSESSED
+            ):
+                raise ValidationError({
+                    "detail": "Assess a positive document fee before recording cash payment."
+                })
+
+            if (
+                document_request.payment_method == DocumentRequest.PaymentMethod.CASH
+                and document_request.payment_status
+                == DocumentRequest.PaymentStatus.VERIFIED
+            ):
+                return Response(
+                    DocumentRequestSerializer(
+                        document_request,
+                        context={"request": request},
+                    ).data,
+                    status=status.HTTP_200_OK,
+                )
+
+            if document_request.payment_method not in (
+                "",
+                DocumentRequest.PaymentMethod.CASH,
+            ):
+                raise ValidationError({
+                    "payment_method": (
+                        "This walk-in request has an electronic payment method. Review that payment instead."
+                    )
+                })
+            if document_request.payment_status not in (
+                DocumentRequest.PaymentStatus.UNPAID,
+                DocumentRequest.PaymentStatus.REJECTED,
+            ):
+                raise ValidationError({
+                    "payment_status": "This payment cannot be changed in its current state."
+                })
+
+            old_proof_name = None
+            old_storage = None
+            if document_request.payment_proof_image and document_request.payment_proof_image.name:
+                old_proof_name = document_request.payment_proof_image.name
+                old_storage = document_request.payment_proof_image.storage
+
+            document_request.payment_method = DocumentRequest.PaymentMethod.CASH
+            document_request.payment_recipient = None
+            document_request.payment_recipient_name_snapshot = ""
+            document_request.payment_recipient_identifier_snapshot = ""
+            document_request.payment_instructions_snapshot = ""
+            document_request.payment_reference = ""
+            document_request.payment_transacted_at = timezone.now()
+            document_request.payment_proof_image = None
+            document_request.payment_status = DocumentRequest.PaymentStatus.VERIFIED
+            document_request.payment_review_note = "Walk-in cash received in person."
+            document_request.save(
+                update_fields=[
+                    "payment_method",
+                    "payment_recipient",
+                    "payment_recipient_name_snapshot",
+                    "payment_recipient_identifier_snapshot",
+                    "payment_instructions_snapshot",
+                    "payment_reference",
+                    "payment_transacted_at",
+                    "payment_proof_image",
+                    "payment_status",
+                    "payment_review_note",
+                    "updated_at",
+                ]
+            )
+            if old_proof_name and old_storage:
+                transaction.on_commit(
+                    lambda s=old_storage, p=old_proof_name: safe_delete_storage_file(s, p)
+                )
+
+            log_action(
+                user=request.user,
+                action_type=AuditLog.ActionType.DOCUMENT_ACTION,
+                description=(
+                    f"Recorded cash payment of ₱{document_request.fee_amount} for "
+                    f"walk-in document request #{document_request.pk}."
+                ),
+                request=request,
+            )
+
+        return Response(
+            DocumentRequestSerializer(
+                document_request,
+                context={"request": request},
+            ).data,
+            status=status.HTTP_200_OK,
+        )
+
     @transaction.atomic
     def perform_create(self, serializer):
         user = self.request.user
@@ -740,6 +859,16 @@ class DocumentRequestViewSet(viewsets.ModelViewSet):
                     })
                 if document_request.fee_amount > 0:
                     if document_request.payment_method == DocumentRequest.PaymentMethod.CASH:
+                        if (
+                            document_request.is_walkin
+                            and document_request.payment_status
+                            != DocumentRequest.PaymentStatus.VERIFIED
+                        ):
+                            raise ValidationError({
+                                "payment_status": (
+                                    "Record the walk-in cash payment as received before releasing this document."
+                                )
+                            })
                         document_request.payment_status = DocumentRequest.PaymentStatus.VERIFIED
                     elif document_request.payment_method in {
                         DocumentRequest.PaymentMethod.GCASH,
