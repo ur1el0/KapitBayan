@@ -1,9 +1,10 @@
+import uuid
+from datetime import datetime, time, timedelta
+from zoneinfo import ZoneInfo
+
 from gridy_auth.models import Barangay
 from django.conf import settings
 from django.utils import timezone
-
-from datetime import datetime, time, timedelta
-from zoneinfo import ZoneInfo
 
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
@@ -248,6 +249,40 @@ class DocumentRequest(models.Model):
             models.Index(fields=['barangay', 'status']),
             models.Index(fields=['status']),
         ]
+
+
+class DocumentCertificateVerification(models.Model):
+    """Opaque public verification token for a Barangay-issued paper certificate."""
+
+    document_request = models.ForeignKey(
+        DocumentRequest,
+        on_delete=models.CASCADE,
+        related_name="certificate_verifications",
+    )
+    token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    issued_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="issued_certificate_verifications",
+    )
+    issued_at = models.DateTimeField(auto_now_add=True)
+    revoked_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-issued_at", "-id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["document_request"],
+                condition=models.Q(revoked_at__isnull=True),
+                name="unique_active_certificate_verification",
+            ),
+        ]
+
+    def __str__(self):
+        return f"Certificate verification for request #{self.document_request_id}"
+
 
 class AidRequest(models.Model):
     class Status(models.TextChoices):

@@ -9,6 +9,7 @@ from .views import (
     PaymentRecipientViewSet,
     DocumentServiceOfferingViewSet,
 )
+from .views.certificate_verification import PublicCertificateVerificationView
 
 router = DefaultRouter()
 router.register(r'document-requests', DocumentRequestViewSet, basename='document-request')
@@ -18,6 +19,11 @@ router.register(r'tickets', QueueTicketViewSet, basename='ticket')
 router.register(r'payment-recipients', PaymentRecipientViewSet, basename='payment-recipient')
 
 urlpatterns = [
+    path(
+        'public/certificate-verifications/<uuid:token>/',
+        PublicCertificateVerificationView.as_view(),
+        name='public-certificate-verification',
+    ),
     path(
         'documents/<int:pk>/payment-proof/',
         DocumentRequestViewSet.as_view({'get': 'payment_proof'}),

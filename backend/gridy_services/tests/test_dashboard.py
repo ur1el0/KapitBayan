@@ -1,11 +1,38 @@
 from rest_framework import status
 
+from gridy_auth.models import Barangay
 from gridy_reports.models import IssueReport
 from gridy_services.models import DocumentRequest, QueueTicket
 from .base import ServiceAPIBaseTestCase
 
 
 class DashboardSummaryAPITests(ServiceAPIBaseTestCase):
+    def test_empty_dashboard_uses_real_zero_counts_instead_of_sample_values(self):
+        empty_barangay = Barangay.objects.create(name="Empty Analytics Test Barangay")
+        self.official.barangay = empty_barangay
+        self.official.save(update_fields=["barangay"])
+        self.client.force_login(self.official)
+
+        response = self.client.get("/api/v1/dashboard/summary/")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["total_residents"], 0)
+        self.assertEqual(response.data["demographics"]["purok_distribution"], {})
+        self.assertEqual(
+            response.data["demographics"]["age_demographics"],
+            {"youth": 0, "young_adult": 0, "adult": 0, "senior": 0},
+        )
+        self.assertEqual(
+            response.data["issue_reports"]["category_breakdown"],
+            {
+                "peace_and_order": 0,
+                "public_health": 0,
+                "infrastructure": 0,
+                "environment": 0,
+                "other": 0,
+            },
+        )
+
     def test_dashboard_summary_required_auth(self):
         url = "/api/v1/dashboard/summary/"
         response = self.client.get(url)

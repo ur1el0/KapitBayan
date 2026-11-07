@@ -770,7 +770,7 @@ class PaymentSubmissionAndReviewWorkflowTests(APITestCase):
         )
         self.assertFalse(storage.exists(file_name))
 
-    def test_field_official_can_verify_payment_and_record_or_number(self):
+    def test_field_official_cannot_verify_payment_or_record_or_number(self):
         document = self._make_ready_request(
             payment_method=DocumentRequest.PaymentMethod.GCASH,
             payment_reference="GCASH-VERIFY-1",
@@ -787,26 +787,45 @@ class PaymentSubmissionAndReviewWorkflowTests(APITestCase):
             format="json",
         )
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         document.refresh_from_db()
-        self.assertEqual(document.payment_status, DocumentRequest.PaymentStatus.VERIFIED)
-        self.assertEqual(document.or_number, "OR-2026-0099")
-        self.assertEqual(document.status, DocumentRequest.Status.READY_FOR_PICKUP)
-        self.assertTrue(
-            AuditLog.objects.filter(
-                action_by=self.field_official,
-                action_type=AuditLog.ActionType.DOCUMENT_ACTION,
-                description__icontains=f"#{document.pk}",
-            ).exists()
+        self.assertEqual(
+            document.payment_status,
+            DocumentRequest.PaymentStatus.PENDING_VERIFICATION,
         )
+        self.assertFalse(document.or_number)
+        self.assertEqual(document.status, DocumentRequest.Status.READY_FOR_PICKUP)
 
-    def test_field_official_rejection_requires_reason(self):
+    def test_field_official_cannot_assess_fees_or_record_or_in_document_review(self):
+        document = self._make_ready_request()
+        original_fee_amount = document.fee_amount
+        self.client.force_login(self.field_official)
+
+        for payload in (
+            {"or_number": "OR-FIELD-001"},
+            {"fee_amount": "75.00"},
+            {"fee_waiver_reason": "Field override"},
+            {"statutory_exempt": True},
+        ):
+            with self.subTest(payload=payload):
+                response = self.client.patch(
+                    reverse("document-request-validate", args=[document.pk]),
+                    payload,
+                    format="json",
+                )
+                self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+        document.refresh_from_db()
+        self.assertFalse(document.or_number)
+        self.assertEqual(document.fee_amount, original_fee_amount)
+
+    def test_admin_payment_rejection_requires_reason(self):
         document = self._make_ready_request(
             payment_method=DocumentRequest.PaymentMethod.GCASH,
             payment_reference="GCASH-REJECT-1",
             payment_status=DocumentRequest.PaymentStatus.PENDING_VERIFICATION,
         )
-        self.client.force_login(self.field_official)
+        self.client.force_login(self.admin)
 
         # Rejected without note -> 400
         res1 = self.client.patch(
@@ -834,20 +853,20 @@ class PaymentSubmissionAndReviewWorkflowTests(APITestCase):
             "Reference number not found in barangay GCash statement.",
         )
 
-    def test_cross_barangay_field_official_cannot_review_payment(self):
+    def test_field_official_cannot_review_payment_even_in_own_barangay(self):
         document = self._make_ready_request(
             payment_method=DocumentRequest.PaymentMethod.GCASH,
             payment_reference="GCASH-CROSS-1",
             payment_status=DocumentRequest.PaymentStatus.PENDING_VERIFICATION,
         )
-        self.client.force_login(self.foreign_field_official)
+        self.client.force_login(self.field_official)
 
         response = self.client.patch(
             reverse("document-request-payment-review", args=[document.pk]),
             {"status": DocumentRequest.PaymentStatus.VERIFIED},
             format="json",
         )
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_or_persistence_decoupled_from_release_in_validate(self):
         document = self._make_ready_request()
