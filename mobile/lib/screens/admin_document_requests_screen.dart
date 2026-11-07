@@ -473,7 +473,7 @@ class _AdminDocumentRequestDetailsScreenState
     );
     _orController = TextEditingController(text: _request.orNumber ?? '');
     _paymentNoteController = TextEditingController();
-    _selectedStatus = _request.isPending ? 'PROCESSING' : _request.status;
+    _selectedStatus = _request.status;
     _editFeeAssessment = _request.isAwaitingAssessment;
     if (_request.paymentProofUrl?.isNotEmpty == true) {
       _proofFuture = widget.service.fetchPaymentProof(_request.id);
@@ -493,6 +493,24 @@ class _AdminDocumentRequestDetailsScreenState
   String _errorMessage(Object error) => error is ApiException
       ? error.message
       : 'The action could not be completed. Check your connection and try again.';
+
+  List<String> get _allowedStatuses => switch (_request.status) {
+    'PENDING' => const ['PENDING', 'PROCESSING', 'REJECTED'],
+    'PROCESSING' => const ['PROCESSING', 'READY_FOR_PICKUP', 'REJECTED'],
+    'READY_FOR_PICKUP' => const ['READY_FOR_PICKUP', 'RELEASED'],
+    'RELEASED' => const ['RELEASED'],
+    'REJECTED' => const ['REJECTED'],
+    _ => const [],
+  };
+
+  String _statusLabel(String status) => switch (status) {
+    'PENDING' => 'Pending review',
+    'PROCESSING' => 'Processing',
+    'READY_FOR_PICKUP' => 'Ready for pickup',
+    'RELEASED' => 'Released to resident',
+    'REJECTED' => 'Rejected',
+    _ => status.replaceAll('_', ' '),
+  };
 
   void _showMessage(String message, {bool error = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -916,18 +934,14 @@ class _AdminDocumentRequestDetailsScreenState
               labelText: 'Request status',
               border: OutlineInputBorder(),
             ),
-            items: const [
-              DropdownMenuItem(value: 'PROCESSING', child: Text('Processing')),
-              DropdownMenuItem(
-                value: 'READY_FOR_PICKUP',
-                child: Text('Ready for pickup'),
-              ),
-              DropdownMenuItem(
-                value: 'RELEASED',
-                child: Text('Released to resident'),
-              ),
-              DropdownMenuItem(value: 'REJECTED', child: Text('Rejected')),
-            ],
+            items: _allowedStatuses
+                .map(
+                  (status) => DropdownMenuItem(
+                    value: status,
+                    child: Text(_statusLabel(status)),
+                  ),
+                )
+                .toList(),
             onChanged: _isUpdating
                 ? null
                 : (value) =>
@@ -938,7 +952,8 @@ class _AdminDocumentRequestDetailsScreenState
             controller: _orController,
             decoration: const InputDecoration(
               labelText: 'Official receipt number',
-              helperText: 'Residents and field staff can use this to find the Barangay record.',
+              helperText:
+                  'Residents and field staff can use this to find the Barangay record.',
               border: OutlineInputBorder(),
             ),
           ),

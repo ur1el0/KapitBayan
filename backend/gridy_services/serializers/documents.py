@@ -301,14 +301,34 @@ class DocumentRequestReviewSerializer(FeePolicyValidationMixin, serializers.Mode
         ]
 
     def validate_status(self, value):
-        allowed_statuses = {
-            DocumentRequest.Status.PROCESSING,
-            DocumentRequest.Status.READY_FOR_PICKUP,
-            DocumentRequest.Status.RELEASED,
-            DocumentRequest.Status.REJECTED,
+        current_status = (
+            self.instance.status if self.instance is not None else None
+        )
+        allowed_transitions = {
+            DocumentRequest.Status.PENDING: {
+                DocumentRequest.Status.PENDING,
+                DocumentRequest.Status.PROCESSING,
+                DocumentRequest.Status.REJECTED,
+            },
+            DocumentRequest.Status.PROCESSING: {
+                DocumentRequest.Status.PROCESSING,
+                DocumentRequest.Status.READY_FOR_PICKUP,
+                DocumentRequest.Status.REJECTED,
+            },
+            DocumentRequest.Status.READY_FOR_PICKUP: {
+                DocumentRequest.Status.READY_FOR_PICKUP,
+                DocumentRequest.Status.RELEASED,
+            },
+            DocumentRequest.Status.RELEASED: {DocumentRequest.Status.RELEASED},
+            DocumentRequest.Status.REJECTED: {DocumentRequest.Status.REJECTED},
         }
-        if value not in allowed_statuses:
-            raise serializers.ValidationError("Invalid status transition")
+        if current_status is None or value not in allowed_transitions.get(
+            current_status, set()
+        ):
+            raise serializers.ValidationError(
+                f"Cannot change a document request from {current_status or 'unknown'} "
+                f"to {value}."
+            )
 
         return value
 
