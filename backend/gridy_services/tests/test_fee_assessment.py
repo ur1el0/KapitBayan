@@ -128,7 +128,7 @@ class FeeAssessmentWorkflowAndRBACTests(TestCase):
         doc.refresh_from_db()
         self.assertEqual(doc.status, DocumentRequest.Status.PROCESSING)
 
-    def test_staff_assessing_positive_fee_sets_provenance_and_unpaid(self):
+    def test_field_official_cannot_assess_positive_fee(self):
         doc = DocumentRequest.objects.create(
             user=self.resident,
             barangay=self.barangay,
@@ -138,6 +138,7 @@ class FeeAssessmentWorkflowAndRBACTests(TestCase):
             fee_amount=Decimal("0.00"),
             fee_assessment_status=DocumentRequest.FeeAssessmentStatus.AWAITING_ASSESSMENT,
         )
+        initial_audit_count = AuditLog.objects.count()
         self.client.force_login(self.field_official)
         response = self.client.patch(
             reverse("document-request-validate", args=[doc.pk]),
@@ -147,25 +148,20 @@ class FeeAssessmentWorkflowAndRBACTests(TestCase):
             },
             format="json",
         )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertIn("Only a Barangay Admin", response.data["detail"])
         doc.refresh_from_db()
         self.assertEqual(
-            doc.fee_assessment_status, DocumentRequest.FeeAssessmentStatus.ASSESSED
+            doc.fee_assessment_status,
+            DocumentRequest.FeeAssessmentStatus.AWAITING_ASSESSMENT,
         )
-        self.assertEqual(doc.fee_amount, Decimal("65.00"))
-        self.assertEqual(doc.fee_assessed_by, self.field_official)
-        self.assertIsNotNone(doc.fee_assessed_at)
+        self.assertEqual(doc.fee_amount, Decimal("0.00"))
+        self.assertIsNone(doc.fee_assessed_by)
+        self.assertIsNone(doc.fee_assessed_at)
         self.assertEqual(doc.fee_waiver_reason, "")
-        self.assertEqual(doc.payment_status, DocumentRequest.PaymentStatus.UNPAID)
-        self.assertEqual(doc.status, DocumentRequest.Status.READY_FOR_PICKUP)
-
-        # Confirm AuditLog
-        log_entry = AuditLog.objects.filter(
-            action_type=AuditLog.ActionType.DOCUMENT_ACTION,
-            action_by=self.field_official,
-        ).first()
-        self.assertIsNotNone(log_entry)
-        self.assertIn("Assessed fee of ₱65.00", log_entry.description)
+        self.assertEqual(doc.payment_status, DocumentRequest.PaymentStatus.NOT_REQUIRED)
+        self.assertEqual(doc.status, DocumentRequest.Status.PROCESSING)
+        self.assertEqual(AuditLog.objects.count(), initial_audit_count)
 
     def test_staff_waiving_fee_requires_justification(self):
         doc = DocumentRequest.objects.create(
