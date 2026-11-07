@@ -445,6 +445,12 @@ const Map<String, String> _filipino = {
   'Search for certificates or permits...': 'Maghanap ng sertipiko o permit…',
   'No active document requests':
       'Wala kang kasalukuyang kahilingan para sa dokumento',
+  'This document has already been released. No pickup ticket is needed.':
+      'Naibigay na ang dokumento. Hindi na kailangan ng numero sa pila.',
+  'A rejected request cannot enter the pickup queue.':
+      'Hindi makakapasok sa pila ang tinanggihang kahilingan.',
+  'A pickup ticket is available when the document is ready.':
+      'Makakakuha ng numero sa pila kapag handa na ang dokumento.',
   'No requests matching': 'Walang tumutugmang kahilingan para sa',
   'Tap any certificate above to submit a new request.':
       'Pumili ng sertipiko sa itaas upang magpadala ng bagong kahilingan.',

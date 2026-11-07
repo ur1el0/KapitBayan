@@ -180,7 +180,15 @@ export const DocumentRequestRow: React.FC<DocumentRequestRowProps> = ({
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
     const [isRetrying, setIsRetrying] = useState(false);
 
-    const isAvailableForDownload = request.status.toUpperCase() === 'RELEASED'
+    const requestStatus = request.status.toUpperCase();
+    const canGetCounterTicket = requestStatus === 'READY_FOR_PICKUP';
+    const counterTicketUnavailableMessage = requestStatus === 'RELEASED'
+        ? t('This document has already been released. No pickup ticket is needed.')
+        : requestStatus === 'REJECTED'
+            ? t('A rejected request cannot enter the pickup queue.')
+            : t('A pickup ticket is available when the document is ready.');
+
+    const isAvailableForDownload = requestStatus === 'RELEASED'
         && Boolean(request.or_number?.trim());
 
     const isStatutoryFeeExempt = isFeeExemptDocumentType(request.document_type) || request.fee_assessment_status === 'STATUTORY_EXEMPT';
@@ -467,18 +475,24 @@ export const DocumentRequestRow: React.FC<DocumentRequestRowProps> = ({
                 </td>
                 <td className="py-4 px-6 text-right">
                     <div className="flex flex-col items-end gap-2">
-                        <button
-                            type="button"
-                            onClick={onGetCounterTicket}
-                            disabled={requestingCounterTicket || request.queue_ticket_active === true}
-                            aria-label={`${t('Get counter ticket for document request')} #${request.id}`}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-800 hover:bg-blue-100 text-xs font-bold border border-blue-200 transition-all cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                            {requestingCounterTicket
-                                ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                : <Ticket className="w-3.5 h-3.5" />}
-                            <span>{request.queue_ticket_active ? t('Counter ticket already active') : t('Get counter ticket')}</span>
-                        </button>
+                        {canGetCounterTicket ? (
+                            <button
+                                type="button"
+                                onClick={onGetCounterTicket}
+                                disabled={requestingCounterTicket || request.queue_ticket_active === true}
+                                aria-label={`${t('Get counter ticket for document request')} #${request.id}`}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-800 hover:bg-blue-100 text-xs font-bold border border-blue-200 transition-all cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                {requestingCounterTicket
+                                    ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                    : <Ticket className="w-3.5 h-3.5" />}
+                                <span>{request.queue_ticket_active ? t('Counter ticket already active') : t('Get counter ticket')}</span>
+                            </button>
+                        ) : (
+                            <span className="max-w-56 text-right text-[11px] leading-4 text-slate-500">
+                                {counterTicketUnavailableMessage}
+                            </span>
+                        )}
                         {isAvailableForDownload ? (
                             <>
                                 {request.status.toUpperCase() === 'READY_FOR_PICKUP' &&

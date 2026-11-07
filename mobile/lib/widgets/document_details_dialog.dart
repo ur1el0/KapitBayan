@@ -534,7 +534,7 @@ class _DocumentDetailsDialogState extends State<DocumentDetailsDialog> {
 
               const SizedBox(height: 24),
 
-              if (widget.onGetCounterTicket != null) ...[
+              if (widget.onGetCounterTicket != null && req.isReadyForPickup) ...[
                 SizedBox(
                   width: double.infinity,
                   height: 48,
@@ -554,6 +554,25 @@ class _DocumentDetailsDialogState extends State<DocumentDetailsDialog> {
                           ? 'Getting counter ticket...'
                           : 'Get counter queue ticket',
                     ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+              ] else if (widget.onGetCounterTicket != null) ...[
+                Text(
+                  req.isReleased
+                      ? context.tr(
+                          'This document has already been released. No pickup ticket is needed.',
+                        )
+                      : req.isRejected
+                      ? context.tr(
+                          'A rejected request cannot enter the pickup queue.',
+                        )
+                      : context.tr(
+                          'A pickup ticket is available when the document is ready.',
+                        ),
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 13,
                   ),
                 ),
                 const SizedBox(height: 10),
