@@ -169,6 +169,7 @@ class _FieldOfficialScreenState extends State<FieldOfficialScreen>
           _totalWaiting = result['remaining_waiting'] as int? ?? 0;
         });
         await _loadQueueStatus();
+        if (!mounted) return;
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
