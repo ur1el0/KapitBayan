@@ -16,9 +16,10 @@ class FieldOfficialService {
   });
 
   /// Advance the live desk queue to the next waiting citizen (POST /tickets/next/)
-  Future<Map<String, dynamic>> callNextTicket() async {
+  Future<Map<String, dynamic>> callNextTicket({bool releaseDocument = false}) async {
     final response = await apiClient.post(
       '/tickets/next/',
+      body: releaseDocument ? {'release_document': true} : null,
       requiresAuth: true,
     );
 

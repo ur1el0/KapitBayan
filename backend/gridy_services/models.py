@@ -11,6 +11,17 @@ from django.db import models, transaction
 
 MANILA_TIME_ZONE = ZoneInfo("Asia/Manila")
 
+
+def manila_day_bounds(now=None):
+    """Return the aware start and end of the Manila calendar day for ``now``."""
+    manila_now = timezone.localtime(now or timezone.now(), MANILA_TIME_ZONE)
+    day_start = datetime.combine(
+        manila_now.date(),
+        time.min,
+        tzinfo=MANILA_TIME_ZONE,
+    )
+    return day_start, day_start + timedelta(days=1)
+
 # Create your models here.
 
 class PaymentRecipient(models.Model):

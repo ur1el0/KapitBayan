@@ -44,10 +44,10 @@ export const QueueActionControls: React.FC<QueueActionControlsProps> = ({
             {/* Notify / Recall Button */}
             <button
                 onClick={onNotifyResident}
-                disabled={isUpdating || !servingTicket}
-                aria-label="Page resident"
+                disabled={isUpdating || !servingTicket || servingTicket.has_resident_account === false}
+                aria-label={servingTicket?.has_resident_account === false ? 'Walk-in ticket cannot be paged' : 'Page resident'}
                 className="flex-none bg-slate-100 hover:bg-slate-200 text-slate-700 py-3.5 px-5 rounded-2xl shadow-xs transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Page the resident linked to the serving ticket"
+                title={servingTicket?.has_resident_account === false ? 'Paging is available only for tickets linked to a resident account' : 'Page the resident linked to the serving ticket'}
             >
                 <Bell className="w-5 h-5" />
             </button>

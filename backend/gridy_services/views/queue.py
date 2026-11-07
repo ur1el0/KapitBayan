@@ -1,4 +1,4 @@
-from datetime import datetime, time, timedelta
+import logging
 
 from django.db import transaction
 from django.db.models import Q
@@ -16,14 +16,19 @@ from gridy_auth.permissions import IsBarangayOfficial, IsBarangayOfficialOrField
 from gridy_communications.models import ResidentNotification
 from gridy_communications.admin_notifications import notify_barangay_admins
 from gridy_communications.tasks import send_notification_to_user_task
-from gridy_services.models import DocumentRequest, MANILA_TIME_ZONE, QueueTicket
+from gridy_services.models import DocumentRequest, QueueTicket, manila_day_bounds
+from gridy_services.release_rules import validate_document_release_requirements
 from gridy_services.serializers import (
+    DocumentRequestReviewSerializer,
+    QueueTicketCompletionSerializer,
     QueueTicketPrioritySerializer,
     QueueTicketSerializer,
 )
 from .dashboard import DashboardSummaryView
 
 __all__ = ["QueueTicketViewSet", "DashboardSummaryView"]
+
+logger = logging.getLogger(__name__)
 
 class QueueTicketViewSet(viewsets.ModelViewSet):
     serializer_class = QueueTicketSerializer
@@ -40,10 +45,20 @@ class QueueTicketViewSet(viewsets.ModelViewSet):
         if not user or not user.is_authenticated:
             return QueueTicket.objects.none()
 
+        day_start, next_day_start = manila_day_bounds()
+        active_statuses = (QueueTicket.Status.WAITING, QueueTicket.Status.SERVING)
+        today_active = Q(
+            status__in=active_statuses,
+            created_at__gte=day_start,
+            created_at__lt=next_day_start,
+        )
+        historical = ~Q(status__in=active_statuses)
+        queryset = QueueTicket.objects.select_related('user', 'document_request')
         if user.role in [User.Role.ADMIN, User.Role.FIELD_OFFICIAL]:
-            return QueueTicket.objects.filter(barangay=user.barangay).order_by('-created_at')
-
-        return QueueTicket.objects.filter(user=user).order_by('-created_at')
+            queryset = queryset.filter(barangay=user.barangay)
+        else:
+            queryset = queryset.filter(user=user)
+        return queryset.filter(today_active | historical).order_by('-created_at', '-id')
 
     def perform_create(self, serializer):
         user = self.request.user
@@ -57,9 +72,32 @@ class QueueTicketViewSet(viewsets.ModelViewSet):
             raise PermissionDenied(
                 "A barangay assignment is required to generate queue tickets."
             )
+        if user.role not in (User.Role.ADMIN, User.Role.RESIDENT):
+            raise PermissionDenied("Field officials cannot generate queue tickets.")
 
         priority_reason = serializer.validated_data.get('priority_reason')
         with transaction.atomic():
+            Barangay.objects.select_for_update().get(pk=user.barangay_id)
+            now = timezone.now()
+            day_start, _ = manila_day_bounds(now)
+            QueueTicket.objects.filter(
+                barangay_id=user.barangay_id,
+                status__in=(QueueTicket.Status.WAITING, QueueTicket.Status.SERVING),
+                created_at__lt=day_start,
+            ).update(status=QueueTicket.Status.CANCELLED, updated_at=now)
+
+            if user.role == User.Role.RESIDENT and QueueTicket.objects.filter(
+                user_id=user.id,
+                barangay_id=user.barangay_id,
+                status__in=(QueueTicket.Status.WAITING, QueueTicket.Status.SERVING),
+            ).exists():
+                raise ValidationError({
+                    'detail': (
+                        'You already have an active queue ticket. Complete or '
+                        'cancel it before requesting another ticket.'
+                    )
+                })
+
             document_request = serializer.validated_data.get('document_request')
             if document_request is not None:
                 # Recheck the request under a row lock: its status could have
@@ -79,7 +117,6 @@ class QueueTicketViewSet(viewsets.ModelViewSet):
                         )
                     })
 
-                Barangay.objects.select_for_update().get(pk=user.barangay_id)
                 has_active_ticket = QueueTicket.objects.filter(
                     document_request=document_request,
                     status__in=(
@@ -112,10 +149,6 @@ class QueueTicketViewSet(viewsets.ModelViewSet):
                     barangay_id=user.barangay_id,
                     notification_type='queue',
                 )
-            else:
-                raise PermissionDenied(
-                    "Field officials cannot generate queue tickets."
-                )
 
             if ticket.is_priority:
                 log_action(
@@ -137,6 +170,130 @@ class QueueTicketViewSet(viewsets.ModelViewSet):
         has_email = bool(user.email_alerts and user.email)
         has_push = bool(user.push_alerts and user.fcm_devices.exists())
         return has_email or has_push
+
+    def _complete_serving_ticket(
+        self,
+        *,
+        ticket,
+        official,
+        request,
+        release_document=False,
+    ):
+        if ticket.status != QueueTicket.Status.SERVING:
+            raise ValidationError({
+                'detail': 'Only the currently serving ticket can be completed.'
+            })
+
+        released_document = None
+        if release_document:
+            if ticket.document_request_id is None:
+                raise ValidationError({
+                    'release_document': (
+                        'This queue ticket is not linked to a document request.'
+                    )
+                })
+
+            document_request = DocumentRequest.objects.select_for_update().select_related(
+                'user'
+            ).get(pk=ticket.document_request_id)
+            document_barangay_id = document_request.barangay_id
+            if document_barangay_id is None and document_request.user_id:
+                document_barangay_id = document_request.user.barangay_id
+            if document_barangay_id != official.barangay_id:
+                raise PermissionDenied(
+                    'This document request is outside your Barangay.'
+                )
+            if document_request.status != DocumentRequest.Status.READY_FOR_PICKUP:
+                raise ValidationError({
+                    'release_document': (
+                        'Only a document marked ready for pickup can be released '
+                        'from the queue.'
+                    )
+                })
+
+            serializer = DocumentRequestReviewSerializer(
+                document_request,
+                data={'status': DocumentRequest.Status.RELEASED},
+                partial=True,
+            )
+            serializer.is_valid(raise_exception=True)
+            released_document = serializer.save()
+            validate_document_release_requirements(released_document)
+            released_document.save(
+                update_fields=['status', 'payment_status', 'updated_at']
+            )
+
+            if released_document.user_id:
+                display_status = released_document.get_status_display()
+                message = (
+                    f'Your {released_document.document_type} request is now '
+                    f'{display_status}. Open Documents to review the latest '
+                    'requirements and next steps.'
+                )
+                ResidentNotification.objects.create(
+                    user=released_document.user,
+                    notification_type=ResidentNotification.Type.DOCUMENT,
+                    title='Document request update',
+                    message=message,
+                    data={
+                        'type': 'document',
+                        'document_request_id': str(released_document.pk),
+                        'status': released_document.status,
+                    },
+                )
+                request_id = released_document.pk
+                user_id = released_document.user_id
+                document_type = released_document.document_type
+
+                def send_release_notification():
+                    try:
+                        send_notification_to_user_task.delay(
+                            user_id=user_id,
+                            title='Document Request Update',
+                            body=f'Your request for {document_type} is now Released.',
+                            data={
+                                'type': 'document',
+                                'request_id': str(request_id),
+                            },
+                        )
+                    except Exception as exc:
+                        logger.warning(
+                            'Could not queue document release notification (%s).',
+                            type(exc).__name__,
+                        )
+
+                transaction.on_commit(send_release_notification)
+
+            recipient = (
+                released_document.user.username
+                if released_document.user_id
+                else released_document.walkin_name or 'Walk-in Resident'
+            )
+            log_action(
+                user=official,
+                action_type=AuditLog.ActionType.DOCUMENT_ACTION,
+                description=(
+                    f'Released document request #{released_document.pk} '
+                    f'({released_document.document_type}) to {recipient} '
+                    f'while completing queue ticket {ticket.ticket_number} '
+                    f'(ID: {ticket.pk}).'
+                ),
+                request=request,
+            )
+
+        ticket.status = QueueTicket.Status.COMPLETED
+        ticket.save(update_fields=['status', 'updated_at'])
+        log_action(
+            user=official,
+            action_type=AuditLog.ActionType.QUEUE_ACTION,
+            description=(
+                f"Official {official.username} completed queue ticket "
+                f"{ticket.ticket_number} (ID: {ticket.id})"
+                f"{' and released its linked document' if released_document else ''}."
+            ),
+            request=request,
+        )
+        return released_document
 
     @action(
         detail=True,
@@ -276,12 +433,16 @@ class QueueTicketViewSet(viewsets.ModelViewSet):
                 "avg_wait_mins": 0,
             }, status=status.HTTP_200_OK)
 
-        serving_ticket = QueueTicket.objects.filter(
+        day_start, next_day_start = manila_day_bounds()
+        today_tickets = QueueTicket.objects.filter(
             barangay_id=user.barangay_id,
+            created_at__gte=day_start,
+            created_at__lt=next_day_start,
+        )
+        serving_ticket = today_tickets.filter(
             status=QueueTicket.Status.SERVING,
-        ).first()
-        total_waiting = QueueTicket.objects.filter(
-            barangay_id=user.barangay_id,
+        ).order_by('-created_at', '-id').first()
+        total_waiting = today_tickets.filter(
             status=QueueTicket.Status.WAITING,
         ).count()
 
@@ -289,6 +450,18 @@ class QueueTicketViewSet(viewsets.ModelViewSet):
             "current_ticket": serving_ticket.ticket_number if serving_ticket else None,
             "total_waiting": total_waiting,
             "avg_wait_mins": total_waiting * 2,
+            **({
+                "current_ticket_id": serving_ticket.pk,
+                "current_ticket_document_request_id": serving_ticket.document_request_id,
+                "current_ticket_document_request_status": (
+                    serving_ticket.document_request.status
+                    if serving_ticket.document_request_id
+                    else None
+                ),
+            } if serving_ticket and user.role in (
+                User.Role.ADMIN,
+                User.Role.FIELD_OFFICIAL,
+            ) else {}),
         }, status=status.HTTP_200_OK)
 
     @action(
@@ -305,6 +478,11 @@ class QueueTicketViewSet(viewsets.ModelViewSet):
                 "A barangay assignment is required to complete queue tickets."
             )
 
+        completion_serializer = QueueTicketCompletionSerializer(data=request.data)
+        completion_serializer.is_valid(raise_exception=True)
+        release_document = completion_serializer.validated_data['release_document']
+        released_document = None
+
         with transaction.atomic():
             Barangay.objects.select_for_update().get(pk=user.barangay_id)
             ticket = self.get_object()
@@ -315,17 +493,11 @@ class QueueTicketViewSet(viewsets.ModelViewSet):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
-            ticket.status = QueueTicket.Status.COMPLETED
-            ticket.save(update_fields=["status", "updated_at"])
-
-            log_action(
-                user=user,
-                action_type=AuditLog.ActionType.QUEUE_ACTION,
-                description=(
-                    f"Official {user.username} completed queue ticket "
-                    f"{ticket.ticket_number} (ID: {ticket.id})."
-                ),
+            released_document = self._complete_serving_ticket(
+                ticket=ticket,
+                official=user,
                 request=request,
+                release_document=release_document,
             )
 
         return Response(
@@ -333,6 +505,9 @@ class QueueTicketViewSet(viewsets.ModelViewSet):
                 "detail": "Queue ticket completed successfully.",
                 "ticket_number": ticket.ticket_number,
                 "status": ticket.status,
+                "document_request_status": (
+                    released_document.status if released_document else None
+                ),
             },
             status=status.HTTP_200_OK,
         )
@@ -408,6 +583,7 @@ class QueueTicketViewSet(viewsets.ModelViewSet):
             status=status.HTTP_200_OK,
         )
 
+    @extend_schema(request=QueueTicketCompletionSerializer)
     @action(detail=False, methods=['post'], permission_classes=[IsBarangayOfficialOrField], url_path='next')
     def next_ticket(self, request):
         user = request.user
@@ -417,29 +593,48 @@ class QueueTicketViewSet(viewsets.ModelViewSet):
                 "A barangay assignment is required to advance the queue."
             )
 
+        completion_serializer = QueueTicketCompletionSerializer(data=request.data)
+        completion_serializer.is_valid(raise_exception=True)
+        release_document = completion_serializer.validated_data['release_document']
+        released_document = None
+
         with transaction.atomic():
             Barangay.objects.select_for_update().get(pk=user.barangay_id)
             now = timezone.now()
-            local_today = timezone.localtime(now, MANILA_TIME_ZONE).date()
-            day_start = datetime.combine(
-                local_today,
-                time.min,
-                tzinfo=MANILA_TIME_ZONE,
+            day_start, next_day_start = manila_day_bounds(now)
+            QueueTicket.objects.filter(
+                barangay_id=user.barangay_id,
+                status__in=(QueueTicket.Status.WAITING, QueueTicket.Status.SERVING),
+                created_at__lt=day_start,
+            ).update(status=QueueTicket.Status.CANCELLED, updated_at=now)
+
+            today_tickets = QueueTicket.objects.filter(
+                barangay_id=user.barangay_id,
+                created_at__gte=day_start,
+                created_at__lt=next_day_start,
             )
-            next_day_start = day_start + timedelta(days=1)
+            serving_tickets = list(
+                today_tickets.filter(status=QueueTicket.Status.SERVING)
+                .select_for_update()
+                .order_by('-created_at', '-id')
+            )
+            serving_ticket = serving_tickets[0] if serving_tickets else None
+            if release_document and serving_ticket is None:
+                raise ValidationError({
+                    'release_document': (
+                        'There is no currently serving ticket with a document to release.'
+                    )
+                })
 
             QueueTicket.objects.filter(
                 barangay_id=user.barangay_id,
                 status=QueueTicket.Status.SERVING,
+                created_at__gte=day_start,
+                created_at__lt=next_day_start,
                 called_at__isnull=True,
             ).update(called_at=now)
-            QueueTicket.objects.filter(
-                barangay_id=user.barangay_id,
-                status=QueueTicket.Status.SERVING,
-            ).update(status=QueueTicket.Status.COMPLETED, updated_at=now)
 
-            served_today = QueueTicket.objects.filter(
-                barangay_id=user.barangay_id,
+            served_today = today_tickets.filter(
                 status__in=(
                     QueueTicket.Status.COMPLETED,
                     QueueTicket.Status.SERVING,
@@ -464,8 +659,7 @@ class QueueTicketViewSet(viewsets.ModelViewSet):
                 )
 
             regular_ticket = (
-                QueueTicket.objects.filter(
-                    barangay_id=user.barangay_id,
+                today_tickets.filter(
                     status=QueueTicket.Status.WAITING,
                     is_priority=False,
                 )
@@ -473,8 +667,7 @@ class QueueTicketViewSet(viewsets.ModelViewSet):
                 .first()
             )
             priority_ticket = (
-                QueueTicket.objects.filter(
-                    barangay_id=user.barangay_id,
+                today_tickets.filter(
                     status=QueueTicket.Status.WAITING,
                     is_priority=True,
                 )
@@ -496,6 +689,19 @@ class QueueTicketViewSet(viewsets.ModelViewSet):
                     {"detail": "No tickets waiting in queue."},
                     status=status.HTTP_404_NOT_FOUND,
                 )
+
+            if serving_ticket is not None:
+                released_document = self._complete_serving_ticket(
+                    ticket=serving_ticket,
+                    official=user,
+                    request=request,
+                    release_document=release_document,
+                )
+                for additional_serving_ticket in serving_tickets[1:]:
+                    additional_serving_ticket.status = QueueTicket.Status.COMPLETED
+                    additional_serving_ticket.save(
+                        update_fields=['status', 'updated_at']
+                    )
 
             next_ticket.status = QueueTicket.Status.SERVING
             next_ticket.called_at = now
@@ -534,14 +740,16 @@ class QueueTicketViewSet(viewsets.ModelViewSet):
                     )
                 )
 
-            remaining_waiting = QueueTicket.objects.filter(
-                barangay_id=user.barangay_id,
+            remaining_waiting = today_tickets.filter(
                 status=QueueTicket.Status.WAITING,
             ).count()
 
             response_data = {
                 "current_ticket": next_ticket.ticket_number,
                 "remaining_waiting": remaining_waiting,
+                "document_request_status": (
+                    released_document.status if released_document else None
+                ),
             }
 
         return Response(response_data, status=status.HTTP_200_OK)

@@ -330,7 +330,7 @@ class QueueTicketAPITests(ServiceAPIBaseTestCase):
             AuditLog.objects.filter(
                 action_type=AuditLog.ActionType.QUEUE_ACTION
             ).count(),
-            1,
+            2,
         )
 
     def test_queue_ticket_sequencing_isolated_by_barangay(self):

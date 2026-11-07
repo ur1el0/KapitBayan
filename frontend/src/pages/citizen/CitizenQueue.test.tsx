@@ -42,7 +42,7 @@ describe('CitizenQueue', () => {
 
         await waitFor(() => {
             expect(axiosPrivate.post).toHaveBeenCalledWith('/tickets/', {
-                service_type: 'Document Processing & Clearances',
+                service_type: 'General service visit',
             });
         });
     });

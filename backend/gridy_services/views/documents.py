@@ -26,6 +26,7 @@ from gridy_services.models import (
     DocumentServiceOffering,
     PaymentRecipient,
     QueueTicket,
+    manila_day_bounds,
 )
 from gridy_services.signals import safe_delete_storage_file
 from gridy_services.serializers import (
@@ -46,6 +47,7 @@ from gridy_audit.models import AuditLog
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from drf_spectacular.utils import extend_schema
 from ..fee_policy import FEE_EXEMPT_DOCUMENT_TYPES, check_ra11261_eligibility
+from ..release_rules import validate_document_release_requirements
 
 logger = logging.getLogger(__name__)
 
@@ -159,9 +161,12 @@ class DocumentRequestViewSet(viewsets.ModelViewSet):
         if not user or not user.is_authenticated:
             return DocumentRequest.objects.none()
 
+        queue_day_start, queue_next_day_start = manila_day_bounds()
         active_queue_ticket = QueueTicket.objects.filter(
             document_request_id=OuterRef("pk"),
             status__in=(QueueTicket.Status.WAITING, QueueTicket.Status.SERVING),
+            created_at__gte=queue_day_start,
+            created_at__lt=queue_next_day_start,
         )
         
         # The request's barangay is authoritative; only legacy null-barangay
@@ -801,12 +806,6 @@ class DocumentRequestViewSet(viewsets.ModelViewSet):
                         request=self.request,
                     )
 
-            if document_request.status in (DocumentRequest.Status.READY_FOR_PICKUP, DocumentRequest.Status.RELEASED):
-                if document_request.fee_assessment_status == DocumentRequest.FeeAssessmentStatus.AWAITING_ASSESSMENT:
-                    raise ValidationError({
-                        "fee_assessment_status": "Document fee must be assessed or explicitly waived before marking ready for pickup."
-                    })
-
             if document_request.fee_amount <= 0:
                 document_request.payment_method = ""
                 document_request.payment_reference = ""
@@ -848,44 +847,7 @@ class DocumentRequestViewSet(viewsets.ModelViewSet):
                         lambda s=storage, p=old_proof_name: safe_delete_storage_file(s, p)
                     )
 
-            if document_request.status == DocumentRequest.Status.RELEASED:
-                if document_request.fee_amount > 0 and (
-                    not document_request.or_number or not document_request.or_number.strip()
-                ):
-                    raise ValidationError({
-                        "or_number": (
-                            "An official receipt number is required before release."
-                        )
-                    })
-                if document_request.fee_amount > 0:
-                    if document_request.payment_method == DocumentRequest.PaymentMethod.CASH:
-                        if (
-                            document_request.is_walkin
-                            and document_request.payment_status
-                            != DocumentRequest.PaymentStatus.VERIFIED
-                        ):
-                            raise ValidationError({
-                                "payment_status": (
-                                    "Record the walk-in cash payment as received before releasing this document."
-                                )
-                            })
-                        document_request.payment_status = DocumentRequest.PaymentStatus.VERIFIED
-                    elif document_request.payment_method in {
-                        DocumentRequest.PaymentMethod.GCASH,
-                        DocumentRequest.PaymentMethod.MAYA,
-                        DocumentRequest.PaymentMethod.BANK,
-                        DocumentRequest.PaymentMethod.OTHER,
-                    }:
-                        if document_request.payment_status != DocumentRequest.PaymentStatus.VERIFIED:
-                            raise ValidationError({
-                                "payment_status": (
-                                    "Verify the transfer before releasing this document."
-                                )
-                            })
-                    else:
-                        raise ValidationError({
-                            "payment_method": "Record cash or a verified electronic transfer."
-                        })
+            validate_document_release_requirements(document_request)
 
             if (
                 original_status == DocumentRequest.Status.RELEASED

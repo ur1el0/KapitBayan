@@ -88,7 +88,12 @@ export const QueueHistoryModal: React.FC<QueueHistoryModalProps> = ({
                                             </span>
                                         </td>
                                         <td className="py-2.5 px-3 text-xs text-slate-500 whitespace-nowrap">
-                                            {new Date(t.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            {new Date(t.created_at).toLocaleString([], {
+                                                month: 'short',
+                                                day: 'numeric',
+                                                hour: '2-digit',
+                                                minute: '2-digit',
+                                            })}
                                         </td>
                                         <td className="py-2.5 px-3 text-right whitespace-nowrap">
                                             <button
