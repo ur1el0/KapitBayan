@@ -914,6 +914,24 @@ class PaymentSubmissionAndReviewWorkflowTests(APITestCase):
         self.assertEqual(document.status, DocumentRequest.Status.READY_FOR_PICKUP)
         self.assertEqual(response.data["or_number"], "OR-2026-0099")
 
+    def test_admin_cannot_reuse_an_or_number_with_different_capitalization(self):
+        existing = self._make_ready_request(or_number="OR-2026-0099")
+        duplicate = self._make_ready_request(or_number="")
+        self.client.force_login(self.admin)
+
+        response = self.client.patch(
+            reverse("document-request-or-number", args=[duplicate.pk]),
+            {"or_number": "or-2026-0099"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("or_number", response.data)
+        duplicate.refresh_from_db()
+        self.assertFalse(duplicate.or_number)
+        existing.refresh_from_db()
+        self.assertEqual(existing.or_number, "OR-2026-0099")
+
     def test_resident_cannot_save_an_official_receipt_number(self):
         document = self._make_ready_request()
         self.client.force_login(self.resident)

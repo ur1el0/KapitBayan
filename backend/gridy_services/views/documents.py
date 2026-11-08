@@ -13,7 +13,7 @@ from django.http import FileResponse, Http404, HttpResponse
 from PIL import Image, UnidentifiedImageError
 from django.utils import timezone
 from xhtml2pdf import pisa
-from gridy_auth.models import User
+from gridy_auth.models import Barangay, User
 from gridy_auth.permissions import (
     IsBarangayOfficial,
     IsBarangayOfficialOrField,
@@ -126,6 +126,76 @@ CANONICAL_DOCUMENT_SNAPSHOTS = {
         "details": "Clearance required for new business registration or annual business permit renewal.",
     },
 }
+
+
+def _resolve_active_pickup_tickets(document_request, *, actor, request):
+    """Close queue work once the linked document has been physically released.
+
+    A still-waiting pickup ticket is cancelled because it is no longer needed;
+    a serving ticket is completed because the resident was already at the desk.
+    """
+    tickets = QueueTicket.objects.select_for_update().filter(
+        document_request=document_request,
+        status__in=(QueueTicket.Status.WAITING, QueueTicket.Status.SERVING),
+    )
+    for ticket in tickets:
+        previous_status = ticket.status
+        ticket.status = (
+            QueueTicket.Status.COMPLETED
+            if previous_status == QueueTicket.Status.SERVING
+            else QueueTicket.Status.CANCELLED
+        )
+        ticket.save(update_fields=["status", "updated_at"])
+        log_action(
+            user=actor,
+            action_type=AuditLog.ActionType.QUEUE_ACTION,
+            description=(
+                f"Closed pickup ticket {ticket.ticket_number} (ID: {ticket.pk}) "
+                f"when linked document request #{document_request.pk} was released "
+                f"({previous_status} to {ticket.status})."
+            ),
+            request=request,
+        )
+
+
+def _document_barangay_id(document_request):
+    return document_request.barangay_id or (
+        document_request.user.barangay_id if document_request.user_id else None
+    )
+
+
+def _ensure_unique_barangay_or_number(document_request, or_number):
+    normalized = (or_number or "").strip()
+    if not normalized:
+        return
+
+    barangay_id = _document_barangay_id(document_request)
+    duplicate_requests = DocumentRequest.objects.filter(
+        or_number__iexact=normalized,
+    ).exclude(pk=document_request.pk)
+    if barangay_id is not None:
+        duplicate_requests = duplicate_requests.filter(
+            Q(barangay_id=barangay_id)
+            | Q(
+                barangay__isnull=True,
+                is_walkin=False,
+                user__barangay_id=barangay_id,
+            )
+        )
+    else:
+        duplicate_requests = duplicate_requests.filter(
+            barangay__isnull=True,
+            user__isnull=True,
+        )
+
+    if duplicate_requests.exists():
+        raise ValidationError({
+            "or_number": (
+                "This O.R. number is already recorded for another request in "
+                "this Barangay."
+            )
+        })
+
 
 class DocumentRequestViewSet(viewsets.ModelViewSet):
     serializer_class = DocumentRequestSerializer
@@ -378,8 +448,12 @@ class DocumentRequestViewSet(viewsets.ModelViewSet):
         or_number = serializer.validated_data["or_number"]
 
         with transaction.atomic():
+            scoped_request = self.get_object()
+            barangay_id = _document_barangay_id(scoped_request)
+            if barangay_id is not None:
+                Barangay.objects.select_for_update().get(pk=barangay_id)
             document_request = DocumentRequest.objects.select_for_update().get(
-                pk=self.get_object().pk
+                pk=scoped_request.pk
             )
             if (
                 document_request.status == DocumentRequest.Status.RELEASED
@@ -390,6 +464,7 @@ class DocumentRequestViewSet(viewsets.ModelViewSet):
                     "or_number": "A paid released document must keep its official receipt number."
                 })
 
+            _ensure_unique_barangay_or_number(document_request, or_number)
             document_request.or_number = or_number or None
             document_request.save(update_fields=["or_number", "updated_at"])
             log_action(
@@ -650,50 +725,109 @@ class DocumentRequestViewSet(viewsets.ModelViewSet):
 
     def perform_destroy(self, instance):
         user = self.request.user
-        
-        # 1. Citizen Resident Self-Service Cancellation
-        if user.role == User.Role.RESIDENT:
-            if instance.user != user:
-                raise PermissionDenied("You can only cancel your own document requests.")
-            
-            if instance.status != DocumentRequest.Status.PENDING:
-                raise ValidationError(
-                    {"detail": "You can only cancel document requests that are still pending review."}
+        barangay_id = instance.barangay_id or (
+            instance.user.barangay_id if instance.user_id else user.barangay_id
+        )
+
+        # Keep deletion in the same lock order as queue advancement and release:
+        # Barangay -> document -> linked queue ticket. This prevents a released
+        # request from being deleted while a pickup ticket is being completed.
+        with transaction.atomic():
+            if barangay_id is not None:
+                Barangay.objects.select_for_update().get(pk=barangay_id)
+            try:
+                locked_instance = DocumentRequest.objects.select_for_update().get(
+                    pk=instance.pk
                 )
-            
+            except DocumentRequest.DoesNotExist:
+                raise Http404("Document request was already removed.")
+
+            # 1. Resident self-service cancellation.
+            if user.role == User.Role.RESIDENT:
+                if locked_instance.user_id != user.id:
+                    raise PermissionDenied(
+                        "You can only cancel your own document requests."
+                    )
+                if locked_instance.status != DocumentRequest.Status.PENDING:
+                    raise ValidationError({
+                        "detail": (
+                            "You can only cancel document requests that are still "
+                            "pending review."
+                        )
+                    })
+                description = (
+                    f"Resident {user.username} cancelled pending document request "
+                    f"#{locked_instance.id} ({locked_instance.document_type})."
+                )
+            # 2. Barangay official archival deletion after resolution.
+            elif user.role in [User.Role.ADMIN, User.Role.FIELD_OFFICIAL]:
+                if locked_instance.status not in [
+                    DocumentRequest.Status.RELEASED,
+                    DocumentRequest.Status.REJECTED,
+                ]:
+                    raise ValidationError({
+                        "detail": (
+                            "Only resolved (released or rejected) clearance "
+                            "requests can be deleted by officials."
+                        )
+                    })
+
+                if locked_instance.status == DocumentRequest.Status.RELEASED:
+                    _resolve_active_pickup_tickets(
+                        locked_instance,
+                        actor=user,
+                        request=self.request,
+                    )
+                elif QueueTicket.objects.filter(
+                    document_request=locked_instance,
+                    status__in=(QueueTicket.Status.WAITING, QueueTicket.Status.SERVING),
+                ).exists():
+                    raise ValidationError({
+                        "detail": (
+                            "Resolve the linked queue ticket before deleting this "
+                            "rejected request."
+                        )
+                    })
+
+                recipient_desc = (
+                    locked_instance.user.username
+                    if locked_instance.user_id
+                    else (locked_instance.walkin_name or "Resident")
+                )
+                description = (
+                    f"Deleted {locked_instance.get_status_display().lower()} "
+                    f"document request #{locked_instance.id} "
+                    f"({locked_instance.document_type}) for {recipient_desc}."
+                )
+            else:
+                raise PermissionDenied(
+                    "You do not have permission to delete this document request."
+                )
+
             log_action(
                 user=user,
                 action_type=AuditLog.ActionType.DOCUMENT_ACTION,
-                description=f"Resident {user.username} cancelled pending document request #{instance.id} ({instance.document_type}).",
-                request=self.request
+                description=description,
+                request=self.request,
             )
-            instance.delete()
-            return
-
-        # 2. Barangay Official Administrative Deletion
-        if user.role in [User.Role.ADMIN, User.Role.FIELD_OFFICIAL]:
-            if instance.status not in [DocumentRequest.Status.RELEASED, DocumentRequest.Status.REJECTED]:
-                raise ValidationError(
-                    {"detail": "Only resolved (released or rejected) clearance requests can be deleted by officials."}
-                )
-
-            recipient_desc = instance.user.username if instance.user else (instance.walkin_name or "Resident")
-            log_action(
-                user=user,
-                action_type=AuditLog.ActionType.DOCUMENT_ACTION,
-                description=f"Deleted {instance.get_status_display().lower()} document request #{instance.id} ({instance.document_type}) for {recipient_desc}.",
-                request=self.request
-            )
-            instance.delete()
-            return
-
-        raise PermissionDenied("You do not have permission to delete this document request.")
+            locked_instance.delete()
 
     @action(detail=True, methods=['patch'], permission_classes=[IsBarangayOfficialOrField])
     def validate(self, request, pk=None):
         with transaction.atomic():
+            scoped_request = self.get_object()
+            # Queue advancement locks the Barangay before a linked document and
+            # ticket. Take the same parent lock before a release can lock those
+            # rows, avoiding a document/ticket lock inversion under concurrency.
+            if (
+                request.data.get("status") == DocumentRequest.Status.RELEASED
+                or "or_number" in request.data
+            ):
+                barangay_id = _document_barangay_id(scoped_request)
+                if barangay_id is not None:
+                    Barangay.objects.select_for_update().get(pk=barangay_id)
             document_request = DocumentRequest.objects.select_for_update().get(
-                pk=self.get_object().pk
+                pk=scoped_request.pk
             )
             if (
                 request.user.role == User.Role.FIELD_OFFICIAL
@@ -712,6 +846,14 @@ class DocumentRequestViewSet(viewsets.ModelViewSet):
             )
             serializer.is_valid(raise_exception=True)
             document_request = serializer.save()
+            if (
+                document_request.status == DocumentRequest.Status.RELEASED
+                or "or_number" in serializer.validated_data
+            ):
+                _ensure_unique_barangay_or_number(
+                    document_request,
+                    document_request.or_number,
+                )
             doc_type_clean = " ".join((document_request.document_type or "").split()).casefold()
             is_statutory = doc_type_clean in FEE_EXEMPT_DOCUMENT_TYPES
 
@@ -888,6 +1030,15 @@ class DocumentRequestViewSet(viewsets.ModelViewSet):
                     "updated_at",
                 ]
             )
+            if (
+                original_status != DocumentRequest.Status.RELEASED
+                and document_request.status == DocumentRequest.Status.RELEASED
+            ):
+                _resolve_active_pickup_tickets(
+                    document_request,
+                    actor=request.user,
+                    request=request,
+                )
             if document_request.user and document_request.status != original_status:
                 display_status = document_request.get_status_display()
                 ResidentNotification.objects.create(
@@ -1089,6 +1240,9 @@ class DocumentRequestViewSet(viewsets.ModelViewSet):
         serializer = PaymentReviewSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         with transaction.atomic():
+            receipt_number = serializer.validated_data.get("or_number", "").strip()
+            if receipt_number and doc_barangay_id is not None:
+                Barangay.objects.select_for_update().get(pk=doc_barangay_id)
             document_request = DocumentRequest.objects.select_for_update().get(
                 pk=document_request.pk
             )
@@ -1119,6 +1273,10 @@ class DocumentRequestViewSet(viewsets.ModelViewSet):
             if "or_number" in serializer.validated_data:
                 or_number_val = serializer.validated_data["or_number"].strip()
                 if or_number_val:
+                    _ensure_unique_barangay_or_number(
+                        document_request,
+                        or_number_val,
+                    )
                     document_request.or_number = or_number_val
                     update_fields.append("or_number")
 

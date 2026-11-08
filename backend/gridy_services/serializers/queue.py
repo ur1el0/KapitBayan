@@ -102,14 +102,11 @@ class QueueTicketSerializer(serializers.ModelSerializer):
                     )
                 })
 
-            if (
-                user.role == User.Role.RESIDENT
-                and document_request.status != DocumentRequest.Status.READY_FOR_PICKUP
-            ):
+            if document_request.status != DocumentRequest.Status.READY_FOR_PICKUP:
                 raise serializers.ValidationError({
                     'document_request_id': (
-                        'A pickup queue ticket is available only when the document '
-                        'is ready for pickup.'
+                        'A document pickup queue ticket is available only when the '
+                        'document is ready for pickup.'
                     )
                 })
 

@@ -270,6 +270,134 @@ class QueueTicketAPITests(ServiceAPIBaseTestCase):
         self.assertEqual(after_completion.status_code, status.HTTP_201_CREATED)
         self.assertEqual(QueueTicket.objects.filter(document_request=document).count(), 2)
 
+    def test_admin_created_document_pickup_ticket_keeps_resident_link(self):
+        barangay = Barangay.objects.create(name="Admin Document Pickup Barangay")
+        self.official.barangay = barangay
+        self.official.save(update_fields=["barangay"])
+        self.resident.barangay = barangay
+        self.resident.save(update_fields=["barangay"])
+        document = DocumentRequest.objects.create(
+            user=self.resident,
+            barangay=barangay,
+            document_type="Barangay Clearance",
+            status=DocumentRequest.Status.READY_FOR_PICKUP,
+        )
+        self.client.force_login(self.official)
+
+        response = self.client.post(
+            reverse("ticket-list"),
+            {"service_type": "DOCUMENT", "document_request_id": document.pk},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        ticket = QueueTicket.objects.get(document_request=document)
+        self.assertEqual(ticket.user_id, self.resident.pk)
+        self.assertTrue(response.data["has_resident_account"])
+
+    def test_admin_cannot_add_document_pickup_when_resident_has_active_ticket(self):
+        barangay = Barangay.objects.create(name="No Duplicate Resident Queue Barangay")
+        self.official.barangay = barangay
+        self.official.save(update_fields=["barangay"])
+        self.resident.barangay = barangay
+        self.resident.save(update_fields=["barangay"])
+        QueueTicket.objects.create(
+            user=self.resident,
+            barangay=barangay,
+            service_type="General assistance",
+        )
+        document = DocumentRequest.objects.create(
+            user=self.resident,
+            barangay=barangay,
+            document_type="Barangay Clearance",
+            status=DocumentRequest.Status.READY_FOR_PICKUP,
+        )
+        self.client.force_login(self.official)
+
+        response = self.client.post(
+            reverse("ticket-list"),
+            {"service_type": "DOCUMENT", "document_request_id": document.pk},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            QueueTicket.objects.filter(user=self.resident).count(),
+            1,
+        )
+
+    def test_admin_cannot_link_a_queue_ticket_to_document_not_ready(self):
+        barangay = Barangay.objects.create(name="Not Ready Document Queue Barangay")
+        self.official.barangay = barangay
+        self.official.save(update_fields=["barangay"])
+        self.resident.barangay = barangay
+        self.resident.save(update_fields=["barangay"])
+        document = DocumentRequest.objects.create(
+            user=self.resident,
+            barangay=barangay,
+            document_type="Barangay Clearance",
+            status=DocumentRequest.Status.PROCESSING,
+        )
+        self.client.force_login(self.official)
+
+        response = self.client.post(
+            reverse("ticket-list"),
+            {"service_type": "DOCUMENT", "document_request_id": document.pk},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(QueueTicket.objects.filter(document_request=document).exists())
+
+    def test_unverified_resident_cannot_create_queue_ticket(self):
+        from gridy_auth.models import Resident
+
+        barangay = Barangay.objects.create(name="Unverified Queue Barangay")
+        pending_resident = User.objects.create_user(
+            username="pending_queue_resident",
+            password="SecurePassword123!",
+            role=User.Role.RESIDENT,
+            barangay=barangay,
+        )
+        Resident.objects.create(
+            user=pending_resident,
+            full_name="Pending Queue Resident",
+            birth_date="1995-05-15",
+            is_verified=False,
+        )
+        self.client.force_login(pending_resident)
+
+        response = self.client.post(
+            reverse("ticket-list"),
+            {"service_type": "DOCUMENT"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertFalse(QueueTicket.objects.filter(user=pending_resident).exists())
+
+    def test_next_queue_does_not_silently_complete_multiple_serving_tickets(self):
+        barangay = Barangay.objects.create(name="Multiple Serving Tickets Barangay")
+        self.official.barangay = barangay
+        self.official.save(update_fields=["barangay"])
+        tickets = [
+            QueueTicket.objects.create(
+                barangay=barangay,
+                ticket_number=f"T00{number}",
+                service_type="DOCUMENT",
+                status=QueueTicket.Status.SERVING,
+            )
+            for number in (1, 2)
+        ]
+        self.client.force_login(self.official)
+
+        response = self.client.post(reverse("ticket-next-ticket"), {}, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        for ticket in tickets:
+            ticket.refresh_from_db()
+            self.assertEqual(ticket.status, QueueTicket.Status.SERVING)
+
     def test_resident_without_barangay_cannot_create_queue_ticket(self):
         self.client.force_login(self.resident)
         response = self.client.post(

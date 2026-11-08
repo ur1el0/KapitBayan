@@ -1,11 +1,12 @@
 from decimal import Decimal
 from unittest.mock import patch
 from django.urls import reverse
+from django.utils import timezone
 from rest_framework import status
 from gridy_audit.models import AuditLog
 from gridy_auth.models import Barangay, Resident, User
 from gridy_communications.models import ResidentNotification
-from gridy_services.models import DocumentRequest, DocumentServiceOffering
+from gridy_services.models import DocumentRequest, DocumentServiceOffering, QueueTicket
 from .base import ServiceAPIBaseTestCase
 
 
@@ -308,6 +309,53 @@ class DocumentRequestAPITests(ServiceAPIBaseTestCase):
         # Verify the audit log was fired
         self.assertEqual(AuditLog.objects.filter(action_type=AuditLog.ActionType.DOCUMENT_ACTION).count(), 1)
 
+    def test_releasing_document_resolves_linked_pickup_queue_ticket(self):
+        barangay = self._assign_shared_barangay()
+        self.client.force_login(self.official)
+        tickets_by_status = {}
+
+        for index, queue_status in enumerate(
+            (QueueTicket.Status.WAITING, QueueTicket.Status.SERVING),
+            start=1,
+        ):
+            document = DocumentRequest.objects.create(
+                user=self.resident,
+                barangay=barangay,
+                document_type="Barangay Clearance",
+                status=DocumentRequest.Status.READY_FOR_PICKUP,
+                fee_amount=Decimal("0.00"),
+                fee_assessment_status=DocumentRequest.FeeAssessmentStatus.WAIVED,
+                fee_assessed_by=self.official,
+                fee_assessed_at=timezone.now(),
+                fee_waiver_reason=f"Approved waiver {index}",
+                payment_status=DocumentRequest.PaymentStatus.NOT_REQUIRED,
+            )
+            tickets_by_status[queue_status] = QueueTicket.objects.create(
+                user=self.resident,
+                barangay=barangay,
+                document_request=document,
+                service_type="Barangay Clearance",
+                status=queue_status,
+            )
+
+            response = self.client.patch(
+                reverse("document-request-validate", args=[document.pk]),
+                {"status": DocumentRequest.Status.RELEASED},
+                format="json",
+            )
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        tickets_by_status[QueueTicket.Status.WAITING].refresh_from_db()
+        tickets_by_status[QueueTicket.Status.SERVING].refresh_from_db()
+        self.assertEqual(
+            tickets_by_status[QueueTicket.Status.WAITING].status,
+            QueueTicket.Status.CANCELLED,
+        )
+        self.assertEqual(
+            tickets_by_status[QueueTicket.Status.SERVING].status,
+            QueueTicket.Status.COMPLETED,
+        )
+
     def test_official_can_delete_released_document_request(self):
         barangay = self._assign_shared_barangay()
         self.client.force_login(self.official)
@@ -322,6 +370,36 @@ class DocumentRequestAPITests(ServiceAPIBaseTestCase):
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(DocumentRequest.objects.filter(id=doc.id).exists())
         self.assertTrue(AuditLog.objects.filter(action_type=AuditLog.ActionType.DOCUMENT_ACTION, action_by=self.official).exists())
+
+    def test_deleting_legacy_released_request_resolves_linked_queue_ticket(self):
+        barangay = self._assign_shared_barangay()
+        self.client.force_login(self.official)
+        for queue_status, expected_status in (
+            (QueueTicket.Status.WAITING, QueueTicket.Status.CANCELLED),
+            (QueueTicket.Status.SERVING, QueueTicket.Status.COMPLETED),
+        ):
+            document = DocumentRequest.objects.create(
+                user=self.resident,
+                barangay=barangay,
+                document_type="Barangay Clearance",
+                status=DocumentRequest.Status.RELEASED,
+            )
+            ticket = QueueTicket.objects.create(
+                user=self.resident,
+                barangay=barangay,
+                document_request=document,
+                service_type="Barangay Clearance",
+                status=queue_status,
+            )
+
+            response = self.client.delete(
+                reverse("document-request-detail", args=[document.pk])
+            )
+
+            self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+            ticket.refresh_from_db()
+            self.assertEqual(ticket.status, expected_status)
+            self.assertIsNone(ticket.document_request_id)
 
     def test_official_can_delete_rejected_document_request(self):
         barangay = self._assign_shared_barangay()
