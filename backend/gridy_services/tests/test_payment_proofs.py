@@ -963,12 +963,18 @@ class PaymentSubmissionAndReviewWorkflowTests(APITestCase):
                 )
             },
         )
+        reference_response = self.client.get(
+            reverse("document-request-verify"),
+            {"identifier": f"KB-DOC-{document.pk:08d}"},
+        )
 
         self.assertEqual(receipt_response.status_code, status.HTTP_200_OK)
         self.assertEqual(receipt_response.data["id"], document.pk)
         self.assertEqual(receipt_response.data["or_number"], "OR-2026-0099")
         self.assertEqual(tracking_response.status_code, status.HTTP_200_OK)
         self.assertEqual(tracking_response.data["id"], document.pk)
+        self.assertEqual(reference_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(reference_response.data["system_reference"], f"KB-DOC-{document.pk:08d}")
 
     def test_field_official_receipt_lookup_is_limited_to_their_barangay(self):
         foreign_document = DocumentRequest.objects.create(

@@ -83,7 +83,15 @@ class QueueTicketViewSet(viewsets.ModelViewSet):
 
         priority_reason = serializer.validated_data.get('priority_reason')
         with transaction.atomic():
-            Barangay.objects.select_for_update().get(pk=user.barangay_id)
+            expected_barangay_id = user.barangay_id
+            Barangay.objects.select_for_update().get(pk=expected_barangay_id)
+            user = User.objects.select_for_update().get(pk=user.pk)
+            if user.barangay_id != expected_barangay_id:
+                raise ValidationError({
+                    'detail': (
+                        'Your Barangay assignment changed. Refresh and request a new ticket.'
+                    )
+                })
             now = timezone.now()
             day_start, _ = manila_day_bounds(now)
             QueueTicket.objects.filter(

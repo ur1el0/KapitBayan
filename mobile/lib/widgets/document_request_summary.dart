@@ -22,6 +22,20 @@ class DocumentRequestSummary extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (req.systemReference?.isNotEmpty == true) ...[
+          _DetailRow(
+            label: context.tr('KapitBayan reference'),
+            value: req.systemReference!,
+          ),
+          const SizedBox(height: 6),
+          Text(
+            context.tr(
+              'Use this code to let Barangay staff find the request. It is not an official receipt number.',
+            ),
+            style: const TextStyle(fontSize: 11, color: AppColors.textMuted),
+          ),
+          const SizedBox(height: 12),
+        ],
         // Details List
         _DetailRow(
           label: context.tr('Current Status'),

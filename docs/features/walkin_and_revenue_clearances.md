@@ -19,7 +19,7 @@ Fee amount and fee provenance are separate. Staff must make an explicit positive
 - CASH remains an in-person treasury flow. Electronic payment methods are out-of-band transfers to configured barangay recipients.
 - Resident references, transfer timestamps, and private receipt screenshots are submitted evidence; staff verify them manually against the barangay's actual account.
 - A rejected electronic payment may be resubmitted using the same or another currently active Barangay recipient, or changed to cash. Changing a rejected choice clears the rejected reference and proof so stale evidence is not reused.
-- O.R. recording is retained as a treasury action. A request with a positive fee cannot be released without its required O.R.; the release gate is server-side.
+- O.R. recording is retained as a treasury action. A request with a positive fee cannot be released without its required O.R.; the release gate is server-side. Staff enter the number printed on the Barangay-issued official receipt. KapitBayan generates a separate `KB-DOC-00000050` style request reference for staff lookup; it is not a receipt and must never be used as one.
 - Statutory fee-exempt requests display the appropriate not-required state and do not require an O.R. for a fee of zero.
 
 The staff review screens do not select the resident's payment method. They assess the fee, manage the Barangay's offered e-payment accounts in payment settings, review uploaded evidence, and record the O.R. Resident payment-choice updates are restricted to the request owner and validated against the active recipients in the request's Barangay.
@@ -28,7 +28,7 @@ The staff review screens do not select the resident's payment method. They asses
 
 Barangay Admins save the Official Receipt number from the document review screen using the dedicated **Save O.R. number** action. This updates the receipt field independently from status, payment method, and fee assessment, so an O.R.-only edit does not repeat unrelated workflow actions. Residents cannot edit this field.
 
-Field Officials can use the mobile **Clearance & Receipt Validator** to enter either the printed document tracking ID or the exact O.R. number recorded by the Barangay. The API searches only records in the Field Official's assigned Barangay, checks an exact case-insensitive O.R. match first, and otherwise resolves supported tracking-ID formats. A missing record returns not found; an O.R. shared by multiple records returns an ambiguity error for staff follow-up.
+Field Officials can use the mobile **Clearance & Receipt Validator** to enter a KapitBayan request reference, the printed document tracking ID, or the exact O.R. number recorded by the Barangay. The API searches only records in the Field Official's assigned Barangay and normalizes leading/trailing whitespace and case for O.R. lookup. A missing record returns not found; an O.R. shared by multiple records returns an ambiguity error for staff follow-up. The database also prevents duplicate O.R. numbers within a Barangay regardless of case or outer whitespace.
 
 The mobile validator shows the API's error message when a lookup fails, instead of labeling every failure a network error. An unknown or out-of-Barangay identifier displays a not-found message; an ambiguous O.R. displays the server's review instruction. Session, access, and service errors remain separate from those record results. If the service reports an error, record its status and the matching backend log before treating a receipt as verified.
 

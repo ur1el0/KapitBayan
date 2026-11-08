@@ -1,5 +1,7 @@
 from decimal import Decimal
+import uuid
 from unittest.mock import patch
+from django.db import IntegrityError, transaction
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
@@ -20,6 +22,7 @@ class DocumentRequestAPITests(ServiceAPIBaseTestCase):
         return barangay
 
     def test_resident_can_create_document_request(self):
+        self._assign_shared_barangay()
         self.client.force_login(self.resident)
         url = reverse('document-request-list')
         response = self.client.post(
@@ -47,6 +50,64 @@ class DocumentRequestAPITests(ServiceAPIBaseTestCase):
         self.assertFalse(created_request.walkin_purok)
         self.assertFalse(created_request.or_number)
         self.assertEqual(str(created_request.fee_amount), "0.00")
+        self.assertEqual(
+            response.data["system_reference"],
+            f"KB-DOC-{created_request.pk:08d}",
+        )
+
+    def test_document_submission_key_replays_identical_request_and_rejects_reuse(self):
+        self._assign_shared_barangay()
+        self.client.force_login(self.resident)
+        key = str(uuid.uuid4())
+        url = reverse("document-request-list")
+        payload = {
+            "document_type": "Barangay Clearance",
+            "purpose": "Proof of residency",
+            "urgency_tag": "REGULAR",
+        }
+
+        first = self.client.post(
+            url,
+            payload,
+            format="json",
+            HTTP_IDEMPOTENCY_KEY=key,
+        )
+        replay = self.client.post(
+            url,
+            payload,
+            format="json",
+            HTTP_IDEMPOTENCY_KEY=key,
+        )
+        conflict = self.client.post(
+            url,
+            {**payload, "purpose": "Different purpose"},
+            format="json",
+            HTTP_IDEMPOTENCY_KEY=key,
+        )
+
+        self.assertEqual(first.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(replay.status_code, status.HTTP_200_OK)
+        self.assertEqual(replay.data["id"], first.data["id"])
+        self.assertEqual(conflict.status_code, status.HTTP_409_CONFLICT)
+        self.assertEqual(DocumentRequest.objects.count(), 1)
+
+    def test_database_rejects_duplicate_barangay_or_ignoring_case_and_outer_space(self):
+        barangay = self._assign_shared_barangay()
+        DocumentRequest.objects.create(
+            user=self.resident,
+            barangay=barangay,
+            document_type="Barangay Clearance",
+            or_number="OR-2030-0042",
+        )
+
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                DocumentRequest.objects.create(
+                    user=self.resident,
+                    barangay=barangay,
+                    document_type="Barangay Clearance",
+                    or_number="  or-2030-0042  ",
+                )
 
     def test_official_can_create_walkin_document_request(self):
         barangay = Barangay.objects.create(name="Walk-in Test Barangay")
@@ -479,6 +540,7 @@ class DocumentRequestAPITests(ServiceAPIBaseTestCase):
         self.assertTrue(DocumentRequest.objects.filter(id=doc.id).exists())
 
     def test_exempt_resident_document_types_are_zero_fee(self):
+        self._assign_shared_barangay()
         self.client.force_login(self.resident)
         url = reverse("document-request-list")
 

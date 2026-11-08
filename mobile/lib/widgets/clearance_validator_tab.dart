@@ -36,7 +36,7 @@ class ClearanceValidatorTab extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           const Text(
-            'Enter a document tracking ID or the official receipt number recorded by your Barangay.',
+            'Enter the KapitBayan reference (KB-DOC-00000050), a document tracking ID, or the official receipt number recorded by your Barangay.',
             style: TextStyle(fontSize: 13, color: Color(0xFF64748B)),
           ),
           const SizedBox(height: 16),
@@ -46,7 +46,7 @@ class ClearanceValidatorTab extends StatelessWidget {
                 child: TextField(
                   controller: trackingIdController,
                   decoration: InputDecoration(
-                    hintText: 'e.g. REQ-12 or OR-2026-0099',
+                    hintText: 'e.g. KB-DOC-00000050 or OR-2026-0099',
                     filled: true,
                     fillColor: Colors.white,
                     contentPadding: const EdgeInsets.symmetric(

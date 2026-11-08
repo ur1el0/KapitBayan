@@ -138,6 +138,7 @@ jobs:
               "gridy_communications.0012_alter_adminnotification_notification_type",
               "gridy_communications.0013_alter_residentnotification_notification_type",
               "gridy_services.0020_documentcertificateverification",
+              "gridy_services.0021_documentrequest_submission_fingerprint_and_more",
           }
 
           if os.environ.get("CONFIRM_PRODUCTION", "").lower() != "true":

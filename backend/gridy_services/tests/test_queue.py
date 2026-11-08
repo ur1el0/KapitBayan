@@ -1,5 +1,6 @@
 from datetime import datetime, timezone as datetime_timezone
 from unittest.mock import patch
+from django.db import IntegrityError, transaction
 from django.urls import reverse
 from rest_framework import status
 from gridy_audit.models import AuditLog
@@ -9,6 +10,23 @@ from .base import ServiceAPIBaseTestCase
 
 
 class QueueTicketAPITests(ServiceAPIBaseTestCase):
+    def test_database_rejects_duplicate_ticket_number_for_barangay_day(self):
+        barangay = Barangay.objects.create(name="Queue Identifier Constraint Barangay")
+        first = QueueTicket.objects.create(
+            barangay=barangay,
+            ticket_number="T777",
+            service_type="DOCUMENT",
+        )
+
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                QueueTicket.objects.create(
+                    barangay=barangay,
+                    ticket_number=f"  {first.ticket_number.lower()}  ",
+                    service_type="DOCUMENT",
+                    created_at=first.created_at,
+                )
+
     def test_field_official_cannot_create_queue_ticket(self):
         # Field officials monitor ticker and call next ticket, but cannot take tickets for themselves
         field_official = User.objects.create_user(

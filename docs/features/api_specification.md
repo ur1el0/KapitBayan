@@ -25,6 +25,22 @@ Barangay Admins create Field Official accounts through `POST /api/v1/auth/staff/
 
 ## Document O.R. save and verification
 
+Every saved request also receives a stable KapitBayan lookup reference, such as
+`KB-DOC-00000050`. Residents can show it to Barangay staff, and the Field
+Official validator can use it to locate the same-Barangay record. It is an
+internal request reference, not an official receipt and not proof of payment.
+
+- `POST /api/v1/document-requests/` accepts an optional UUID `Idempotency-Key`
+  header. Resident web/mobile requests and staff walk-ins send one. A retry with
+  the same authenticated actor, key, and request details returns the original
+  request with `200`; reusing that key with changed details returns `409`.
+  Older clients without this header remain supported but do not receive retry
+  deduplication.
+- A Barangay Admin still records the actual O.R. number issued by the Barangay
+  Treasurer through `PATCH /api/v1/document-requests/{id}/or-number/`. KapitBayan
+  must not invent a treasury receipt number or present an internal request
+  reference as proof of payment.
+
 ## Resident-selected document payment
 
 - `POST /api/v1/document-requests/{id}/payment-choice/` is available to the authenticated resident who owns a positive-fee request after it reaches `READY_FOR_PICKUP`, while its payment status is `UNPAID` or `REJECTED`. Send either `{"payment_method":"CASH"}` or `{"payment_recipient_id": <id>}`. The server derives the electronic provider from an active recipient belonging to the request's Barangay; clients cannot submit an arbitrary provider or another Barangay's recipient.
@@ -33,7 +49,7 @@ Barangay Admins create Field Official accounts through `POST /api/v1/auth/staff/
 - Residents may change an unpaid or rejected choice. Changing a rejected choice clears its previous reference, timestamp, review note, and proof. Choices are locked while evidence is pending verification or after payment is verified.
 
 - `PATCH /api/v1/document-requests/{id}/or-number/` saves only `or_number` for an in-scope document request. It is Barangay Admin-only and accepts a trimmed string up to 50 characters. It does not change the document status, fee assessment, or payment method. A positive-fee request already marked `RELEASED` cannot have its O.R. cleared.
-- `GET /api/v1/document-requests/verify/?identifier={value}` lets a Barangay Admin or Field Official look up a document by exact case-insensitive O.R. number or supported tracking identifier (`REQ-12`, a numeric request ID, or the printed `ID: #BC|CI|RC|BP|DOC-YYYY-NNNN` form). Lookup is restricted to the authenticated user's Barangay. It returns the document request when found, `404` when no matching record exists in that Barangay, and `409` when the O.R. matches multiple records.
+- `GET /api/v1/document-requests/verify/?identifier={value}` lets a Barangay Admin or Field Official look up a document by exact case-insensitive O.R. number or supported tracking identifier (`KB-DOC-00000050`, `REQ-12`, a numeric request ID, or the legacy printed `ID: #BC|CI|RC|BP|DOC-YYYY-NNNN` form). Lookup is restricted to the authenticated user's Barangay. It returns the document request when found, `404` when no matching record exists in that Barangay, and `409` when an O.R. matches multiple historical records.
 
 This lookup confirms the identifier against KapitBayan's stored record. It does not verify a paper receipt with the treasury or settle an electronic transfer. The official release and payment controls remain enforced by the server-side document workflow.
 

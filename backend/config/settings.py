@@ -15,6 +15,7 @@ import sys
 import environ
 from pathlib import Path
 from django.core.exceptions import ImproperlyConfigured
+from corsheaders.defaults import default_headers
 
 IS_TESTING = "test" in sys.argv or "pytest" in sys.modules
 
@@ -246,6 +247,7 @@ CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = get_cors_allowed_origins(DEBUG)
 CORS_ALLOWED_ORIGIN_REGEXES = get_cors_allowed_origin_regexes(DEBUG)
+CORS_ALLOW_HEADERS = (*default_headers, "idempotency-key")
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (

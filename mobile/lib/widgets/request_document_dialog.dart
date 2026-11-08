@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 
 import '../core/default_document_requirements.dart';
@@ -35,6 +38,8 @@ class _RequestDocumentDialogState extends State<RequestDocumentDialog> {
   String _selectedUrgency = 'REGULAR';
   bool _isSubmitting = false;
   String? _errorMessage;
+  String? _submissionFingerprint;
+  String? _submissionKey;
   final Set<int> _checkedRequirementIndexes = <int>{};
 
   @override
@@ -186,17 +191,29 @@ class _RequestDocumentDialogState extends State<RequestDocumentDialog> {
       final purpose = _purposeController.text.isNotEmpty
           ? _purposeController.text
           : null;
+      final fingerprint = jsonEncode({
+        'document_type': documentType,
+        'offering_id': selectedOffering?.id,
+        'purpose': purpose?.trim() ?? '',
+        'urgency_tag': _selectedUrgency,
+      });
+      if (_submissionFingerprint != fingerprint || _submissionKey == null) {
+        _submissionFingerprint = fingerprint;
+        _submissionKey = _newSubmissionKey();
+      }
       final newDoc = selectedOffering == null
           ? await widget.documentService.createDocumentRequest(
               documentType: documentType,
               urgencyTag: _selectedUrgency,
               purpose: purpose,
+              idempotencyKey: _submissionKey,
             )
           : await widget.documentService.createDocumentRequestFromOffering(
               offeringId: selectedOffering.id,
               documentType: documentType,
               urgencyTag: _selectedUrgency,
               purpose: purpose,
+              idempotencyKey: _submissionKey,
             );
 
       if (mounted) {
@@ -224,6 +241,17 @@ class _RequestDocumentDialogState extends State<RequestDocumentDialog> {
         });
       }
     }
+  }
+
+  String _newSubmissionKey() {
+    final random = Random.secure();
+    final bytes = List<int>.generate(16, (_) => random.nextInt(256));
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    final hex = bytes
+        .map((value) => value.toRadixString(16).padLeft(2, '0'))
+        .toList();
+    return '${hex.sublist(0, 4).join()}-${hex.sublist(4, 6).join()}-${hex.sublist(6, 8).join()}-${hex.sublist(8, 10).join()}-${hex.sublist(10).join()}';
   }
 
   @override

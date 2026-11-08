@@ -8,6 +8,8 @@ from django.utils import timezone
 
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
+from django.db.models import F, Q
+from django.db.models.functions import Lower, Trim
 
 MANILA_TIME_ZONE = ZoneInfo("Asia/Manila")
 
@@ -21,6 +23,11 @@ def manila_day_bounds(now=None):
         tzinfo=MANILA_TIME_ZONE,
     )
     return day_start, day_start + timedelta(days=1)
+
+
+def queue_ticket_created_at():
+    """Evaluate the clock when a ticket is instantiated, including Manila-day tests."""
+    return timezone.now()
 
 # Create your models here.
 
@@ -111,6 +118,16 @@ class DocumentRequest(models.Model):
         blank=True,
         related_name='document_requests'
     )
+    submitted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="submitted_document_requests",
+        help_text="Authenticated actor that submitted this request; used to safely deduplicate retries.",
+    )
+    submission_key = models.UUIDField(null=True, blank=True, editable=False)
+    submission_fingerprint = models.CharField(max_length=64, blank=True, editable=False)
     barangay = models.ForeignKey(
         Barangay,
         on_delete=models.CASCADE,
@@ -254,11 +271,36 @@ class DocumentRequest(models.Model):
         applicant = self.user.username if self.user else f"Walk-in: {self.walkin_name}"
         return f"{self.document_type} - {applicant} ({self.status})"
 
+    @property
+    def system_reference(self):
+        """Stable KapitBayan lookup code; distinct from a Barangay-issued O.R."""
+        if self.pk is None:
+            return ""
+        return f"KB-DOC-{self.pk:08d}"
+
     class Meta:
         indexes = [
             models.Index(fields=['user', 'status']),
             models.Index(fields=['barangay', 'status']),
             models.Index(fields=['status']),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["submitted_by", "submission_key"],
+                condition=Q(
+                    submitted_by__isnull=False,
+                    submission_key__isnull=False,
+                ),
+                name="unique_document_submission_key_per_actor",
+            ),
+            models.UniqueConstraint(
+                F("barangay"),
+                Lower(Trim("or_number")),
+                condition=Q(barangay__isnull=False)
+                & Q(or_number__isnull=False)
+                & ~Q(or_number=""),
+                name="unique_document_or_per_barangay_ci",
+            ),
         ]
 
 
@@ -377,6 +419,7 @@ class QueueTicket(models.Model):
         related_name='queue_tickets'
     )
     ticket_number = models.CharField(max_length=20)
+    ticket_day = models.DateField(null=True, blank=True, editable=False)
     service_type = models.CharField(max_length=100)
     # New Fields for Manual Entry
     walkin_name = models.CharField(max_length=255, blank=True, null=True)
@@ -393,7 +436,7 @@ class QueueTicket(models.Model):
     )
     is_priority = models.BooleanField(default=False)
     called_at = models.DateTimeField(null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(default=queue_ticket_created_at, editable=False)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
@@ -401,45 +444,39 @@ class QueueTicket(models.Model):
 
 
     def save(self, *args, **kwargs):
-        if self.ticket_number:
-            return super().save(*args, **kwargs)
+        if not self.ticket_day:
+            self.ticket_day = timezone.localtime(
+                self.created_at or timezone.now(),
+                MANILA_TIME_ZONE,
+            ).date()
 
-        if self.barangay_id is None:
+        if self._state.adding and self.barangay_id is None and not self.ticket_number:
             raise ValidationError(
                 "A barangay is required to assign a queue ticket number."
             )
 
-        with transaction.atomic():
-            Barangay.objects.select_for_update().get(pk=self.barangay_id)
+        if self._state.adding and self.barangay_id is not None:
+            with transaction.atomic():
+                Barangay.objects.select_for_update().get(pk=self.barangay_id)
 
-            manila_now = timezone.localtime(
-                timezone.now(),
-                MANILA_TIME_ZONE,
-            )
-            manila_day_start = datetime.combine(
-                manila_now.date(),
-                time.min,
-                tzinfo=MANILA_TIME_ZONE,
-            )
-            next_manila_day_start = manila_day_start + timedelta(days=1)
+                if not self.ticket_number:
+                    existing_numbers = QueueTicket.objects.filter(
+                        barangay_id=self.barangay_id,
+                        ticket_day=self.ticket_day,
+                    ).values_list("ticket_number", flat=True)
 
-            existing_numbers = QueueTicket.objects.filter(
-                barangay_id=self.barangay_id,
-                created_at__gte=manila_day_start,
-                created_at__lt=next_manila_day_start,
-            ).values_list("ticket_number", flat=True)
+                    parsed_numbers = []
+                    for number in existing_numbers:
+                        normalized_number = number.strip().upper()
+                        if normalized_number.startswith("T") and normalized_number[1:].isdigit():
+                            parsed_numbers.append(int(normalized_number[1:]))
+                    highest_number = max(parsed_numbers, default=0)
+                    self.ticket_number = f"T{highest_number + 1:03d}"
 
-            highest_number = max(
-                (
-                    int(number[1:])
-                    for number in existing_numbers
-                    if number.startswith("T") and number[1:].isdigit()
-                ),
-                default=0,
-            )
+                super().save(*args, **kwargs)
+            return
 
-            self.ticket_number = f"T{highest_number + 1:03d}"
-            super().save(*args, **kwargs)
+        super().save(*args, **kwargs)
 
     class Meta:
         indexes = [
@@ -448,6 +485,13 @@ class QueueTicket(models.Model):
             models.Index(fields=['barangay', 'called_at'], name='gridy_queue_call_idx'),
         ]
         constraints = [
+            models.UniqueConstraint(
+                F("barangay"),
+                F("ticket_day"),
+                Lower(Trim("ticket_number")),
+                condition=Q(barangay__isnull=False, ticket_day__isnull=False),
+                name="unique_queue_ticket_number_per_barangay_day_ci",
+            ),
             models.UniqueConstraint(
                 fields=['document_request'],
                 condition=models.Q(
