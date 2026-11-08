@@ -46,6 +46,23 @@ class AuthAPITests(IsolatedAuthAPITestCase):
         self.assertEqual(cookie['path'], '/api/v1/auth/')
         self.assertTrue(LoginEvent.objects.filter(user=self.user).exists())
 
+    def test_login_rejects_case_ambiguous_resident_usernames(self):
+        User.objects.create_user(
+            username="Resident_Test",
+            password=self.password,
+            email="case-collision@example.com",
+            role=User.Role.RESIDENT,
+        )
+
+        response = self.client.post(
+            reverse("auth_login"),
+            {"username": "RESIDENT_TEST", "password": self.password},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertFalse(RefreshSession.objects.filter(is_revoked=False).exists())
+
     def test_barangay_operator_can_login_and_access_only_onboarding_and_account_support(self):
         reviewer = User.objects.create_user(
             username="barangay-operator_reviewer",

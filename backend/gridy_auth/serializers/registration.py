@@ -7,6 +7,7 @@ from django.conf import settings
 from django.utils import timezone
 from django.db.models import Q
 from gridy_communications.admin_notifications import notify_barangay_admins
+from .base import ResidentEvidenceImageField
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
@@ -38,17 +39,17 @@ class RegisterSerializer(serializers.ModelSerializer):
         write_only=True,
         required=False,
     )
-    guardianship_evidence = serializers.ImageField(
+    guardianship_evidence = ResidentEvidenceImageField(
         write_only=True,
         required=False,
         allow_null=True,
     )
     philsys_id_number = serializers.CharField(write_only=True, required=False, allow_blank=True)
-    philsys_id_photo = serializers.ImageField(write_only=True, required=False, allow_null=True)
+    philsys_id_photo = ResidentEvidenceImageField(write_only=True, required=False, allow_null=True)
     secondary_id_type = serializers.CharField(write_only=True, required=False, allow_blank=True)
-    secondary_id_photo = serializers.ImageField(write_only=True, required=False, allow_null=True)
+    secondary_id_photo = ResidentEvidenceImageField(write_only=True, required=False, allow_null=True)
     utility_billing_type = serializers.CharField(write_only=True, required=False, allow_blank=True)
-    utility_billing_photo = serializers.ImageField(write_only=True, required=False, allow_null=True)
+    utility_billing_photo = ResidentEvidenceImageField(write_only=True, required=False, allow_null=True)
 
     class Meta:
         model = User
@@ -69,10 +70,16 @@ class RegisterSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(list(e.messages))
         return value
 
-    def validate_guardianship_evidence(self, value):
-        if value is not None and value.size > 5 * 1024 * 1024:
-            raise serializers.ValidationError("Guardianship proof images must be 5 MB or smaller.")
-        return value
+    def validate_username(self, value):
+        # Authentication treats resident usernames case-insensitively. Store
+        # self-service names in one canonical form and reject existing variants
+        # so a later login cannot resolve to an arbitrary account.
+        username = value.strip().lower()
+        if User.objects.filter(username__iexact=username).exists():
+            raise serializers.ValidationError(
+                "This username is already in use, regardless of capitalization."
+            )
+        return username
 
     def validate_email(self, value):
         normalized_email = value.strip().lower()
