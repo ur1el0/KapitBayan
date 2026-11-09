@@ -9,6 +9,7 @@ import '../core/network/api_client.dart';
 import '../core/network/api_exception.dart';
 import '../models/auth_response.dart';
 import '../models/barangay_model.dart';
+import '../models/resident_transfer_model.dart';
 import '../models/user_model.dart';
 import 'storage_service.dart';
 import 'push_notification_service.dart';
@@ -488,5 +489,69 @@ class AuthService {
       body: {'new_password': newPassword, 'uidb64': uidb64, 'token': token},
       requiresAuth: false,
     );
+  }
+
+  /// Fetch transfer requests for the authenticated resident `/api/v1/auth/resident-transfers/`
+  Future<List<ResidentTransferModel>> fetchTransferRequests() async {
+    final response = await apiClient.get(
+      '/auth/resident-transfers/',
+      requiresAuth: true,
+    );
+    final decoded = jsonDecode(utf8.decode(response.bodyBytes));
+    final List<dynamic> results = decoded is Map<String, dynamic>
+        ? (decoded['results'] as List<dynamic>? ?? <dynamic>[])
+        : decoded as List<dynamic>;
+    return results
+        .map((item) => ResidentTransferModel.fromJson(item as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// Submit a resident transfer request `/api/v1/auth/resident-transfers/`
+  Future<ResidentTransferModel> submitTransferRequest({
+    required int destinationBarangayId,
+    required String reason,
+    String? purok,
+    String? addressDetails,
+    required XFile proofFile,
+  }) async {
+    final Map<String, String> fields = {
+      'destination_barangay_id': destinationBarangayId.toString(),
+      'reason': reason.trim(),
+      if (purok != null && purok.trim().isNotEmpty) 'purok': purok.trim(),
+      if (addressDetails != null && addressDetails.trim().isNotEmpty)
+        'address_details': addressDetails.trim(),
+    };
+
+    final bytes = await proofFile.readAsBytes();
+    final files = [
+      http.MultipartFile.fromBytes(
+        'proof_of_residency',
+        bytes,
+        filename: proofFile.name.isNotEmpty
+            ? proofFile.name
+            : 'proof_of_residency.jpg',
+      ),
+    ];
+
+    final response = await apiClient.postMultipart(
+      '/auth/resident-transfers/',
+      fields: fields,
+      files: files,
+      requiresAuth: true,
+    );
+
+    final Map<String, dynamic> responseData = jsonDecode(
+      utf8.decode(response.bodyBytes),
+    );
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return ResidentTransferModel.fromJson(responseData);
+    } else {
+      throw ApiException(
+        _extractErrorMessage(responseData, 'Failed to submit transfer request'),
+        statusCode: response.statusCode,
+        details: responseData,
+      );
+    }
   }
 }

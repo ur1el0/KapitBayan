@@ -15,7 +15,7 @@ class ProtectedMediaView(APIView):
     # Directories containing sensitive PII under RA 10173
     SENSITIVE_DIRECTORIES = (
         'resident_ids/', 'resident_billings/', 'blotter/', 'payment_proofs/',
-        'barangay_onboarding/', 'resident_guardianship/',
+        'barangay_onboarding/', 'resident_guardianship/', 'resident_transfers/',
     )
 
     def get(self, request, path):

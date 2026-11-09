@@ -347,6 +347,24 @@ class ResidentTransferRequest(models.Model):
         related_name="incoming_resident_transfers",
     )
     reason = models.CharField(max_length=500)
+    purok = models.CharField(
+        max_length=100,
+        blank=True,
+        default="",
+        help_text="Updated purok or zone in the destination Barangay.",
+    )
+    address_details = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
+        help_text="Updated street address or residence details in the destination Barangay.",
+    )
+    proof_of_residency = models.ImageField(
+        upload_to="resident_transfers/",
+        blank=True,
+        null=True,
+        help_text="Uploaded proof of residency (e.g. utility bill, lease, or certificate).",
+    )
     status = models.CharField(
         max_length=12,
         choices=Status.choices,

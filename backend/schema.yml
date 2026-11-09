@@ -1513,6 +1513,28 @@ paths:
               schema:
                 $ref: '#/components/schemas/ResidentTransferReview'
           description: ''
+  /api/v1/auth/resident-transfers/{id}/proof/:
+    get:
+      operationId: api_v1_auth_resident_transfers_proof_retrieve
+      description: Serve uploaded residency proof privately to the resident owner
+        or destination admin.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResidentTransferRequest'
+          description: ''
   /api/v1/auth/resident-transfers/{id}/reject/:
     post:
       operationId: api_v1_auth_resident_transfers_reject_create
@@ -2396,6 +2418,81 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/v1/document-requests/{id}/certificate-verification/:
+    get:
+      operationId: api_v1_document_requests_certificate_verification_retrieve
+      description: Manage an opaque public verification token for a released paper
+        certificate.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this document request.
+        required: true
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentRequest'
+          description: ''
+    post:
+      operationId: api_v1_document_requests_certificate_verification_create
+      description: Manage an opaque public verification token for a released paper
+        certificate.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this document request.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DocumentRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DocumentRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentRequest'
+          description: ''
+    delete:
+      operationId: api_v1_document_requests_certificate_verification_destroy
+      description: Manage an opaque public verification token for a released paper
+        certificate.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this document request.
+        required: true
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
   /api/v1/document-requests/{id}/generate-pdf/:
     get:
       operationId: api_v1_document_requests_generate_pdf_retrieve
@@ -2562,6 +2659,41 @@ paths:
           multipart/form-data:
             schema:
               $ref: '#/components/schemas/PatchedDocumentRequest'
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentRequest'
+          description: ''
+  /api/v1/document-requests/{id}/record-cash-payment/:
+    post:
+      operationId: api_v1_document_requests_record_cash_payment_create
+      description: Record cash received for a walk-in request that has no resident
+        account.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this document request.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DocumentRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DocumentRequest'
+        required: true
       security:
       - cookieAuth: []
       responses:
@@ -3241,6 +3373,26 @@ paths:
               schema:
                 $ref: '#/components/schemas/PublicQueueStatus'
           description: ''
+  /api/v1/public/certificate-verifications/{token}/:
+    get:
+      operationId: api_v1_public_certificate_verifications_retrieve
+      description: Publicly confirm a Barangay certificate record without exposing
+        resident data.
+      parameters:
+      - in: path
+        name: token
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
   /api/v1/reports/:
     get:
       operationId: api_v1_reports_list
@@ -3739,14 +3891,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/QueueTicket'
+              $ref: '#/components/schemas/QueueTicketCompletion'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/QueueTicket'
+              $ref: '#/components/schemas/QueueTicketCompletion'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/QueueTicket'
-        required: true
+              $ref: '#/components/schemas/QueueTicketCompletion'
       security:
       - cookieAuth: []
       responses:
@@ -4293,6 +4444,9 @@ components:
         request_id:
           type: integer
           readOnly: true
+        system_reference:
+          type: string
+          readOnly: true
         requester_name:
           type: string
           readOnly: true
@@ -4457,6 +4611,7 @@ components:
       - requester_name
       - requirements_snapshot
       - status
+      - system_reference
       - updated_at
     DocumentRequestPaymentMethodEnum:
       enum:
@@ -4606,9 +4761,8 @@ components:
           type: string
         order:
           type: integer
-          maximum: 9223372036854775807
-          minimum: -9223372036854775808
-          format: int64
+          maximum: 2147483647
+          minimum: -2147483648
           description: Order in which the FAQ appears
         audience:
           $ref: '#/components/schemas/AudienceEnum'
@@ -5439,6 +5593,9 @@ components:
         request_id:
           type: integer
           readOnly: true
+        system_reference:
+          type: string
+          readOnly: true
         requester_name:
           type: string
           readOnly: true
@@ -5644,9 +5801,8 @@ components:
           type: string
         order:
           type: integer
-          maximum: 9223372036854775807
-          minimum: -9223372036854775808
-          format: int64
+          maximum: 2147483647
+          minimum: -2147483648
           description: Order in which the FAQ appears
         audience:
           $ref: '#/components/schemas/AudienceEnum'
@@ -5783,6 +5939,9 @@ components:
           type: string
           nullable: true
           maxLength: 255
+        has_resident_account:
+          type: string
+          readOnly: true
         service_type:
           type: string
           maxLength: 100
@@ -5790,6 +5949,10 @@ components:
           type: integer
           nullable: true
         document_request_type:
+          type: string
+          readOnly: true
+          nullable: true
+        document_request_status:
           type: string
           readOnly: true
           nullable: true
@@ -5804,6 +5967,7 @@ components:
         notes:
           type: string
           nullable: true
+          maxLength: 500
         status:
           allOf:
           - $ref: '#/components/schemas/QueueTicketStatusEnum'
@@ -6289,6 +6453,9 @@ components:
           type: string
           nullable: true
           maxLength: 255
+        has_resident_account:
+          type: string
+          readOnly: true
         service_type:
           type: string
           maxLength: 100
@@ -6296,6 +6463,10 @@ components:
           type: integer
           nullable: true
         document_request_type:
+          type: string
+          readOnly: true
+          nullable: true
+        document_request_status:
           type: string
           readOnly: true
           nullable: true
@@ -6310,6 +6481,7 @@ components:
         notes:
           type: string
           nullable: true
+          maxLength: 500
         status:
           allOf:
           - $ref: '#/components/schemas/QueueTicketStatusEnum'
@@ -6324,13 +6496,21 @@ components:
           readOnly: true
       required:
       - created_at
+      - document_request_status
       - document_request_type
+      - has_resident_account
       - resident_name
       - service_type
       - status
       - ticket_id
       - ticket_number
       - updated_at
+    QueueTicketCompletion:
+      type: object
+      properties:
+        release_document:
+          type: boolean
+          default: false
     QueueTicketPriority:
       type: object
       properties:
@@ -6897,8 +7077,20 @@ components:
         reason:
           type: string
           maxLength: 500
+        purok:
+          type: string
+          default: ''
+          maxLength: 100
+        address_details:
+          type: string
+          default: ''
+          maxLength: 255
+        proof_of_residency:
+          type: string
+          format: uri
       required:
       - destination_barangay_id
+      - proof_of_residency
       - reason
     ResidentTransferRequest:
       type: object
@@ -6906,11 +7098,17 @@ components:
         id:
           type: integer
           readOnly: true
+        resident_id:
+          type: integer
+          readOnly: true
         resident_name:
           type: string
           readOnly: true
         resident_username:
           type: string
+          readOnly: true
+        source_barangay_id:
+          type: integer
           readOnly: true
         source_barangay_name:
           type: string
@@ -6920,6 +7118,18 @@ components:
           readOnly: true
         destination_barangay_name:
           type: string
+          readOnly: true
+        purok:
+          type: string
+          readOnly: true
+          description: Updated purok or zone in the destination Barangay.
+        address_details:
+          type: string
+          readOnly: true
+          description: Updated street address or residence details in the destination
+            Barangay.
+        has_proof_of_residency:
+          type: boolean
           readOnly: true
         reason:
           type: string
@@ -6944,16 +7154,21 @@ components:
           readOnly: true
           nullable: true
       required:
+      - address_details
       - created_at
       - destination_barangay_id
       - destination_barangay_name
+      - has_proof_of_residency
       - id
+      - purok
       - reason
       - residency_confirmed
+      - resident_id
       - resident_name
       - resident_username
       - review_note
       - reviewed_at
+      - source_barangay_id
       - source_barangay_name
       - status
     ResidentTransferReview:

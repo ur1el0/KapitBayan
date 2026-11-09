@@ -1,14 +1,21 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Check, RefreshCw, ShieldCheck, X } from 'lucide-react';
+import { Check, Eye, RefreshCw, ShieldCheck, X } from 'lucide-react';
 import { axiosPrivate } from '../../api/axios';
+import { usePrivateMediaUrl } from '../../hooks/usePrivateMediaUrl';
 import { InlineErrorState } from '../../components/ui/InlineErrorState';
 
 interface TransferRequest {
     id: number;
+    resident_id: number;
     resident_name: string;
     resident_username: string;
+    source_barangay_id: number;
     source_barangay_name: string;
+    destination_barangay_id: number;
     destination_barangay_name: string;
+    purok: string;
+    address_details: string;
+    has_proof_of_residency: boolean;
     reason: string;
     status: 'PENDING' | 'APPROVED' | 'REJECTED';
     review_note: string;
@@ -20,6 +27,43 @@ const responseRows = (data: unknown): TransferRequest[] => {
     const rows = Array.isArray(data) ? data : (data as { results?: unknown[] } | null)?.results;
     return Array.isArray(rows) ? rows as TransferRequest[] : [];
 };
+
+function TransferProofViewer({ requestId }: { requestId: number }) {
+    const [open, setOpen] = useState(false);
+    const { url, isLoading, hasError } = usePrivateMediaUrl(
+        open ? `/auth/resident-transfers/${requestId}/proof/` : null
+    );
+
+    return (
+        <div className="mt-2">
+            <button
+                type="button"
+                onClick={() => setOpen((current) => !current)}
+                className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            >
+                <Eye className="h-3.5 w-3.5 text-slate-500" aria-hidden="true" />
+                <span>{open ? 'Hide residency proof' : 'View uploaded residency proof'}</span>
+            </button>
+            {open && (
+                <div className="mt-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                    {isLoading && <p className="text-xs text-slate-500">Loading residency proof…</p>}
+                    {hasError && (
+                        <p role="alert" className="text-xs text-rose-700">
+                            Could not load residency proof image.
+                        </p>
+                    )}
+                    {url && (
+                        <img
+                            src={url}
+                            alt="Uploaded proof of residency"
+                            className="max-h-72 rounded-lg border border-slate-200 object-contain shadow-2xs"
+                        />
+                    )}
+                </div>
+            )}
+        </div>
+    );
+}
 
 export function ResidentTransfers() {
     const [requests, setRequests] = useState<TransferRequest[]>([]);
@@ -100,12 +144,25 @@ export function ResidentTransfers() {
                             <h4 className="text-base font-bold text-slate-900">{request.resident_name}</h4>
                             <p className="text-sm text-slate-600">Account: {request.resident_username}</p>
                             <p className="mt-1 text-sm text-slate-700">{request.source_barangay_name} → {request.destination_barangay_name}</p>
+                            {(request.purok || request.address_details) && (
+                                <p className="mt-1 text-xs text-slate-600">
+                                    <strong>New residence:</strong> {[request.purok, request.address_details].filter(Boolean).join(', ')}
+                                </p>
+                            )}
                         </div>
                         <span className={`rounded-full px-3 py-1 text-xs font-bold ${request.status === 'PENDING' ? 'bg-amber-100 text-amber-900' : request.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-900' : 'bg-rose-100 text-rose-900'}`}>
                             {request.status.replace('_', ' ')}
                         </span>
                     </div>
-                    <div className="rounded-lg bg-slate-50 p-3 text-sm text-slate-700"><strong>Resident’s reason:</strong> {request.reason}</div>
+
+                    <div className="rounded-lg bg-slate-50 p-3 text-sm text-slate-700">
+                        <strong>Resident’s reason:</strong> {request.reason}
+                    </div>
+
+                    {request.has_proof_of_residency && (
+                        <TransferProofViewer requestId={request.id} />
+                    )}
+
                     {request.status === 'PENDING' ? (
                         <div className="grid gap-4 border-t border-slate-100 pt-4 lg:grid-cols-2">
                             <div className="space-y-3">
