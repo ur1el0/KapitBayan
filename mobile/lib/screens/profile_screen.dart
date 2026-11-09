@@ -15,6 +15,7 @@ import '../widgets/kapitbayan_logo.dart';
 import '../widgets/resident_evidence_edit_section.dart';
 import '../widgets/resident_evidence_view_section.dart';
 import '../widgets/resident_evidence_viewer_dialog.dart';
+import '../widgets/resident_transfer_section.dart';
 import 'login_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -593,6 +594,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
                   _buildNotificationPreferences(),
+                  ResidentTransferSection(
+                    user: _currentUser,
+                    authService: widget.authService,
+                  ),
                 ],
               ],
               const SizedBox(height: 36),
