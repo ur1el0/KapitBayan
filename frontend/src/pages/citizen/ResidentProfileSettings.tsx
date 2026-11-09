@@ -32,6 +32,9 @@ interface TransferRequest {
     id: number;
     source_barangay_name: string;
     destination_barangay_name: string;
+    purok?: string;
+    address_details?: string;
+    has_proof_of_residency?: boolean;
     reason: string;
     status: string;
     review_note: string;
@@ -86,6 +89,10 @@ export function ResidentProfileSettings() {
     const [transferRequests, setTransferRequests] = useState<TransferRequest[]>([]);
     const [transferDestinationId, setTransferDestinationId] = useState('');
     const [transferReason, setTransferReason] = useState('');
+    const [transferPurok, setTransferPurok] = useState('');
+    const [transferAddressDetails, setTransferAddressDetails] = useState('');
+    const [transferProofFile, setTransferProofFile] = useState<File | null>(null);
+    const [transferProofError, setTransferProofError] = useState<string | null>(null);
     const [transferLoading, setTransferLoading] = useState(true);
     const [transferLoadError, setTransferLoadError] = useState(false);
     const [transferSubmitting, setTransferSubmitting] = useState(false);
@@ -141,25 +148,65 @@ export function ResidentProfileSettings() {
         void loadTransfers();
     }, [loadTransfers]);
 
+    const handleProofFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0] || null;
+        if (!file) {
+            setTransferProofFile(null);
+            return;
+        }
+        if (file.size > 5 * 1024 * 1024) {
+            setTransferProofError(t('Residency proof image must be 5 MiB or smaller.'));
+            setTransferProofFile(null);
+            e.target.value = '';
+            return;
+        }
+        setTransferProofError(null);
+        setTransferProofFile(file);
+    };
+
     const handleTransferSubmit = async (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         if (!transferDestinationId || !transferReason.trim()) {
             setTransferFeedback({ message: t('Choose a Barangay and explain why you are moving.'), kind: 'error' });
             return;
         }
+        if (!transferProofFile) {
+            setTransferProofError(t('Upload proof of residency to request a transfer.'));
+            return;
+        }
+
         setTransferSubmitting(true);
         setTransferFeedback(null);
+        setTransferProofError(null);
         try {
-            await axiosPrivate.post('/auth/resident-transfers/', {
-                destination_barangay_id: Number(transferDestinationId),
-                reason: transferReason.trim(),
+            const formData = new FormData();
+            formData.append('destination_barangay_id', transferDestinationId);
+            formData.append('reason', transferReason.trim());
+            if (transferPurok.trim()) {
+                formData.append('purok', transferPurok.trim());
+            }
+            if (transferAddressDetails.trim()) {
+                formData.append('address_details', transferAddressDetails.trim());
+            }
+            formData.append('proof_of_residency', transferProofFile);
+
+            await axiosPrivate.post('/auth/resident-transfers/', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
             });
             setTransferReason('');
             setTransferDestinationId('');
+            setTransferPurok('');
+            setTransferAddressDetails('');
+            setTransferProofFile(null);
             setTransferFeedback({ message: t('Transfer request sent to the receiving Barangay for verification.'), kind: 'success' });
             await loadTransfers();
-        } catch {
-            setTransferFeedback({ message: t('We could not submit your transfer request. Check the details and try again.'), kind: 'error' });
+        } catch (error: unknown) {
+            const apiError = error as { response?: { data?: { detail?: string; proof_of_residency?: string[]; destination_barangay_id?: string[] } } };
+            const detail = apiError?.response?.data?.detail
+                || apiError?.response?.data?.proof_of_residency?.[0]
+                || apiError?.response?.data?.destination_barangay_id?.[0]
+                || t('We could not submit your transfer request. Check the details and try again.');
+            setTransferFeedback({ message: String(detail), kind: 'error' });
         } finally {
             setTransferSubmitting(false);
         }
@@ -372,6 +419,53 @@ export function ResidentProfileSettings() {
                                     ))}
                                 </select>
                             </label>
+
+                            <div className="grid gap-4 sm:grid-cols-2">
+                                <label htmlFor="transfer-purok" className="block text-sm font-semibold text-slate-800">
+                                    {t('Purok / Zone')} <span className="text-xs font-normal text-slate-500">({t('if applicable')})</span>
+                                    <input
+                                        id="transfer-purok"
+                                        type="text"
+                                        maxLength={100}
+                                        value={transferPurok}
+                                        onChange={(event) => setTransferPurok(event.target.value)}
+                                        placeholder={t('e.g. Purok 3')}
+                                        className="mt-2 min-h-12 w-full rounded-xl border border-slate-300 bg-white px-3 text-base font-normal text-slate-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                    />
+                                </label>
+
+                                <label htmlFor="transfer-address" className="block text-sm font-semibold text-slate-800">
+                                    {t('New Street Address / Details')}
+                                    <input
+                                        id="transfer-address"
+                                        type="text"
+                                        maxLength={255}
+                                        value={transferAddressDetails}
+                                        onChange={(event) => setTransferAddressDetails(event.target.value)}
+                                        placeholder={t('e.g. 123 Rizal Street')}
+                                        className="mt-2 min-h-12 w-full rounded-xl border border-slate-300 bg-white px-3 text-base font-normal text-slate-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                    />
+                                </label>
+                            </div>
+
+                            <div>
+                                <label htmlFor="transfer-proof" className="block text-sm font-semibold text-slate-800">
+                                    {t('Proof of Residency')} <span className="text-xs font-normal text-slate-500">({t('utility bill, lease, or certificate')})</span>
+                                    <input
+                                        id="transfer-proof"
+                                        type="file"
+                                        accept="image/*"
+                                        required
+                                        onChange={handleProofFileChange}
+                                        className="mt-2 block w-full text-sm text-slate-600 file:mr-4 file:min-h-11 file:rounded-xl file:border-0 file:bg-primary/10 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-primary hover:file:bg-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                                    />
+                                </label>
+                                {transferProofError && (
+                                    <p role="alert" className="mt-1 text-xs font-semibold text-rose-700">{transferProofError}</p>
+                                )}
+                                <p className="mt-1 text-xs text-slate-500">{t('Image file up to 5 MiB.')}</p>
+                            </div>
+
                             <label htmlFor="transfer-reason" className="block text-sm font-semibold text-slate-800">
                                 {t('Reason for moving')}
                                 <textarea id="transfer-reason" required maxLength={500} value={transferReason} onChange={(event) => setTransferReason(event.target.value)} rows={3} className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-3 text-base font-normal text-slate-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
@@ -397,8 +491,20 @@ export function ResidentProfileSettings() {
                                             {t(request.status)}
                                         </span>
                                     </div>
+                                    {(request.purok || request.address_details) && (
+                                        <p className="mt-1 text-xs text-slate-600">
+                                            <strong>{t('New residence')}:</strong> {[request.purok, request.address_details].filter(Boolean).join(', ')}
+                                        </p>
+                                    )}
                                     <p className="mt-2 text-sm text-slate-600">{request.reason}</p>
-                                    {request.review_note && <p className="mt-2 text-sm text-slate-600"><strong>{t('Admin note')}:</strong> {request.review_note}</p>}
+                                    {request.status === 'REJECTED' && request.review_note && (
+                                        <div role="alert" className="mt-2 rounded-lg border border-rose-200 bg-rose-50 p-2.5 text-xs text-rose-900">
+                                            <strong>{t('Rejection reason')}:</strong> {request.review_note}
+                                        </div>
+                                    )}
+                                    {request.status === 'APPROVED' && request.review_note && (
+                                        <p className="mt-2 text-xs text-slate-600"><strong>{t('Admin note')}:</strong> {request.review_note}</p>
+                                    )}
                                     <p className="mt-2 text-xs text-slate-500">{new Date(request.created_at).toLocaleString()}</p>
                                 </article>
                             ))}
