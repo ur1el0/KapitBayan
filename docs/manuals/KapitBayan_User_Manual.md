@@ -59,7 +59,7 @@ Sign in using the official Admin account. Review dashboard counts and charts as 
 1. Open **Documents** and manage the Barangay’s document service catalog.
 2. Add or edit each document’s name, applicable common requirements (checkboxes), any additional service-specific requirements, published fee, and instructions. Select only requirements confirmed for that document; the common options are not universal rules. Save the offering to publish the current details to residents. New requests use a snapshot of those details; editing the catalog does not silently rewrite earlier applications.
 3. Open a request to review the resident’s purpose and submitted evidence. Record the processing status and staff notes. Confirm final fee, waiver/exemption basis, payment, O.R. number, pickup, and release according to Barangay procedure.
-4. Electronic payment proofs are manually reviewed. Payment verification, fee assessment, waivers/exemptions, and O.R. recording are restricted to Barangay Admins in the current revision branch; verify that the branch has been merged and deployed before relying on this change.
+4. Electronic payment proofs are manually reviewed. Payment verification, fee assessment, waivers/exemptions, and O.R. recording are restricted to Barangay Admins in the merged revision. Confirm the production deployment before relying on the updated role behavior.
 5. Walk-in requests can be entered by authorized staff. Explain the required items and next step to the resident before they leave.
 6. Once the QR feature is deployed, after a paper certificate has actually been issued and the request is marked **Released**, an Admin can confirm issuance and print a separate verification QR label to attach to the paper. The QR checks the Barangay's issuance record; it does not replace or generate the paper certificate.
 
@@ -69,7 +69,7 @@ Sign in using the official Admin account. Review dashboard counts and charts as 
 - Review issue reports and aid requests, assign or update status, and communicate the next step. Use the designated emergency process for urgent events.
 - In **Communications**, publish announcements, activity schedules, and emergency hotlines. Check date, time, location, and contact details before publishing. Share the generated public link/QR or caption only after reviewing the content.
 - Maintain FAQs based on questions residents actually ask. Answers should reflect current Barangay policy.
-- Use the account sign-in history for the account-monitoring purpose shown in Settings. It records a limited set of session metadata; it is not GPS tracking and an IP address alone does not prove a person’s physical location.
+- Use the account sign-in history for the account-monitoring purpose shown in Settings. It records the timestamp, browser/app user-agent, and optional IP address for successful sign-ins and retains those events for 90 days. It is not GPS tracking, and an IP address alone does not prove a person’s physical location.
 
 ## 4. Field Official / Tanod Android app
 
@@ -104,5 +104,5 @@ Use only your assigned account. Do not share passwords, reset links, payment ima
 - The mobile client provides encrypted, read-only offline snapshots for announcements, hotlines, and up to 100 records per resident request list. It does not cache evidence images or queue offline writes.
 - Queue and notification refresh use periodic HTTP requests, not WebSockets/SSE.
 - Browser compatibility and real-device notification delivery must be verified and documented before claiming tested support.
-- The certificate-verification QR is implemented in the current working branch but needs its migration, deployment, and real print/scan check before it is available in production.
+- Certificate-verification QR creation and lookup code is included in merged PR #317, but production create/lookup behavior and a real print/scan check have not yet been verified. The pending `0021` migration is for request/ticket/receipt uniqueness and is not the QR model migration.
 - A public self-service kiosk and online payment processing are not described as available features in this manual.
