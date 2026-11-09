@@ -197,6 +197,7 @@ class ResidentTransferAPITests(IsolatedAuthAPITestCase):
             storage,
             "open_private_media",
             side_effect=lambda name, mode="rb": BytesIO(raw_bytes),
+            create=True,
         ), patch.object(
             storage,
             "open",
