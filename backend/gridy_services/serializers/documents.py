@@ -360,7 +360,18 @@ class DocumentRequestReviewSerializer(FeePolicyValidationMixin, serializers.Mode
                 "fee_waiver_reason" in attrs
                 and attrs["fee_waiver_reason"] != self.instance.fee_waiver_reason
             )
-            if fee_amount_changed or waiver_reason_changed:
+            can_cancel_pending_payment_for_waiver = (
+                self.instance.payment_status
+                == DocumentRequest.PaymentStatus.PENDING_VERIFICATION
+                and not (self.instance.or_number or "").strip()
+                and fee_amount == 0
+                and bool(
+                    attrs.get(
+                        "fee_waiver_reason", self.instance.fee_waiver_reason
+                    ).strip()
+                )
+            )
+            if (fee_amount_changed or waiver_reason_changed) and not can_cancel_pending_payment_for_waiver:
                 raise serializers.ValidationError({
                     "fee_amount": (
                         "The assessed fee cannot change while payment evidence is under review, "
