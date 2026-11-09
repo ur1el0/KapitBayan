@@ -13,7 +13,7 @@ class ResidentAwareCloudinaryStorage(MediaCloudinaryStorage):
 
     PRIVATE_DIRECTORIES = {
         "resident_ids", "resident_billings", "resident_guardianship",
-        "payment_proofs", "barangay_onboarding",
+        "payment_proofs", "barangay_onboarding", "resident_transfers",
     }
 
     @classmethod

@@ -1,10 +1,13 @@
+import logging
 from datetime import timedelta
 
 from django.conf import settings
 from django.db import IntegrityError, transaction
 from django.db.models import Q
+from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from PIL import Image
 from rest_framework import mixins, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied, ValidationError
@@ -20,6 +23,13 @@ from gridy_auth.serializers.post_defense import (
     ResidentTransferRequestSerializer,
     ResidentTransferReviewSerializer,
 )
+from gridy_communications.admin_notifications import notify_barangay_admins
+from gridy_communications.services import (
+    send_email_notification_to_user,
+    send_notification_to_user,
+)
+
+logger = logging.getLogger(__name__)
 
 
 def _resident_has_open_barangay_work(resident, barangay_id):
@@ -149,6 +159,10 @@ class ResidentTransferViewSet(
                     ),
                     request=request,
                 )
+                notify_barangay_admins(
+                    barangay_id=transfer.destination_barangay_id,
+                    notification_type="registration",
+                )
         except User.DoesNotExist:
             raise ValidationError({"detail": "Your account could not be loaded."})
         except IntegrityError:
@@ -172,6 +186,56 @@ class ResidentTransferViewSet(
             destination_barangay_id=request.user.barangay_id,
             status=ResidentTransferRequest.Status.PENDING,
         )
+
+    @action(detail=True, methods=["get"])
+    def proof(self, request, pk=None):
+        """Serve uploaded residency proof privately to the resident owner or destination admin."""
+        transfer = get_object_or_404(ResidentTransferRequest, pk=pk)
+        requester = request.user
+        is_owner = requester.role == User.Role.RESIDENT and requester.pk == transfer.resident_id
+        is_destination_admin = (
+            requester.role == User.Role.ADMIN
+            and requester.barangay_id is not None
+            and requester.barangay_id == transfer.destination_barangay_id
+        )
+        if not (is_owner or is_destination_admin):
+            raise Http404("Media not found.")
+
+        media_file = transfer.proof_of_residency
+        if not media_file or not media_file.name:
+            raise Http404("Media not found.")
+
+        try:
+            private_open = getattr(media_file.storage, "open_private_media", None)
+            if private_open:
+                opened_file = private_open(media_file.name, "rb")
+            else:
+                opened_file = media_file.open("rb")
+
+            position = opened_file.tell()
+            try:
+                with Image.open(opened_file) as image:
+                    image_format = image.format
+                    image.verify()
+                content_type = Image.MIME.get(image_format)
+                if not content_type or not content_type.startswith("image/"):
+                    raise OSError("Unsupported resident image format.")
+            finally:
+                opened_file.seek(position)
+        except (FileNotFoundError, OSError):
+            raise Http404("Media not found.")
+        except Exception as error:
+            logger.error("Resident transfer proof storage error (%s).", type(error).__name__)
+            return Response(
+                {"detail": "Resident transfer media storage is temporarily unavailable."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        response = FileResponse(opened_file, content_type=content_type)
+        response["Content-Disposition"] = "inline"
+        response["Cache-Control"] = "private, no-store, max-age=0"
+        response["X-Content-Type-Options"] = "nosniff"
+        return response
 
     @action(detail=True, methods=["post"])
     def approve(self, request, pk=None):
@@ -226,6 +290,21 @@ class ResidentTransferViewSet(
 
             resident_user.barangay_id = transfer.destination_barangay_id
             resident_user.save(update_fields=["barangay"])
+
+            # Update resident profile address details to match destination
+            profile_update_fields = []
+            if transfer.purok:
+                profile.purok = transfer.purok
+                profile_update_fields.append("purok")
+            if transfer.address_details:
+                profile.address_details = transfer.address_details
+                profile_update_fields.append("address_details")
+            if transfer.proof_of_residency:
+                profile.utility_billing_photo = transfer.proof_of_residency
+                profile_update_fields.append("utility_billing_photo")
+            if profile_update_fields:
+                profile.save(update_fields=profile_update_fields)
+
             transfer.status = ResidentTransferRequest.Status.APPROVED
             transfer.reviewed_by = request.user
             transfer.reviewed_at = timezone.now()
@@ -246,6 +325,28 @@ class ResidentTransferViewSet(
                 ),
                 request=request,
             )
+
+            # Notify the resident of the approval outcome
+            title = "Barangay transfer approved"
+            body = (
+                f"Your request to transfer your KapitBayan account to Barangay {transfer.destination_barangay.name} "
+                "has been approved. Future service requests and queue tickets will now be with your new Barangay."
+            )
+            send_email_notification_to_user(resident_user, title, body)
+            send_notification_to_user(
+                resident_user, title, body, data={"type": "transfer", "status": "APPROVED"}
+            )
+            try:
+                from gridy_communications.models import ResidentNotification
+                ResidentNotification.objects.create(
+                    user=resident_user,
+                    notification_type=ResidentNotification.Type.DOCUMENT,
+                    title=title,
+                    message=body,
+                    data={"type": "transfer", "transfer_id": str(transfer.pk), "status": "APPROVED"},
+                )
+            except Exception as exc:
+                logger.warning("Could not persist in-app resident transfer notification: %s", exc)
 
         return Response(ResidentTransferRequestSerializer(transfer).data)
 
@@ -274,5 +375,27 @@ class ResidentTransferViewSet(
                 ),
                 request=request,
             )
+
+            # Notify the resident of the rejection outcome
+            title = "Barangay transfer request rejected"
+            body = (
+                f"Your request to transfer to Barangay {transfer.destination_barangay.name} was rejected. "
+                f"Reason: {note}"
+            )
+            send_email_notification_to_user(transfer.resident, title, body)
+            send_notification_to_user(
+                transfer.resident, title, body, data={"type": "transfer", "status": "REJECTED"}
+            )
+            try:
+                from gridy_communications.models import ResidentNotification
+                ResidentNotification.objects.create(
+                    user=transfer.resident,
+                    notification_type=ResidentNotification.Type.DOCUMENT,
+                    title=title,
+                    message=body,
+                    data={"type": "transfer", "transfer_id": str(transfer.pk), "status": "REJECTED"},
+                )
+            except Exception as exc:
+                logger.warning("Could not persist in-app resident transfer rejection notification: %s", exc)
 
         return Response(ResidentTransferRequestSerializer(transfer).data)
