@@ -26,4 +26,4 @@ Tell residents to keep the signed paper certificate and use the QR to check that
 
 ## Delivery status
 
-The workflow is implemented on `fix/revision-matrix-panel-comments`. It still needs a database migration in the target environment, a production deployment, a real scan/print check, and a scoped review of the public response before it should be described as live.
+The workflow code is present on `main` after PR #317. The production migration plan showed `0021_documentrequest_submission_fingerprint_and_more` as the only pending migration; the certificate-verification model was introduced earlier, so that pending migration is not the QR model migration. The current deployment's QR create/lookup flow, print layout, and real phone scan have not been verified in this pass. Do not claim end-to-end certificate verification until an Admin creates a QR for a released request, the label is printed, and the public page is scanned and checked.

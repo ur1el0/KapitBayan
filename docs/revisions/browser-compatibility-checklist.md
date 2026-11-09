@@ -11,6 +11,10 @@ This checklist tracks revision-matrix item 26. The matrix accepts a responsive r
 | Firefox desktop | Not recorded | Not recorded | Not tested | Not tested | Not tested | Pending manual verification |
 | Chrome Android | Not recorded | Not recorded | Not tested | Not tested | Not tested | Pending manual verification |
 
+## Limited automated smoke test — November 9, 2026
+
+Playwright Chromium `153.0.8010.12` and Firefox `155.0` each loaded the deployed login and resident-registration routes at `1365×900` and `390×844`. Both routes returned HTTP 200, the forms rendered, and `document.documentElement.scrollWidth` matched the viewport width. This used Firefox plus Playwright's Chromium engine; it did not exercise Google Chrome, Microsoft Edge, a physical Android Chrome browser, authentication submissions, or the protected document and queue screens. It is useful smoke evidence but does not close any of the four required browser rows above.
+
 ## Minimum checks
 
 1. Record the tested production or preview URL, date, browser version, operating system, and viewport/device.
