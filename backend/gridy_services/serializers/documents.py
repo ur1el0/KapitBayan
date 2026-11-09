@@ -301,6 +301,7 @@ class DocumentRequestReviewSerializer(FeePolicyValidationMixin, serializers.Mode
             "fee_waiver_reason",
             "fee_assessment_status",
         ]
+        read_only_fields = ["or_number"]
 
     def validate_status(self, value):
         current_status = (
@@ -344,18 +345,37 @@ class DocumentRequestReviewSerializer(FeePolicyValidationMixin, serializers.Mode
             "fee_amount",
             self.instance.fee_amount if self.instance is not None else 0,
         )
-        or_number = attrs.get(
-            "or_number",
-            self.instance.or_number if self.instance is not None else None,
-        )
+        if self.instance is not None and (
+            self.instance.payment_status in {
+                DocumentRequest.PaymentStatus.PENDING_VERIFICATION,
+                DocumentRequest.PaymentStatus.VERIFIED,
+            }
+            or bool((self.instance.or_number or "").strip())
+        ):
+            fee_amount_changed = (
+                "fee_amount" in attrs
+                and attrs["fee_amount"] != self.instance.fee_amount
+            )
+            waiver_reason_changed = (
+                "fee_waiver_reason" in attrs
+                and attrs["fee_waiver_reason"] != self.instance.fee_waiver_reason
+            )
+            if fee_amount_changed or waiver_reason_changed:
+                raise serializers.ValidationError({
+                    "fee_amount": (
+                        "The assessed fee cannot change while payment evidence is under review, "
+                        "after payment is verified, or after an O.R. number is assigned."
+                    )
+                })
         if (
             document_status == DocumentRequest.Status.RELEASED
             and fee_amount > 0
-            and not (or_number or "").strip()
+            and self.instance is not None
+            and not (self.instance.or_number or "").strip()
         ):
             raise serializers.ValidationError({
                 "or_number": (
-                    "An Official Receipt (O.R.) number is required before releasing a document with a fee."
+                    "Confirm payment to assign an O.R. from the Barangay's configured receipt series before release."
                 )
             })
         return attrs

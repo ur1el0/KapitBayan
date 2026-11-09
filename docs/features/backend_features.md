@@ -12,7 +12,7 @@ API permissions and querysets enforce role and Barangay scope. Residents access 
 
 ## Documents and treasury
 
-The document workflow includes explicit fee assessment, waiver provenance, resident payment evidence, manual staff verification, O.R. recording, and release guards. `PROCESSING` is not a payment state; electronic transfers are not settled automatically. See [walk-in and revenue workflows](walkin_and_revenue_clearances.md) and the applicable ADRs.
+The document workflow includes explicit fee assessment, waiver provenance, resident payment evidence, manual staff payment verification, Barangay-configured O.R. series allocation, and release guards. After an Admin configures the approved prefix and next unused serial, the server assigns the next O.R. number transactionally when authorized staff confirms received cash or verifies an electronic transfer. The Barangay Treasurer still issues the matching paper receipt and controls the physical receipt book. `PROCESSING` is not a payment state; electronic transfers are not settled automatically. See [walk-in and revenue workflows](walkin_and_revenue_clearances.md), [ADR 028](../../architecture/decisions/028-transactional-official-receipt-series.md), and the other applicable ADRs.
 
 ## Queue and analytics
 

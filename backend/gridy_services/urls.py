@@ -8,6 +8,7 @@ from .views import (
     PublicQueueStatusView,
     PaymentRecipientViewSet,
     DocumentServiceOfferingViewSet,
+    OfficialReceiptSeriesView,
 )
 from .views.certificate_verification import PublicCertificateVerificationView
 
@@ -19,6 +20,7 @@ router.register(r'tickets', QueueTicketViewSet, basename='ticket')
 router.register(r'payment-recipients', PaymentRecipientViewSet, basename='payment-recipient')
 
 urlpatterns = [
+    path('official-receipt-series/', OfficialReceiptSeriesView.as_view(), name='official-receipt-series'),
     path(
         'public/certificate-verifications/<uuid:token>/',
         PublicCertificateVerificationView.as_view(),

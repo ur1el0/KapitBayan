@@ -3,6 +3,10 @@
 ## Status
 Accepted
 
+## Current implementation note
+
+Staff still manually verify payment. O.R. assignment is now automatic from the Barangay's configured series at payment confirmation; see [ADR 028](028-transactional-official-receipt-series.md). The resident payment-choice decisions below remain active.
+
 ## Context
 
 The document review screens previously let Barangay staff set the payment method on a resident's request. That assigns the resident's choice to staff and can display a method that the Barangay has not configured. Payment recipients are already managed per Barangay, and the system does not process electronic payments.

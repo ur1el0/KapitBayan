@@ -78,9 +78,19 @@ class _AdminDocumentRequestsScreenState
   }
 
   bool _needsAction(DocumentRequestModel request) {
+    final paymentStatus = request.paymentStatus.toUpperCase();
+    final positiveFee = (request.feeAmount ?? 0) > 0 &&
+        !request.isStatutoryExempt;
     return request.isPending ||
-        request.paymentStatus.toUpperCase() == 'PENDING_VERIFICATION' ||
-        request.isAwaitingAssessment;
+        paymentStatus == 'PENDING_VERIFICATION' ||
+        request.isAwaitingAssessment ||
+        (request.status == 'READY_FOR_PICKUP' &&
+            positiveFee &&
+            ((paymentStatus == 'VERIFIED' &&
+                    request.orNumber?.trim().isNotEmpty != true) ||
+                ((paymentStatus == 'UNPAID' || paymentStatus == 'REJECTED') &&
+                    (request.paymentMethod?.toUpperCase() == 'CASH' ||
+                        request.isWalkin))));
   }
 
   Future<void> _openRequest(DocumentRequestModel request) async {
@@ -449,12 +459,16 @@ class _AdminDocumentRequestDetailsScreenState
   late final TextEditingController _adminNotesController;
   late final TextEditingController _feeController;
   late final TextEditingController _waiverController;
-  late final TextEditingController _orController;
   late final TextEditingController _paymentNoteController;
   late String _selectedStatus;
   bool _editFeeAssessment = false;
   bool _isUpdating = false;
   Future<Uint8List>? _proofFuture;
+
+  bool get _feeAssessmentLocked =>
+      _request.paymentStatus.toUpperCase() == 'PENDING_VERIFICATION' ||
+      _request.paymentStatus.toUpperCase() == 'VERIFIED' ||
+      _request.orNumber?.trim().isNotEmpty == true;
 
   @override
   void initState() {
@@ -471,10 +485,9 @@ class _AdminDocumentRequestDetailsScreenState
     _waiverController = TextEditingController(
       text: _request.feeWaiverReason ?? '',
     );
-    _orController = TextEditingController(text: _request.orNumber ?? '');
     _paymentNoteController = TextEditingController();
     _selectedStatus = _request.status;
-    _editFeeAssessment = _request.isAwaitingAssessment;
+    _editFeeAssessment = _request.isAwaitingAssessment && !_feeAssessmentLocked;
     if (_request.paymentProofUrl?.isNotEmpty == true) {
       _proofFuture = widget.service.fetchPaymentProof(_request.id);
     }
@@ -485,7 +498,6 @@ class _AdminDocumentRequestDetailsScreenState
     _adminNotesController.dispose();
     _feeController.dispose();
     _waiverController.dispose();
-    _orController.dispose();
     _paymentNoteController.dispose();
     super.dispose();
   }
@@ -521,32 +533,6 @@ class _AdminDocumentRequestDetailsScreenState
     );
   }
 
-  Future<void> _saveOrNumber() async {
-    final orNumber = _orController.text.trim();
-    if (orNumber.isEmpty) {
-      _showMessage('Enter an official receipt number first.', error: true);
-      return;
-    }
-
-    setState(() => _isUpdating = true);
-    try {
-      final updated = await widget.service.saveOfficialReceiptNumber(
-        requestId: _request.id,
-        orNumber: orNumber,
-      );
-      if (!mounted) return;
-      setState(() {
-        _request = updated;
-        _orController.text = updated.orNumber ?? '';
-      });
-      _showMessage('Official receipt number saved.');
-    } catch (error) {
-      if (mounted) _showMessage(_errorMessage(error), error: true);
-    } finally {
-      if (mounted) setState(() => _isUpdating = false);
-    }
-  }
-
   String _requesterName() {
     if (_request.requesterName?.trim().isNotEmpty == true) {
       return _request.requesterName!.trim();
@@ -561,6 +547,19 @@ class _AdminDocumentRequestDetailsScreenState
     final notes = _adminNotesController.text.trim();
     if (_selectedStatus == 'REJECTED' && notes.isEmpty) {
       _showMessage('Enter a reason before rejecting the request.', error: true);
+      return;
+    }
+    final releaseFee = _editFeeAssessment
+        ? double.tryParse(_feeController.text.trim()) ?? 0
+        : _request.feeAmount ?? 0;
+    if (_selectedStatus == 'RELEASED' &&
+        releaseFee > 0 &&
+        (_request.paymentStatus != 'VERIFIED' ||
+            _request.orNumber?.trim().isNotEmpty != true)) {
+      _showMessage(
+        'Confirm payment first. The approved O.R. number is assigned at confirmation.',
+        error: true,
+      );
       return;
     }
     String? feeAmount;
@@ -595,7 +594,6 @@ class _AdminDocumentRequestDetailsScreenState
         requestId: _request.id,
         status: _selectedStatus,
         adminNotes: notes,
-        orNumber: _orController.text,
         feeAmount: feeAmount,
         feeWaiverReason: _editFeeAssessment ? _waiverController.text : null,
       );
@@ -604,7 +602,6 @@ class _AdminDocumentRequestDetailsScreenState
         _request = updated;
         _selectedStatus = updated.status;
         _adminNotesController.text = updated.adminNotes ?? '';
-        _orController.text = updated.orNumber ?? '';
         _feeController.text = updated.feeAmount?.toStringAsFixed(2) ?? '';
         _waiverController.text = updated.feeWaiverReason ?? '';
         _editFeeAssessment = false;
@@ -619,6 +616,9 @@ class _AdminDocumentRequestDetailsScreenState
 
   Future<void> _reviewPayment(String status) async {
     final isRejecting = status == 'REJECTED';
+    final isCash = (_request.paymentMethod ?? '').toUpperCase() == 'CASH';
+    final isPreviouslyVerified =
+        _request.paymentStatus.toUpperCase() == 'VERIFIED';
     final note = _paymentNoteController.text.trim();
     if (isRejecting && note.isEmpty) {
       _showMessage(
@@ -630,11 +630,23 @@ class _AdminDocumentRequestDetailsScreenState
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text(isRejecting ? 'Reject e-payment?' : 'Verify e-payment?'),
+        title: Text(
+          isRejecting
+              ? 'Reject e-payment?'
+              : isPreviouslyVerified
+              ? 'Assign missing O.R.?'
+              : isCash
+              ? 'Confirm cash received?'
+              : 'Verify e-payment?',
+        ),
         content: Text(
           isRejecting
               ? 'The resident will need to submit corrected transfer details.'
-              : 'Confirm the transfer against the barangay receiving account before verifying.',
+              : isPreviouslyVerified
+              ? 'Payment is already verified. Assign the missing next number from the configured Barangay series.'
+              : isCash
+              ? 'Confirm only after the Treasurer has physically received the cash. This assigns the next configured O.R. number.'
+              : 'Confirm the transfer against the Barangay receiving account before verifying. This assigns the next configured O.R. number.',
         ),
         actions: [
           TextButton(
@@ -648,7 +660,15 @@ class _AdminDocumentRequestDetailsScreenState
                   ? Colors.red.shade700
                   : const Color(0xFF047857),
             ),
-            child: Text(isRejecting ? 'Reject transfer' : 'Verify transfer'),
+            child: Text(
+              isRejecting
+                  ? 'Reject transfer'
+                  : isPreviouslyVerified
+                  ? 'Assign O.R.'
+                  : isCash
+                  ? 'Confirm cash & assign O.R.'
+                  : 'Verify & assign O.R.',
+            ),
           ),
         ],
       ),
@@ -660,16 +680,16 @@ class _AdminDocumentRequestDetailsScreenState
         requestId: _request.id,
         status: status,
         note: note,
-        orNumber: _orController.text,
       );
       if (!mounted) return;
       setState(() {
         _request = updated;
         _paymentNoteController.clear();
-        _orController.text = updated.orNumber ?? '';
       });
       _showMessage(
-        isRejecting ? 'Transfer reference rejected.' : 'Transfer verified.',
+        isRejecting
+            ? 'Transfer reference rejected.'
+            : '${isCash ? 'Cash payment confirmed' : 'Transfer verified'}${updated.orNumber == null ? '.' : '; O.R. ${updated.orNumber} assigned.'}',
       );
     } catch (error) {
       if (mounted) _showMessage(_errorMessage(error), error: true);
@@ -818,51 +838,85 @@ class _AdminDocumentRequestDetailsScreenState
   }
 
   Widget _paymentReviewActions() {
-    if (_request.paymentStatus.toUpperCase() != 'PENDING_VERIFICATION') {
+    final paymentStatus = _request.paymentStatus.toUpperCase();
+    final isCash = (_request.paymentMethod ?? '').toUpperCase() == 'CASH';
+    final isReady = _request.status == 'READY_FOR_PICKUP';
+    final hasPositiveFee = (_request.feeAmount ?? 0) > 0 &&
+        !_request.isStatutoryExempt;
+    final isCashAwaitingReceipt = isCash &&
+        isReady &&
+        hasPositiveFee &&
+        (paymentStatus == 'UNPAID' || paymentStatus == 'REJECTED');
+    final isTransferAwaitingReview = !isCash &&
+        paymentStatus == 'PENDING_VERIFICATION';
+    final isVerifiedReceiptMissing = isReady &&
+        hasPositiveFee &&
+        paymentStatus == 'VERIFIED' &&
+        _request.orNumber?.trim().isNotEmpty != true;
+    if (!isCashAwaitingReceipt &&
+        !isTransferAwaitingReview &&
+        !isVerifiedReceiptMissing) {
       return const SizedBox.shrink();
     }
     return _sectionCard(
-      title: 'Review electronic transfer',
+      title: isVerifiedReceiptMissing
+          ? 'Assign missing O.R. number'
+          : isCash
+          ? 'Confirm cash payment'
+          : 'Review electronic transfer',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text(
-            'Compare the reference, amount, recipient, and transaction time with the official barangay receiving account.',
+          Text(
+            isVerifiedReceiptMissing
+                ? 'Payment is already verified. This action assigns the missing next serial from the configured Barangay series.'
+                : isCash
+                ? 'Confirm only after the Treasurer physically receives the assessed cash amount. Confirmation assigns the next O.R. number.'
+                : 'Compare the reference, amount, recipient, and transaction time with the official Barangay receiving account. Confirmation assigns the next O.R. number.',
             style: TextStyle(color: Color(0xFF475569), fontSize: 13),
           ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _paymentNoteController,
-            minLines: 2,
-            maxLines: 4,
-            decoration: const InputDecoration(
-              labelText: 'Review note (required when rejecting)',
-              border: OutlineInputBorder(),
+          if (isTransferAwaitingReview) ...[
+            const SizedBox(height: 12),
+            TextField(
+              controller: _paymentNoteController,
+              minLines: 2,
+              maxLines: 4,
+              decoration: const InputDecoration(
+                labelText: 'Review note (required when rejecting)',
+                border: OutlineInputBorder(),
+              ),
             ),
-          ),
-          const SizedBox(height: 10),
+            const SizedBox(height: 10),
+          ],
           Row(
             children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: _isUpdating
-                      ? null
-                      : () => _reviewPayment('REJECTED'),
-                  icon: const Icon(Icons.close_rounded),
-                  label: const Text('Reject'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.red.shade700,
+              if (isTransferAwaitingReview)
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _isUpdating
+                        ? null
+                        : () => _reviewPayment('REJECTED'),
+                    icon: const Icon(Icons.close_rounded),
+                    label: const Text('Reject'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.red.shade700,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 10),
+              if (isTransferAwaitingReview) const SizedBox(width: 10),
               Expanded(
                 child: FilledButton.icon(
                   onPressed: _isUpdating
                       ? null
                       : () => _reviewPayment('VERIFIED'),
                   icon: const Icon(Icons.verified_rounded),
-                  label: const Text('Verify transfer'),
+                  label: Text(
+                    isVerifiedReceiptMissing
+                        ? 'Assign missing O.R.'
+                        : isCash
+                        ? 'Confirm cash & assign O.R.'
+                        : 'Verify & assign O.R.',
+                  ),
                   style: FilledButton.styleFrom(
                     backgroundColor: const Color(0xFF047857),
                   ),
@@ -891,11 +945,13 @@ class _AdminDocumentRequestDetailsScreenState
           SwitchListTile.adaptive(
             contentPadding: EdgeInsets.zero,
             title: const Text('Record or update fee assessment'),
-            subtitle: const Text(
-              'A written reason is required for a zero-fee waiver.',
+            subtitle: Text(
+              _feeAssessmentLocked
+                  ? 'Locked while payment evidence is under review or after payment confirmation.'
+                  : 'A written reason is required for a zero-fee waiver.',
             ),
             value: _editFeeAssessment,
-            onChanged: _isUpdating
+            onChanged: _isUpdating || _feeAssessmentLocked
                 ? null
                 : (value) => setState(() => _editFeeAssessment = value),
           ),
@@ -910,6 +966,7 @@ class _AdminDocumentRequestDetailsScreenState
                 prefixText: '₱ ',
                 border: OutlineInputBorder(),
               ),
+              enabled: !_feeAssessmentLocked,
             ),
             const SizedBox(height: 10),
             TextField(
@@ -920,6 +977,7 @@ class _AdminDocumentRequestDetailsScreenState
                 labelText: 'Fee waiver justification (for zero fee)',
                 border: OutlineInputBorder(),
               ),
+              enabled: !_feeAssessmentLocked,
             ),
             const SizedBox(height: 10),
           ],
@@ -948,22 +1006,10 @@ class _AdminDocumentRequestDetailsScreenState
                       setState(() => _selectedStatus = value ?? 'PROCESSING'),
           ),
           const SizedBox(height: 10),
-          TextField(
-            controller: _orController,
-            decoration: const InputDecoration(
-              labelText: 'Barangay-issued official receipt number',
-              helperText:
-                  'Enter the number printed on the actual Barangay receipt. The KapitBayan reference is generated separately for lookup.',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton.icon(
-              onPressed: _isUpdating ? null : _saveOrNumber,
-              icon: const Icon(Icons.receipt_long_outlined),
-              label: const Text('Save O.R. number'),
-            ),
+          _detail(
+            'Official receipt number',
+            _request.orNumber ??
+                'Assigned from the configured series after payment confirmation.',
           ),
           const SizedBox(height: 10),
           TextField(

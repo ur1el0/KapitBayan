@@ -17,7 +17,11 @@ from rest_framework.test import APITestCase
 
 from gridy_audit.models import AuditLog
 from gridy_auth.models import Barangay, Resident, User
-from gridy_services.models import DocumentRequest, PaymentRecipient
+from gridy_services.models import (
+    DocumentRequest,
+    OfficialReceiptSeries,
+    PaymentRecipient,
+)
 from gridy_services.serializers.documents import DocumentRequestReviewSerializer
 
 
@@ -329,6 +333,12 @@ class PaymentSubmissionAndReviewWorkflowTests(APITestCase):
     def setUp(self):
         self.barangay = Barangay.objects.create(name="Barangay Submission Central")
         self.other_barangay = Barangay.objects.create(name="Barangay Foreign Sub")
+        OfficialReceiptSeries.objects.create(
+            barangay=self.barangay,
+            prefix="OR-TEST-",
+            next_number=99,
+            number_width=4,
+        )
 
         self.resident = User.objects.create_user(
             username="submitter_resident",
@@ -868,7 +878,7 @@ class PaymentSubmissionAndReviewWorkflowTests(APITestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    def test_or_persistence_decoupled_from_release_in_validate(self):
+    def test_admin_cannot_manually_assign_or_number_in_document_review(self):
         document = self._make_ready_request()
         self.client.force_login(self.admin)
 
@@ -877,13 +887,13 @@ class PaymentSubmissionAndReviewWorkflowTests(APITestCase):
             {"or_number": "OR-EARLY-SAVE-123"},
             format="json",
         )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         document.refresh_from_db()
-        self.assertEqual(document.or_number, "OR-EARLY-SAVE-123")
+        self.assertFalse(document.or_number)
         self.assertEqual(document.status, DocumentRequest.Status.READY_FOR_PICKUP)
 
     @patch("gridy_services.views.documents.send_notification_to_user_task.delay")
-    def test_saving_only_or_number_does_not_send_duplicate_status_notification(
+    def test_rejected_manual_or_assignment_does_not_send_status_notification(
         self, send_notification
     ):
         document = self._make_ready_request()
@@ -895,10 +905,12 @@ class PaymentSubmissionAndReviewWorkflowTests(APITestCase):
             format="json",
         )
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        document.refresh_from_db()
+        self.assertFalse(document.or_number)
         send_notification.assert_not_called()
 
-    def test_admin_can_save_or_number_without_resubmitting_workflow_fields(self):
+    def test_admin_cannot_manually_assign_or_number_through_legacy_endpoint(self):
         document = self._make_ready_request()
         self.client.force_login(self.admin)
 
@@ -908,11 +920,10 @@ class PaymentSubmissionAndReviewWorkflowTests(APITestCase):
             format="json",
         )
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         document.refresh_from_db()
-        self.assertEqual(document.or_number, "OR-2026-0099")
+        self.assertFalse(document.or_number)
         self.assertEqual(document.status, DocumentRequest.Status.READY_FOR_PICKUP)
-        self.assertEqual(response.data["or_number"], "OR-2026-0099")
 
     def test_admin_cannot_reuse_an_or_number_with_different_capitalization(self):
         existing = self._make_ready_request(or_number="OR-2026-0099")
@@ -1079,20 +1090,25 @@ class PaymentSubmissionAndReviewWorkflowTests(APITestCase):
         self.assertEqual(res1.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("or_number", res1.data)
 
-        # 2. Paid document with O.R. can be released
+        # 2. Confirming payment assigns the next O.R. before release.
+        payment_response = self.client.patch(
+            reverse("document-request-payment-review", args=[paid_unverified.pk]),
+            {"status": DocumentRequest.PaymentStatus.VERIFIED},
+            format="json",
+        )
+        self.assertEqual(payment_response.status_code, status.HTTP_200_OK, payment_response.data)
+        paid_unverified.refresh_from_db()
+        self.assertEqual(paid_unverified.or_number, "OR-TEST-0099")
+
         res2 = self.client.patch(
             reverse("document-request-validate", args=[paid_unverified.pk]),
-            {
-                "status": DocumentRequest.Status.RELEASED,
-                "or_number": "OR-FINAL-999",
-                "payment_method": DocumentRequest.PaymentMethod.CASH,
-            },
+            {"status": DocumentRequest.Status.RELEASED},
             format="json",
         )
         self.assertEqual(res2.status_code, status.HTTP_200_OK)
         paid_unverified.refresh_from_db()
         self.assertEqual(paid_unverified.status, DocumentRequest.Status.RELEASED)
-        self.assertEqual(paid_unverified.or_number, "OR-FINAL-999")
+        self.assertEqual(paid_unverified.or_number, "OR-TEST-0099")
 
         # 3. Fee-exempt document (fee = 0) can be released without O.R.
         exempt_doc = self._make_ready_request(

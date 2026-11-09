@@ -65,6 +65,35 @@ class PaymentRecipient(models.Model):
         return f"{self.get_provider_display()} — {self.display_name}"
 
 
+class OfficialReceiptSeries(models.Model):
+    """Barangay-controlled numbering configuration for issued official receipts."""
+
+    barangay = models.OneToOneField(
+        Barangay,
+        on_delete=models.CASCADE,
+        related_name="official_receipt_series",
+    )
+    prefix = models.CharField(max_length=40)
+    next_number = models.PositiveBigIntegerField()
+    number_width = models.PositiveSmallIntegerField(
+        default=0,
+        help_text="Minimum serial width; zero disables leading zero padding.",
+    )
+    last_issued_number = models.PositiveBigIntegerField(null=True, blank=True, editable=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    @property
+    def is_configured(self):
+        return bool(self.prefix.strip()) and self.next_number > 0
+
+    def format_number(self, serial):
+        return f"{self.prefix}{str(serial).zfill(self.number_width)}"
+
+    def __str__(self):
+        return f"Official receipt series for {self.barangay}"
+
+
 class DocumentServiceOffering(models.Model):
     """A Barangay-published document service and its current requirements."""
 
@@ -184,7 +213,12 @@ class DocumentRequest(models.Model):
         REJECTED = "REJECTED", "Rejected"
 
     # Official Receipt (OR) & Fee Auditing
-    or_number = models.CharField(max_length=50, blank=True, null=True, help_text="Official Receipt Number issued by Barangay Treasurer")
+    or_number = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+        help_text="Barangay-approved O.R. number assigned from the configured series after payment confirmation.",
+    )
     fee_amount = models.DecimalField(max_digits=8, decimal_places=2, default=0.00, help_text="Clearance issuance fee in PHP")
 
     class FeeAssessmentStatus(models.TextChoices):

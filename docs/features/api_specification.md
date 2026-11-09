@@ -13,6 +13,7 @@ Application endpoints are mounted below `/api/v1/`:
 | `/tickets/` | issue ticket, list ticket, live status, staff queue operations |
 | `/aid-requests/` | submit and review assistance applications |
 | `/payment-recipients/` | read or manage barangay payment recipients according to role |
+| `/official-receipt-series/` | read or configure the assigned Barangay's approved O.R. series |
 | `/reports/` | submit and triage incident reports |
 | `/announcements/`, `/activities/`, `/faqs/`, `/hotlines/` | community information and schedules |
 | `/health/live/`, `/health/ready/` | process liveness and dependency readiness |
@@ -36,10 +37,15 @@ internal request reference, not an official receipt and not proof of payment.
   request with `200`; reusing that key with changed details returns `409`.
   Older clients without this header remain supported but do not receive retry
   deduplication.
-- A Barangay Admin still records the actual O.R. number issued by the Barangay
-  Treasurer through `PATCH /api/v1/document-requests/{id}/or-number/`. KapitBayan
-  must not invent a treasury receipt number or present an internal request
-  reference as proof of payment.
+- The Barangay Admin configures the approved prefix, next unused serial, and
+  optional serial width through `GET` and `PATCH
+  /api/v1/official-receipt-series/`. The prefix and starting serial must match
+  the Barangay's controlled receipt book; KapitBayan does not invent a series.
+- When authorized staff confirms cash received or verifies an electronic
+  transfer, `or_number` is assigned atomically from that series in the same
+  transaction as the payment status. A retry returns the existing number.
+  Missing configuration, duplicate historical numbers, or an invalid serial
+  blocks confirmation without consuming a serial.
 
 ## Resident-selected document payment
 
@@ -48,7 +54,7 @@ internal request reference, not an official receipt and not proof of payment.
 - `POST /api/v1/document-requests/{id}/payment-reference/` accepts the e-payment recipient, transfer reference, timestamp, and proof image only when that recipient matches the resident's saved choice. Cash does not use this endpoint. Barangay staff manually verify e-payment evidence; the system does not process or settle money.
 - Residents may change an unpaid or rejected choice. Changing a rejected choice clears its previous reference, timestamp, review note, and proof. Choices are locked while evidence is pending verification or after payment is verified.
 
-- `PATCH /api/v1/document-requests/{id}/or-number/` saves only `or_number` for an in-scope document request. It is Barangay Admin-only and accepts a trimmed string up to 50 characters. It does not change the document status, fee assessment, or payment method. A positive-fee request already marked `RELEASED` cannot have its O.R. cleared.
+- `PATCH /api/v1/document-requests/{id}/or-number/` remains for older clients but cannot assign or clear an O.R.; it accepts only the unchanged number already stored on the request. New O.R. numbers come from the configured series at payment confirmation.
 - `GET /api/v1/document-requests/verify/?identifier={value}` lets a Barangay Admin or Field Official look up a document by exact case-insensitive O.R. number or supported tracking identifier (`KB-DOC-00000050`, `REQ-12`, a numeric request ID, or the legacy printed `ID: #BC|CI|RC|BP|DOC-YYYY-NNNN` form). Lookup is restricted to the authenticated user's Barangay. It returns the document request when found, `404` when no matching record exists in that Barangay, and `409` when an O.R. matches multiple historical records.
 
 This lookup confirms the identifier against KapitBayan's stored record. It does not verify a paper receipt with the treasury or settle an electronic transfer. The official release and payment controls remain enforced by the server-side document workflow.

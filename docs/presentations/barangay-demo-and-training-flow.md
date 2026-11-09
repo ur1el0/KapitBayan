@@ -66,7 +66,7 @@ Point out the correct sign-in before opening any account. An `ADMIN` account get
 
 1. In the web workspace, choose **Documents** from the left menu and open the prepared request.
 2. Review the request and evidence. Record the supported processing decision, fee assessment, or waiver, then update the request through the available controls.
-3. Explain that a resident pays only when the request reaches the applicable payment-ready state. Staff manually check cash or transfer evidence. An uploaded receipt or transfer reference is evidence; it is not automatic proof that funds settled. Required Official Receipt controls still apply before release.
+3. Explain that a resident pays only when the request reaches the applicable payment-ready state. Staff manually check cash or transfer evidence. An uploaded receipt or transfer reference is evidence; it is not automatic proof that funds settled. After the Barangay configures its approved O.R. series, payment confirmation assigns the next number; the Treasurer still issues the controlled paper receipt. Required O.R. controls still apply before release.
 4. Return to the resident screen and refresh the request to show the status change.
 
 **Say:** “KapitBayan records the steps. It does not decide whether a resident qualifies, move money, or verify a bank transfer automatically.” Do not collect real money or show a real receipt during training.
@@ -135,7 +135,7 @@ For a calendar event, open its details and tap **Add to Calendar**. The phone ca
 Sign in with a field-official account and open the **Field Operations** screen. Show its three tabs:
 
 1. **Queue Ticker:** review the live queue and call the next ticket when that action is assigned to the account.
-2. **Verify Clearance:** enter the prepared tracking number or O.R. saved by the Barangay Admin and show the matching record. Explain that this checks KapitBayan's record, not whether a bank transfer settled or a paper receipt is genuine. Use made-up or approved demo records only.
+2. **Verify Clearance:** enter the prepared tracking number or O.R. assigned by the Barangay's configured series and show the matching record. Explain that this checks KapitBayan's record, not whether a bank transfer settled or a paper receipt is genuine. Use synthetic or approved demo records only.
 3. **Field Reports:** review reports for the assigned barangay and record a supported status or urgency update.
 
 Explain that field access is limited to the assigned barangay. If a tab or action is unavailable, use the account role and permissions actually assigned; do not switch to another person's admin credentials.

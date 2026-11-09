@@ -2420,8 +2420,8 @@ paths:
   /api/v1/document-requests/{id}/or-number/:
     patch:
       operationId: api_v1_document_requests_or_number_partial_update
-      description: Save only the official receipt field, independent of workflow status
-        edits.
+      description: Compatibility endpoint. Accepts only an unchanged existing O.R.; new
+        numbers are assigned from the Barangay series after payment confirmation.
       parameters:
       - in: path
         name: id
@@ -3001,6 +3001,81 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/v1/official-receipt-series/:
+    get:
+      operationId: api_v1_official_receipt_series_retrieve
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  configured:
+                    type: boolean
+                  prefix:
+                    type: string
+                  next_number:
+                    type: integer
+                    nullable: true
+                  number_width:
+                    type: integer
+                  last_issued_number:
+                    type: integer
+                    nullable: true
+                  updated_at:
+                    type: string
+                    format: date-time
+          description: ''
+    patch:
+      operationId: api_v1_official_receipt_series_partial_update
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                prefix:
+                  type: string
+                  maxLength: 40
+                next_number:
+                  type: integer
+                  minimum: 1
+                number_width:
+                  type: integer
+                  minimum: 0
+                  maximum: 12
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  configured:
+                    type: boolean
+                  prefix:
+                    type: string
+                  next_number:
+                    type: integer
+                  number_width:
+                    type: integer
+                  last_issued_number:
+                    type: integer
+                    nullable: true
+                  updated_at:
+                    type: string
+                    format: date-time
+          description: ''
   /api/v1/payment-recipients/:
     get:
       operationId: api_v1_payment_recipients_list
@@ -4273,7 +4348,7 @@ components:
           type: string
           readOnly: true
           nullable: true
-          description: Official Receipt Number issued by Barangay Treasurer
+          description: Barangay-approved O.R. number assigned from the configured series after payment confirmation.
         fee_amount:
           type: string
           format: decimal
@@ -5419,7 +5494,7 @@ components:
           type: string
           readOnly: true
           nullable: true
-          description: Official Receipt Number issued by Barangay Treasurer
+          description: Barangay-approved O.R. number assigned from the configured series after payment confirmation.
         fee_amount:
           type: string
           format: decimal
