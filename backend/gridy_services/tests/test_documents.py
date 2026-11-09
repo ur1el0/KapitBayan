@@ -1,7 +1,6 @@
 from decimal import Decimal
 import uuid
 from unittest.mock import patch
-from django.db import IntegrityError, transaction
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
@@ -90,24 +89,6 @@ class DocumentRequestAPITests(ServiceAPIBaseTestCase):
         self.assertEqual(replay.data["id"], first.data["id"])
         self.assertEqual(conflict.status_code, status.HTTP_409_CONFLICT)
         self.assertEqual(DocumentRequest.objects.count(), 1)
-
-    def test_database_rejects_duplicate_barangay_or_ignoring_case_and_outer_space(self):
-        barangay = self._assign_shared_barangay()
-        DocumentRequest.objects.create(
-            user=self.resident,
-            barangay=barangay,
-            document_type="Barangay Clearance",
-            or_number="OR-2030-0042",
-        )
-
-        with self.assertRaises(IntegrityError):
-            with transaction.atomic():
-                DocumentRequest.objects.create(
-                    user=self.resident,
-                    barangay=barangay,
-                    document_type="Barangay Clearance",
-                    or_number="  or-2030-0042  ",
-                )
 
     def test_official_can_create_walkin_document_request(self):
         barangay = Barangay.objects.create(name="Walk-in Test Barangay")

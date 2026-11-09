@@ -293,14 +293,6 @@ class DocumentRequest(models.Model):
                 ),
                 name="unique_document_submission_key_per_actor",
             ),
-            models.UniqueConstraint(
-                F("barangay"),
-                Lower(Trim("or_number")),
-                condition=Q(barangay__isnull=False)
-                & Q(or_number__isnull=False)
-                & ~Q(or_number=""),
-                name="unique_document_or_per_barangay_ci",
-            ),
         ]
 
 

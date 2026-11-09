@@ -177,6 +177,7 @@ def _document_barangay_id(document_request):
 
 
 def _ensure_unique_barangay_or_number(document_request, or_number):
+    """Reject normalized duplicate O.R.s; write callers lock the Barangay row."""
     normalized = (or_number or "").strip().lower()
     if not normalized:
         return
