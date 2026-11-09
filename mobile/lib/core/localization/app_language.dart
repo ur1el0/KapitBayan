@@ -115,6 +115,8 @@ const Map<String, String> _filipino = {
   'Create an Account': 'Gumawa ng Account',
   'Please provide your details to join our\ncommunity.':
       'Ilagay ang iyong detalye upang makasali sa\naming komunidad.',
+  'The selected image is still larger than 5 MiB. Choose or capture a smaller image.':
+      'Lampas pa rin sa 5 MiB ang larawan. Pumili o kumuha ng mas maliit na larawan.',
   'Register Account': 'Irehistro ang Account',
   'Already have an account? ': 'May account ka na ba? ',
   'Login here': 'Mag-login dito',
