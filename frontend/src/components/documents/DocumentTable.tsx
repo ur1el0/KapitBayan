@@ -85,7 +85,12 @@ export const DocumentTable = ({ requests, openModal, getStatusBadge, onDelete, l
                                         )}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 font-mono">
-                                        {req.or_number ? req.or_number : <span className="text-slate-400 italic">None</span>}
+                                        <div>{req.or_number ? req.or_number : <span className="text-slate-400 italic">None</span>}</div>
+                                        {req.system_reference && (
+                                            <div className="mt-1 text-[11px] text-slate-500">
+                                                Ref: {req.system_reference}
+                                            </div>
+                                        )}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
                                         {new Date(req.created_at).toLocaleDateString()}

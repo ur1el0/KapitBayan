@@ -951,9 +951,9 @@ class _AdminDocumentRequestDetailsScreenState
           TextField(
             controller: _orController,
             decoration: const InputDecoration(
-              labelText: 'Official receipt number',
+              labelText: 'Barangay-issued official receipt number',
               helperText:
-                  'Residents and field staff can use this to find the Barangay record.',
+                  'Enter the number printed on the actual Barangay receipt. The KapitBayan reference is generated separately for lookup.',
               border: OutlineInputBorder(),
             ),
           ),
@@ -1018,6 +1018,10 @@ class _AdminDocumentRequestDetailsScreenState
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _detail('Resident', _requesterName()),
+                _detail(
+                  'KapitBayan lookup reference',
+                  _request.systemReference,
+                ),
                 _detail('Purok', purok),
                 _detail(
                   'Purpose',

@@ -273,6 +273,11 @@ export const DocumentRequestRow: React.FC<DocumentRequestRowProps> = ({
                 </td>
                 <td className="py-4 px-6 space-y-2">
                     <RequestStatusBadge status={request.status} />
+                    {request.system_reference && (
+                        <p className="text-xs text-slate-600">
+                            KapitBayan reference: <span className="font-mono font-semibold">{request.system_reference}</span>
+                        </p>
+                    )}
                     {request.or_number && (
                         <p className="text-xs font-semibold text-slate-700">
                             {t('O.R. Number')}: <span className="font-mono">{request.or_number}</span>

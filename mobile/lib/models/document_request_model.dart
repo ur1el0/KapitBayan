@@ -5,6 +5,7 @@ import '../core/default_document_requirements.dart';
 /// Model representing a resident's document request (e.g. Barangay Clearance, Certificate of Residency, Business Permit).
 class DocumentRequestModel {
   final int id;
+  final String? systemReference;
   final String documentType;
   final int? offeringId;
   final List<String> requirementsSnapshot;
@@ -40,6 +41,7 @@ class DocumentRequestModel {
 
   const DocumentRequestModel({
     required this.id,
+    this.systemReference,
     required this.documentType,
     this.offeringId,
     this.requirementsSnapshot = const [],
@@ -83,6 +85,7 @@ class DocumentRequestModel {
                 ) ??
                 0,
       documentType: json['document_type'] as String? ?? 'Document Request',
+      systemReference: json['system_reference'] as String?,
       offeringId: (json['offering_id'] as num?)?.toInt(),
       requirementsSnapshot: json['requirements_snapshot'] is List
           ? (json['requirements_snapshot'] as List)
@@ -144,6 +147,7 @@ class DocumentRequestModel {
     return {
       'id': id,
       'document_type': documentType,
+      'system_reference': systemReference,
       'offering_id': offeringId,
       'requirements_snapshot': requirementsSnapshot,
       'published_fee_amount_snapshot': publishedFeeAmountSnapshot,

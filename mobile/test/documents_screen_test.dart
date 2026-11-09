@@ -50,6 +50,7 @@ class MockDocumentService extends DocumentService {
     required String documentType,
     String urgencyTag = 'REGULAR',
     String? purpose,
+    String? idempotencyKey,
   }) async {
     return DocumentRequestModel(
       id: 999,

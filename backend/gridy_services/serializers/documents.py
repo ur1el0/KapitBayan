@@ -102,6 +102,7 @@ class DocumentServiceOfferingSerializer(serializers.ModelSerializer):
 
 class DocumentRequestSerializer(FeePolicyValidationMixin, serializers.ModelSerializer):
     request_id = serializers.IntegerField(source='id', read_only=True)
+    system_reference = serializers.CharField(read_only=True)
     requester_name = serializers.SerializerMethodField()
     purok = serializers.SerializerMethodField()
     queue_ticket_active = serializers.BooleanField(
@@ -132,6 +133,7 @@ class DocumentRequestSerializer(FeePolicyValidationMixin, serializers.ModelSeria
         fields = [
             'id',
             'request_id',
+            'system_reference',
             'requester_name',
             'purok',
             'is_walkin',

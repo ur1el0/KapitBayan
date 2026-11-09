@@ -246,11 +246,13 @@ class DocumentService {
     required String documentType,
     String urgencyTag = 'REGULAR',
     String? purpose,
+    String? idempotencyKey,
   }) async {
     return _createDocumentRequest(
       documentType: documentType,
       urgencyTag: urgencyTag,
       purpose: purpose,
+      idempotencyKey: idempotencyKey,
     );
   }
 
@@ -259,12 +261,14 @@ class DocumentService {
     required String documentType,
     String urgencyTag = 'REGULAR',
     String? purpose,
+    String? idempotencyKey,
   }) async {
     return _createDocumentRequest(
       documentType: documentType,
       offeringId: offeringId,
       urgencyTag: urgencyTag,
       purpose: purpose,
+      idempotencyKey: idempotencyKey,
     );
   }
 
@@ -273,6 +277,7 @@ class DocumentService {
     int? offeringId,
     required String urgencyTag,
     String? purpose,
+    String? idempotencyKey,
   }) async {
     try {
       final response = await apiClient.post(
@@ -282,6 +287,10 @@ class DocumentService {
           'offering_id': ?offeringId,
           'urgency_tag': urgencyTag.toUpperCase(),
           'purpose': ?purpose,
+        },
+        headers: {
+          if (idempotencyKey != null && idempotencyKey.isNotEmpty)
+            'Idempotency-Key': idempotencyKey,
         },
         requiresAuth: true,
       );

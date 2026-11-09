@@ -219,6 +219,7 @@ describe('CitizenDocuments', () => {
         await waitFor(() => expect(axiosPrivate.post).toHaveBeenCalledWith(
             '/document-requests/',
             { document_type: 'Certificate of Residency', offering_id: 42, purpose: 'Postal ID' },
+            { headers: { 'Idempotency-Key': expect.any(String) } },
         ));
         await waitFor(() => expect(
             screen.queryByRole('heading', { name: 'Request a document' }),

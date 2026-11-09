@@ -58,7 +58,14 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             elif email_matches:
                 matched_user = email_matches[0]
             else:
-                matched_user = User.objects.filter(username__iexact=identifier).order_by('pk').first()
+                username_matches = list(
+                    User.objects.filter(username__iexact=identifier).order_by('pk')[:2]
+                )
+                if len(username_matches) > 1:
+                    raise AuthenticationFailed(
+                        'No active account found with the given credentials.'
+                    )
+                matched_user = username_matches[0] if username_matches else None
             if matched_user:
                 if (
                     matched_user.role in EMAIL_SIGN_IN_ROLES

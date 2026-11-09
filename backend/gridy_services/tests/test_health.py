@@ -120,6 +120,21 @@ class SystemHealthAPITests(APITestCase):
         CORS_ALLOWED_ORIGINS=["https://app.example.gov.ph"],
         CORS_ALLOW_CREDENTIALS=True,
     )
+    def test_preflight_allows_document_idempotency_header(self):
+        response = self.client.options(
+            reverse("health_check"),
+            HTTP_ORIGIN="https://app.example.gov.ph",
+            HTTP_ACCESS_CONTROL_REQUEST_METHOD="POST",
+            HTTP_ACCESS_CONTROL_REQUEST_HEADERS="authorization,content-type,idempotency-key",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("idempotency-key", response["Access-Control-Allow-Headers"].lower())
+
+    @override_settings(
+        CORS_ALLOWED_ORIGINS=["https://app.example.gov.ph"],
+        CORS_ALLOW_CREDENTIALS=True,
+    )
     def test_preflight_omits_cors_headers_for_unlisted_origin(self):
         response = self.client.options(
             reverse("health_check"),

@@ -101,12 +101,16 @@ describe('DocumentRequests', () => {
         expect(await screen.findByRole('alert')).toHaveTextContent("We couldn't load document requests.");
         expect(screen.getByText('Rosa Resident')).toBeInTheDocument();
         expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-        expect(axiosPrivate.post).toHaveBeenCalledExactlyOnceWith('/document-requests/', {
-            walkin_name: 'Lina Visitor',
-            walkin_purok: '',
-            document_type: 'Barangay Clearance',
-            purpose: 'Proof of employment',
-        });
+        expect(axiosPrivate.post).toHaveBeenCalledExactlyOnceWith(
+            '/document-requests/',
+            {
+                walkin_name: 'Lina Visitor',
+                walkin_purok: '',
+                document_type: 'Barangay Clearance',
+                purpose: 'Proof of employment',
+            },
+            { headers: { 'Idempotency-Key': expect.any(String) } },
+        );
         expect(axiosPrivate.patch).not.toHaveBeenCalled();
         expect(axiosPrivate.delete).not.toHaveBeenCalled();
     });

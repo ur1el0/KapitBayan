@@ -161,6 +161,7 @@ class ResidentTransferAPITests(IsolatedAuthAPITestCase):
             user=self.resident,
             barangay=None,
             document_type="Barangay Clearance",
+            status=DocumentRequest.Status.RELEASED,
         )
         ticket = QueueTicket.objects.create(
             user=self.resident,
@@ -170,7 +171,13 @@ class ResidentTransferAPITests(IsolatedAuthAPITestCase):
             status=QueueTicket.Status.WAITING,
             document_request=document,
         )
+        blocked_transfer = self._create_transfer()
+        self.assertEqual(blocked_transfer.status_code, status.HTTP_400_BAD_REQUEST)
+
+        ticket.status = QueueTicket.Status.COMPLETED
+        ticket.save(update_fields=["status", "updated_at"])
         create_response = self._create_transfer()
+        self.assertEqual(create_response.status_code, status.HTTP_201_CREATED)
         transfer_id = create_response.data["id"]
 
         self.client.force_authenticate(user=self.destination_admin)
@@ -190,6 +197,28 @@ class ResidentTransferAPITests(IsolatedAuthAPITestCase):
         transfer = ResidentTransferRequest.objects.get(pk=transfer_id)
         self.assertTrue(transfer.residency_confirmed)
         self.assertEqual(transfer.status, ResidentTransferRequest.Status.APPROVED)
+
+    def test_transfer_approval_is_blocked_if_open_work_arrives_after_request(self):
+        create_response = self._create_transfer()
+        self.assertEqual(create_response.status_code, status.HTTP_201_CREATED)
+        transfer_id = create_response.data["id"]
+        DocumentRequest.objects.create(
+            user=self.resident,
+            barangay=self.source,
+            document_type="Certificate of Residency",
+            status=DocumentRequest.Status.PENDING,
+        )
+
+        self.client.force_authenticate(user=self.destination_admin)
+        response = self.client.post(
+            reverse("resident-transfer-approve", args=[transfer_id]),
+            {"residency_confirmed": True},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.resident.refresh_from_db()
+        self.assertEqual(self.resident.barangay_id, self.source.pk)
 
     def test_rejection_requires_a_reason(self):
         create_response = self._create_transfer()

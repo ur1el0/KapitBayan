@@ -10,11 +10,13 @@ This guide describes the controls added after the defense feedback. It complemen
 
 ## Queue tickets
 
-A document request can have only one active counter ticket while its ticket is `WAITING` or `SERVING`. The API/database guard is authoritative; the web portal also disables the ticket action while one is active. A new ticket is available after the prior ticket leaves those active states. This does not prevent a resident from creating a separate document request. Queue number allocation and serving are serialized per Barangay inside database transactions; the concurrent advance tests run only on database backends that support `SELECT FOR UPDATE`, so SQLite alone is not evidence of production concurrency behavior.
+A document request can have only one active counter ticket while its ticket is `WAITING` or `SERVING`. The API/database guard is authoritative; the web portal also disables the ticket action while one is active. A new ticket is available after the prior ticket leaves those active states. This does not prevent a resident from creating a separate document request. Queue number allocation is serialized per Barangay and Manila business day, and a database uniqueness constraint is the final duplicate guard. The concurrent queue tests run only on database backends that support `SELECT FOR UPDATE`, so SQLite alone is not evidence of production concurrency behavior.
 
 ## O.R. number PDF
 
-The download is an O.R.-number slip, not the requested certificate or clearance. It is available only after the request is `RELEASED` and staff have recorded an O.R. number. It contains the O.R. label and value only, and is served as private, non-cacheable content. A Barangay still issues the actual paper or digital document through its own process.
+Every document request receives a stable KapitBayan lookup reference such as `KB-DOC-00000050`. Residents can give this reference to Barangay staff, and Field Officials can use it in the validator to find the same-Barangay record. It is an internal request reference, not an O.R. and not proof of payment.
+
+The download is an O.R.-number slip, not the requested certificate or clearance. It is available only after the request is `RELEASED` and staff have recorded an O.R. number. It contains the O.R. label and value only, and is served as private, non-cacheable content. The Barangay Admin records the number printed on the real Barangay-issued receipt; KapitBayan must not fabricate or automatically assign an official treasury receipt number. A Barangay still issues the actual paper or digital document through its own process.
 
 ## Document requirements
 
@@ -32,7 +34,11 @@ Only Barangay Admin accounts can verify electronic payment references, assess or
 
 ## Resident Barangay transfer
 
-Residents with a verified account can ask to move their account to another active, approved Barangay. Only an Admin assigned to the destination Barangay can review it. Approval requires the Admin to affirm that identity and residence were independently checked through an official channel. KapitBayan does not automatically verify a move or transfer the resident's old service records into the new Barangay: existing document and queue records stay assigned to the originating Barangay.
+Residents with a verified account can ask to move their account to another active, approved Barangay. Only an Admin assigned to the destination Barangay can review it. Approval requires the Admin to affirm that identity and residence were independently checked through an official channel. A resident cannot submit a transfer request while a document request is pending, processing, or ready for pickup, or while a queue ticket is waiting or serving. Approval checks again in case new work was created after the request. The resident must finish or cancel that work first; completed historical service records remain assigned to the originating Barangay. New document and queue submissions use the same Barangay-then-account lock order as transfer approval so a request cannot slip into the old Barangay during a transfer.
+
+Resident web and mobile document submissions send an `Idempotency-Key` UUID. Retrying the exact same request with the same key returns the original request, while reusing a key for changed details returns a conflict. While the request form remains open, clients keep the key for retries and generate a new one when the request changes. The key is not persisted across app/browser restarts. Older clients that do not send this header remain supported but do not get this retry deduplication guarantee.
+
+The migration adds database uniqueness guards for O.R. numbers within a Barangay and queue numbers within a Barangay's Manila calendar day. It backfills tenant/day values where they can be recovered from request records, approved transfer history, and linked tickets. If historical records have no recoverable Barangay or contain duplicate identifiers, migration stops with example record IDs; reconcile them explicitly before retrying. It never silently renumbers a historic receipt or ticket.
 
 ## Minor registration
 

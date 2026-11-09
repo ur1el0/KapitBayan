@@ -13,13 +13,33 @@ from rest_framework.response import Response
 
 from gridy_audit.models import AuditLog
 from gridy_audit.services import log_action
-from gridy_auth.models import LoginEvent, Resident, ResidentTransferRequest, User
+from gridy_auth.models import Barangay, LoginEvent, Resident, ResidentTransferRequest, User
 from gridy_auth.serializers.post_defense import (
     LoginEventSerializer,
     ResidentTransferCreateSerializer,
     ResidentTransferRequestSerializer,
     ResidentTransferReviewSerializer,
 )
+
+
+def _resident_has_open_barangay_work(resident, barangay_id):
+    """Keep pending services with their current Barangay until staff resolve them."""
+    from gridy_services.models import DocumentRequest, QueueTicket
+
+    tenant_scope = Q(barangay_id=barangay_id) | Q(barangay__isnull=True)
+    open_documents = DocumentRequest.objects.filter(
+        user=resident,
+        status__in=(
+            DocumentRequest.Status.PENDING,
+            DocumentRequest.Status.PROCESSING,
+            DocumentRequest.Status.READY_FOR_PICKUP,
+        ),
+    ).filter(tenant_scope)
+    active_tickets = QueueTicket.objects.filter(
+        user=resident,
+        status__in=(QueueTicket.Status.WAITING, QueueTicket.Status.SERVING),
+    ).filter(tenant_scope)
+    return open_documents.exists() or active_tickets.exists()
 
 
 class LoginEventListView(ListAPIView):
@@ -84,7 +104,30 @@ class ResidentTransferViewSet(
         serializer.is_valid(raise_exception=True)
         try:
             with transaction.atomic():
+                source_barangay_id = request.user.barangay_id
+                Barangay.objects.select_for_update().get(pk=source_barangay_id)
                 locked_user = User.objects.select_for_update().get(pk=request.user.pk)
+                if locked_user.barangay_id != source_barangay_id:
+                    raise ValidationError({
+                        "detail": "Your Barangay assignment changed. Refresh and try again."
+                    })
+                profile = Resident.objects.select_for_update().filter(
+                    user=locked_user
+                ).first()
+                if profile is None or not profile.is_verified:
+                    raise PermissionDenied(
+                        "Your resident account must remain verified before requesting a transfer."
+                    )
+                if _resident_has_open_barangay_work(
+                    locked_user,
+                    source_barangay_id,
+                ):
+                    raise ValidationError({
+                        "detail": (
+                            "Complete or cancel your open document requests and queue tickets "
+                            "with your current Barangay before requesting a transfer."
+                        )
+                    })
                 if ResidentTransferRequest.objects.filter(
                     resident=locked_user,
                     status=ResidentTransferRequest.Status.PENDING,
@@ -143,6 +186,7 @@ class ResidentTransferViewSet(
 
         with transaction.atomic():
             transfer = self._get_pending_transfer_for_admin(request, pk)
+            Barangay.objects.select_for_update().get(pk=transfer.source_barangay_id)
             resident_user = User.objects.select_for_update().get(pk=transfer.resident_id)
             profile = get_object_or_404(
                 Resident.objects.select_for_update(), user=resident_user
@@ -154,6 +198,17 @@ class ResidentTransferViewSet(
             if resident_user.barangay_id != transfer.source_barangay_id:
                 raise ValidationError({
                     "detail": "The resident's Barangay changed after this request was submitted."
+                })
+
+            if _resident_has_open_barangay_work(
+                resident_user,
+                transfer.source_barangay_id,
+            ):
+                raise ValidationError({
+                    "detail": (
+                        "The resident still has open document requests or queue tickets with "
+                        "the source Barangay. Finish or cancel that work before approving the transfer."
+                    )
                 })
 
             # Preserve the original tenant for legacy records that predate

@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import toast from 'react-hot-toast';
 import { axiosPrivate } from '../../api/axios';
 import { getSafeApiErrorMessage } from '../../api/error-message';
+import { createIdempotencyKey } from '../../utils/idempotency';
 import { InlineErrorState } from '../../components/ui/InlineErrorState';
 import { NewDocumentRequestModal } from '../../components/citizen-documents/NewDocumentRequestModal';
 import { type DocumentServiceOffering } from '../../components/documents/documentCatalog';
@@ -38,6 +39,7 @@ export const CitizenDocuments: React.FC = () => {
     const [offeringId, setOfferingId] = useState<number | null>(null);
     const [otherDocumentType, setOtherDocumentType] = useState('');
     const [purpose, setPurpose] = useState('');
+    const submissionAttempt = useRef<{ fingerprint: string; key: string } | null>(null);
 
     const fetchRequests = async () => {
         try {
@@ -121,12 +123,23 @@ export const CitizenDocuments: React.FC = () => {
 
         try {
             setSubmitting(true);
-            await axiosPrivate.post('/document-requests/', {
+            const payload = {
                 document_type: requestedDocumentType,
                 ...(selectedOffering ? { offering_id: selectedOffering.id } : {}),
                 purpose: purpose.trim(),
+            };
+            const fingerprint = JSON.stringify(payload);
+            if (submissionAttempt.current?.fingerprint !== fingerprint) {
+                submissionAttempt.current = {
+                    fingerprint,
+                    key: createIdempotencyKey(),
+                };
+            }
+            await axiosPrivate.post('/document-requests/', payload, {
+                headers: { 'Idempotency-Key': submissionAttempt.current.key },
             });
             toast.success(t('Document request filed successfully!'));
+            submissionAttempt.current = null;
             setIsModalOpen(false);
             setPurpose('');
             setOtherDocumentType('');

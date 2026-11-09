@@ -1,5 +1,7 @@
+import json
 import logging
 import re
+import uuid
 
 from django.conf import settings
 from rest_framework import viewsets, permissions, status
@@ -8,12 +10,14 @@ from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.response import Response
 from django.db import IntegrityError, transaction
 from django.db.models import Exists, OuterRef, Q
+from django.db.models.functions import Lower, Trim
 from django.template.loader import get_template
 from django.http import FileResponse, Http404, HttpResponse
 from PIL import Image, UnidentifiedImageError
 from django.utils import timezone
+from django.utils.crypto import salted_hmac
 from xhtml2pdf import pisa
-from gridy_auth.models import User
+from gridy_auth.models import Barangay, User
 from gridy_auth.permissions import (
     IsBarangayOfficial,
     IsBarangayOfficialOrField,
@@ -44,12 +48,18 @@ from gridy_communications.models import ResidentNotification
 from decimal import Decimal
 from gridy_audit.services import log_action
 from gridy_audit.models import AuditLog
-from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.exceptions import APIException, PermissionDenied, ValidationError
 from drf_spectacular.utils import extend_schema
 from ..fee_policy import FEE_EXEMPT_DOCUMENT_TYPES, check_ra11261_eligibility
 from ..release_rules import validate_document_release_requirements
 
 logger = logging.getLogger(__name__)
+
+
+class DocumentSubmissionConflict(APIException):
+    status_code = status.HTTP_409_CONFLICT
+    default_detail = "This submission key was already used for different request details."
+    default_code = "idempotency_conflict"
 
 FINANCIAL_REVIEW_FIELDS = {
     "or_number",
@@ -66,6 +76,8 @@ def _document_request_id_from_tracking_identifier(identifier):
     match = re.fullmatch(r"(?:REQ[-\s#:]*)(\d+)", identifier, flags=re.IGNORECASE)
     if match is None:
         match = re.fullmatch(r"(\d+)", identifier)
+    if match is None:
+        match = re.fullmatch(r"KB-DOC-(\d+)", identifier, flags=re.IGNORECASE)
     if match is None:
         match = re.fullmatch(
             r"(?:ID:\s*)?#?(?:BC|CI|RC|BP|DOC)-\d{4}-(\d+)",
@@ -127,8 +139,144 @@ CANONICAL_DOCUMENT_SNAPSHOTS = {
     },
 }
 
+
+def _resolve_active_pickup_tickets(document_request, *, actor, request):
+    """Close queue work once the linked document has been physically released.
+
+    A still-waiting pickup ticket is cancelled because it is no longer needed;
+    a serving ticket is completed because the resident was already at the desk.
+    """
+    tickets = QueueTicket.objects.select_for_update().filter(
+        document_request=document_request,
+        status__in=(QueueTicket.Status.WAITING, QueueTicket.Status.SERVING),
+    )
+    for ticket in tickets:
+        previous_status = ticket.status
+        ticket.status = (
+            QueueTicket.Status.COMPLETED
+            if previous_status == QueueTicket.Status.SERVING
+            else QueueTicket.Status.CANCELLED
+        )
+        ticket.save(update_fields=["status", "updated_at"])
+        log_action(
+            user=actor,
+            action_type=AuditLog.ActionType.QUEUE_ACTION,
+            description=(
+                f"Closed pickup ticket {ticket.ticket_number} (ID: {ticket.pk}) "
+                f"when linked document request #{document_request.pk} was released "
+                f"({previous_status} to {ticket.status})."
+            ),
+            request=request,
+        )
+
+
+def _document_barangay_id(document_request):
+    return document_request.barangay_id or (
+        document_request.user.barangay_id if document_request.user_id else None
+    )
+
+
+def _ensure_unique_barangay_or_number(document_request, or_number):
+    normalized = (or_number or "").strip().lower()
+    if not normalized:
+        return
+
+    barangay_id = _document_barangay_id(document_request)
+    duplicate_requests = DocumentRequest.objects.annotate(
+        normalized_or_number=Lower(Trim("or_number")),
+    ).filter(
+        normalized_or_number=normalized,
+    ).exclude(pk=document_request.pk)
+    if barangay_id is not None:
+        duplicate_requests = duplicate_requests.filter(
+            Q(barangay_id=barangay_id)
+            | Q(
+                barangay__isnull=True,
+                is_walkin=False,
+                user__barangay_id=barangay_id,
+            )
+        )
+    else:
+        duplicate_requests = duplicate_requests.filter(
+            barangay__isnull=True,
+            user__isnull=True,
+        )
+
+    if duplicate_requests.exists():
+        raise ValidationError({
+            "or_number": (
+                "This O.R. number is already recorded for another request in "
+                "this Barangay."
+            )
+        })
+
+
 class DocumentRequestViewSet(viewsets.ModelViewSet):
     serializer_class = DocumentRequestSerializer
+
+    @staticmethod
+    def _submission_fingerprint(validated_data):
+        offering = validated_data.get("offering")
+        value = {
+            "document_type": " ".join(
+                (validated_data.get("document_type") or "").split()
+            ).casefold(),
+            "offering_id": offering.pk if offering else None,
+            "purpose": (validated_data.get("purpose") or "").strip(),
+            "urgency_tag": validated_data.get("urgency_tag") or "REGULAR",
+            "walkin_name": (validated_data.get("walkin_name") or "").strip(),
+            "walkin_purok": (validated_data.get("walkin_purok") or "").strip(),
+        }
+        canonical = json.dumps(value, sort_keys=True, separators=(",", ":"))
+        return salted_hmac(
+            "gridy.document_request.idempotency",
+            canonical,
+            algorithm="sha256",
+        ).hexdigest()
+
+    def create(self, request, *args, **kwargs):
+        raw_key = request.headers.get("Idempotency-Key", "").strip()
+        if raw_key:
+            try:
+                request._document_submission_key = uuid.UUID(raw_key)
+            except (ValueError, AttributeError):
+                raise ValidationError({
+                    "Idempotency-Key": "Use a valid UUID submission key."
+                })
+        else:
+            request._document_submission_key = None
+
+        try:
+            response = super().create(request, *args, **kwargs)
+        except IntegrityError:
+            key = request._document_submission_key
+            if key is None:
+                raise
+            existing = DocumentRequest.objects.filter(
+                submitted_by=request.user,
+                submission_key=key,
+            ).first()
+            if existing is None:
+                raise
+            retry_serializer = self.get_serializer(data=request.data)
+            retry_serializer.is_valid(raise_exception=True)
+            fingerprint = self._submission_fingerprint(
+                retry_serializer.validated_data
+            )
+            if existing.submission_fingerprint != fingerprint:
+                raise DocumentSubmissionConflict({
+                    "Idempotency-Key": (
+                        "This submission key was already used for different request details."
+                    )
+                })
+            return Response(
+                self.get_serializer(existing).data,
+                status=status.HTTP_200_OK,
+            )
+
+        if getattr(request, "_document_submission_replayed", False):
+            response.status_code = status.HTTP_200_OK
+        return response
     
     def get_permissions(self):
         # Authenticated users can list, view, and download their own approved PDFs or payment proof
@@ -209,7 +357,11 @@ class DocumentRequestViewSet(viewsets.ModelViewSet):
             raise ValidationError({"identifier": "The value is too long."})
 
         requests = self.get_queryset().select_related("user", "barangay")
-        receipt_matches = requests.filter(or_number__iexact=identifier)
+        receipt_matches = requests.annotate(
+            normalized_or_number=Lower(Trim("or_number")),
+        ).filter(
+            normalized_or_number=identifier.strip().lower(),
+        )
         match_count = receipt_matches.count()
         if match_count > 1:
             return Response(
@@ -377,29 +529,50 @@ class DocumentRequestViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         or_number = serializer.validated_data["or_number"]
 
-        with transaction.atomic():
-            document_request = DocumentRequest.objects.select_for_update().get(
-                pk=self.get_object().pk
-            )
-            if (
-                document_request.status == DocumentRequest.Status.RELEASED
-                and document_request.fee_amount > 0
-                and not or_number
-            ):
-                raise ValidationError({
-                    "or_number": "A paid released document must keep its official receipt number."
-                })
+        scoped_request = self.get_object()
+        barangay_id = _document_barangay_id(scoped_request)
+        try:
+            with transaction.atomic():
+                if barangay_id is not None:
+                    Barangay.objects.select_for_update().get(pk=barangay_id)
+                document_request = DocumentRequest.objects.select_for_update().get(
+                    pk=scoped_request.pk
+                )
+                if (
+                    document_request.status == DocumentRequest.Status.RELEASED
+                    and document_request.fee_amount > 0
+                    and not or_number
+                ):
+                    raise ValidationError({
+                        "or_number": "A paid released document must keep its official receipt number."
+                    })
 
-            document_request.or_number = or_number or None
-            document_request.save(update_fields=["or_number", "updated_at"])
-            log_action(
-                user=request.user,
-                action_type=AuditLog.ActionType.DOCUMENT_ACTION,
-                description=(
-                    f"Updated the official receipt number for document request #{document_request.id}."
-                ),
-                request=request,
-            )
+                _ensure_unique_barangay_or_number(document_request, or_number)
+                document_request.or_number = or_number or None
+                document_request.save(update_fields=["or_number", "updated_at"])
+                log_action(
+                    user=request.user,
+                    action_type=AuditLog.ActionType.DOCUMENT_ACTION,
+                    description=(
+                        f"Updated the official receipt number for document request #{document_request.id}."
+                    ),
+                    request=request,
+                )
+        except IntegrityError:
+            conflicting_request = DocumentRequest.objects.annotate(
+                normalized_or_number=Lower(Trim("or_number")),
+            ).filter(
+                barangay_id=barangay_id,
+                normalized_or_number=or_number.strip().lower(),
+            ).exclude(pk=scoped_request.pk)
+            if or_number and conflicting_request.exists():
+                raise ValidationError({
+                    "or_number": (
+                        "This O.R. number is already recorded for another request in "
+                        "this Barangay."
+                    )
+                })
+            raise
 
         return Response(
             DocumentRequestSerializer(
@@ -531,6 +704,24 @@ class DocumentRequestViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         user = self.request.user
         data = serializer.validated_data
+        submission_key = getattr(self.request, "_document_submission_key", None)
+        submission_fingerprint = self._submission_fingerprint(data)
+        if submission_key is not None:
+            existing = DocumentRequest.objects.filter(
+                submitted_by=user,
+                submission_key=submission_key,
+            ).first()
+            if existing is not None:
+                if existing.submission_fingerprint != submission_fingerprint:
+                    raise DocumentSubmissionConflict({
+                        "Idempotency-Key": (
+                            "This submission key was already used for different request details."
+                        )
+                    })
+                serializer.instance = existing
+                self.request._document_submission_replayed = True
+                return
+
         offering = data.get("offering")
         barangay = user.barangay if user and user.is_authenticated else None
 
@@ -579,6 +770,11 @@ class DocumentRequestViewSet(viewsets.ModelViewSet):
 
             serializer.save(
                 user=None,
+                submitted_by=user,
+                submission_key=submission_key,
+                submission_fingerprint=(
+                    submission_fingerprint if submission_key is not None else ""
+                ),
                 barangay=user.barangay,
                 is_walkin=True,
                 walkin_name=walkin_name.strip(),
@@ -614,6 +810,18 @@ class DocumentRequestViewSet(viewsets.ModelViewSet):
                 "Only residents can create personal document requests."
             )
 
+        expected_barangay_id = user.barangay_id
+        if expected_barangay_id is None:
+            raise PermissionDenied(
+                "Your account must be assigned to a Barangay before requesting a document."
+            )
+        Barangay.objects.select_for_update().get(pk=expected_barangay_id)
+        user = User.objects.select_for_update().get(pk=user.pk)
+        if user.barangay_id != expected_barangay_id:
+            raise ValidationError({
+                "detail": "Your Barangay assignment changed. Refresh and submit again."
+            })
+
         if hasattr(user, "profile") and not user.profile.is_verified:
             raise PermissionDenied(
                 "Your account is currently pending verification. Please verify "
@@ -625,6 +833,11 @@ class DocumentRequestViewSet(viewsets.ModelViewSet):
 
         serializer.save(
             user=user,
+            submitted_by=user,
+            submission_key=submission_key,
+            submission_fingerprint=(
+                submission_fingerprint if submission_key is not None else ""
+            ),
             barangay=user.barangay,
             is_walkin=False,
             walkin_name=None,
@@ -650,50 +863,109 @@ class DocumentRequestViewSet(viewsets.ModelViewSet):
 
     def perform_destroy(self, instance):
         user = self.request.user
-        
-        # 1. Citizen Resident Self-Service Cancellation
-        if user.role == User.Role.RESIDENT:
-            if instance.user != user:
-                raise PermissionDenied("You can only cancel your own document requests.")
-            
-            if instance.status != DocumentRequest.Status.PENDING:
-                raise ValidationError(
-                    {"detail": "You can only cancel document requests that are still pending review."}
+        barangay_id = instance.barangay_id or (
+            instance.user.barangay_id if instance.user_id else user.barangay_id
+        )
+
+        # Keep deletion in the same lock order as queue advancement and release:
+        # Barangay -> document -> linked queue ticket. This prevents a released
+        # request from being deleted while a pickup ticket is being completed.
+        with transaction.atomic():
+            if barangay_id is not None:
+                Barangay.objects.select_for_update().get(pk=barangay_id)
+            try:
+                locked_instance = DocumentRequest.objects.select_for_update().get(
+                    pk=instance.pk
                 )
-            
+            except DocumentRequest.DoesNotExist:
+                raise Http404("Document request was already removed.")
+
+            # 1. Resident self-service cancellation.
+            if user.role == User.Role.RESIDENT:
+                if locked_instance.user_id != user.id:
+                    raise PermissionDenied(
+                        "You can only cancel your own document requests."
+                    )
+                if locked_instance.status != DocumentRequest.Status.PENDING:
+                    raise ValidationError({
+                        "detail": (
+                            "You can only cancel document requests that are still "
+                            "pending review."
+                        )
+                    })
+                description = (
+                    f"Resident {user.username} cancelled pending document request "
+                    f"#{locked_instance.id} ({locked_instance.document_type})."
+                )
+            # 2. Barangay official archival deletion after resolution.
+            elif user.role in [User.Role.ADMIN, User.Role.FIELD_OFFICIAL]:
+                if locked_instance.status not in [
+                    DocumentRequest.Status.RELEASED,
+                    DocumentRequest.Status.REJECTED,
+                ]:
+                    raise ValidationError({
+                        "detail": (
+                            "Only resolved (released or rejected) clearance "
+                            "requests can be deleted by officials."
+                        )
+                    })
+
+                if locked_instance.status == DocumentRequest.Status.RELEASED:
+                    _resolve_active_pickup_tickets(
+                        locked_instance,
+                        actor=user,
+                        request=self.request,
+                    )
+                elif QueueTicket.objects.filter(
+                    document_request=locked_instance,
+                    status__in=(QueueTicket.Status.WAITING, QueueTicket.Status.SERVING),
+                ).exists():
+                    raise ValidationError({
+                        "detail": (
+                            "Resolve the linked queue ticket before deleting this "
+                            "rejected request."
+                        )
+                    })
+
+                recipient_desc = (
+                    locked_instance.user.username
+                    if locked_instance.user_id
+                    else (locked_instance.walkin_name or "Resident")
+                )
+                description = (
+                    f"Deleted {locked_instance.get_status_display().lower()} "
+                    f"document request #{locked_instance.id} "
+                    f"({locked_instance.document_type}) for {recipient_desc}."
+                )
+            else:
+                raise PermissionDenied(
+                    "You do not have permission to delete this document request."
+                )
+
             log_action(
                 user=user,
                 action_type=AuditLog.ActionType.DOCUMENT_ACTION,
-                description=f"Resident {user.username} cancelled pending document request #{instance.id} ({instance.document_type}).",
-                request=self.request
+                description=description,
+                request=self.request,
             )
-            instance.delete()
-            return
-
-        # 2. Barangay Official Administrative Deletion
-        if user.role in [User.Role.ADMIN, User.Role.FIELD_OFFICIAL]:
-            if instance.status not in [DocumentRequest.Status.RELEASED, DocumentRequest.Status.REJECTED]:
-                raise ValidationError(
-                    {"detail": "Only resolved (released or rejected) clearance requests can be deleted by officials."}
-                )
-
-            recipient_desc = instance.user.username if instance.user else (instance.walkin_name or "Resident")
-            log_action(
-                user=user,
-                action_type=AuditLog.ActionType.DOCUMENT_ACTION,
-                description=f"Deleted {instance.get_status_display().lower()} document request #{instance.id} ({instance.document_type}) for {recipient_desc}.",
-                request=self.request
-            )
-            instance.delete()
-            return
-
-        raise PermissionDenied("You do not have permission to delete this document request.")
+            locked_instance.delete()
 
     @action(detail=True, methods=['patch'], permission_classes=[IsBarangayOfficialOrField])
     def validate(self, request, pk=None):
         with transaction.atomic():
+            scoped_request = self.get_object()
+            # Queue advancement locks the Barangay before a linked document and
+            # ticket. Take the same parent lock before a release can lock those
+            # rows, avoiding a document/ticket lock inversion under concurrency.
+            if (
+                request.data.get("status") == DocumentRequest.Status.RELEASED
+                or "or_number" in request.data
+            ):
+                barangay_id = _document_barangay_id(scoped_request)
+                if barangay_id is not None:
+                    Barangay.objects.select_for_update().get(pk=barangay_id)
             document_request = DocumentRequest.objects.select_for_update().get(
-                pk=self.get_object().pk
+                pk=scoped_request.pk
             )
             if (
                 request.user.role == User.Role.FIELD_OFFICIAL
@@ -712,6 +984,14 @@ class DocumentRequestViewSet(viewsets.ModelViewSet):
             )
             serializer.is_valid(raise_exception=True)
             document_request = serializer.save()
+            if (
+                document_request.status == DocumentRequest.Status.RELEASED
+                or "or_number" in serializer.validated_data
+            ):
+                _ensure_unique_barangay_or_number(
+                    document_request,
+                    document_request.or_number,
+                )
             doc_type_clean = " ".join((document_request.document_type or "").split()).casefold()
             is_statutory = doc_type_clean in FEE_EXEMPT_DOCUMENT_TYPES
 
@@ -888,6 +1168,15 @@ class DocumentRequestViewSet(viewsets.ModelViewSet):
                     "updated_at",
                 ]
             )
+            if (
+                original_status != DocumentRequest.Status.RELEASED
+                and document_request.status == DocumentRequest.Status.RELEASED
+            ):
+                _resolve_active_pickup_tickets(
+                    document_request,
+                    actor=request.user,
+                    request=request,
+                )
             if document_request.user and document_request.status != original_status:
                 display_status = document_request.get_status_display()
                 ResidentNotification.objects.create(
@@ -1089,6 +1378,9 @@ class DocumentRequestViewSet(viewsets.ModelViewSet):
         serializer = PaymentReviewSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         with transaction.atomic():
+            receipt_number = serializer.validated_data.get("or_number", "").strip()
+            if receipt_number and doc_barangay_id is not None:
+                Barangay.objects.select_for_update().get(pk=doc_barangay_id)
             document_request = DocumentRequest.objects.select_for_update().get(
                 pk=document_request.pk
             )
@@ -1119,6 +1411,10 @@ class DocumentRequestViewSet(viewsets.ModelViewSet):
             if "or_number" in serializer.validated_data:
                 or_number_val = serializer.validated_data["or_number"].strip()
                 if or_number_val:
+                    _ensure_unique_barangay_or_number(
+                        document_request,
+                        or_number_val,
+                    )
                     document_request.or_number = or_number_val
                     update_fields.append("or_number")
 

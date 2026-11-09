@@ -74,10 +74,24 @@ class QueueTicketViewSet(viewsets.ModelViewSet):
             )
         if user.role not in (User.Role.ADMIN, User.Role.RESIDENT):
             raise PermissionDenied("Field officials cannot generate queue tickets.")
+        if user.role == User.Role.RESIDENT:
+            resident_profile = getattr(user, "profile", None)
+            if resident_profile is None or not resident_profile.is_verified:
+                raise PermissionDenied(
+                    "Your resident account must be verified before requesting a queue ticket."
+                )
 
         priority_reason = serializer.validated_data.get('priority_reason')
         with transaction.atomic():
-            Barangay.objects.select_for_update().get(pk=user.barangay_id)
+            expected_barangay_id = user.barangay_id
+            Barangay.objects.select_for_update().get(pk=expected_barangay_id)
+            user = User.objects.select_for_update().get(pk=user.pk)
+            if user.barangay_id != expected_barangay_id:
+                raise ValidationError({
+                    'detail': (
+                        'Your Barangay assignment changed. Refresh and request a new ticket.'
+                    )
+                })
             now = timezone.now()
             day_start, _ = manila_day_bounds(now)
             QueueTicket.objects.filter(
@@ -105,15 +119,11 @@ class QueueTicketViewSet(viewsets.ModelViewSet):
                 document_request = DocumentRequest.objects.select_for_update().get(
                     pk=document_request.pk
                 )
-                if (
-                    user.role == User.Role.RESIDENT
-                    and document_request.status
-                    != DocumentRequest.Status.READY_FOR_PICKUP
-                ):
+                if document_request.status != DocumentRequest.Status.READY_FOR_PICKUP:
                     raise ValidationError({
                         'document_request_id': (
-                            'A pickup queue ticket is available only when the '
-                            'document is ready for pickup.'
+                            'A document pickup queue ticket is available only when '
+                            'the document is ready for pickup.'
                         )
                     })
 
@@ -131,9 +141,28 @@ class QueueTicketViewSet(viewsets.ModelViewSet):
                         )
                     })
 
+                if document_request.user_id and QueueTicket.objects.filter(
+                    user_id=document_request.user_id,
+                    barangay_id=user.barangay_id,
+                    status__in=(
+                        QueueTicket.Status.WAITING,
+                        QueueTicket.Status.SERVING,
+                    ),
+                ).exists():
+                    raise ValidationError({
+                        'document_request_id': (
+                            'This resident already has an active queue ticket. '
+                            'Complete or cancel it before adding a document pickup ticket.'
+                        )
+                    })
+
             if user.role == User.Role.ADMIN:
                 ticket = serializer.save(
-                    user=None,
+                    user=(
+                        document_request.user
+                        if document_request is not None
+                        else None
+                    ),
                     barangay=user.barangay,
                     document_request=document_request,
                 )
@@ -613,11 +642,41 @@ class QueueTicketViewSet(viewsets.ModelViewSet):
                 created_at__gte=day_start,
                 created_at__lt=next_day_start,
             )
+            serving_candidates = list(
+                today_tickets.filter(status=QueueTicket.Status.SERVING)
+                .order_by('-created_at', '-id')
+                .values('id', 'document_request_id')
+            )
+            if len(serving_candidates) > 1:
+                raise ValidationError({
+                    'detail': (
+                        'More than one ticket is marked as serving. Complete or '
+                        'reconcile each serving ticket before advancing the queue.'
+                    )
+                })
+            if (
+                release_document
+                and serving_candidates
+                and serving_candidates[0]['document_request_id'] is not None
+            ):
+                # Document validation/release takes locks in this order too:
+                # Barangay -> document -> queue ticket.
+                DocumentRequest.objects.select_for_update().get(
+                    pk=serving_candidates[0]['document_request_id']
+                )
+
             serving_tickets = list(
                 today_tickets.filter(status=QueueTicket.Status.SERVING)
                 .select_for_update()
                 .order_by('-created_at', '-id')
             )
+            if len(serving_tickets) > 1:
+                raise ValidationError({
+                    'detail': (
+                        'More than one ticket is marked as serving. Complete or '
+                        'reconcile each serving ticket before advancing the queue.'
+                    )
+                })
             serving_ticket = serving_tickets[0] if serving_tickets else None
             if release_document and serving_ticket is None:
                 raise ValidationError({
@@ -697,12 +756,6 @@ class QueueTicketViewSet(viewsets.ModelViewSet):
                     request=request,
                     release_document=release_document,
                 )
-                for additional_serving_ticket in serving_tickets[1:]:
-                    additional_serving_ticket.status = QueueTicket.Status.COMPLETED
-                    additional_serving_ticket.save(
-                        update_fields=['status', 'updated_at']
-                    )
-
             next_ticket.status = QueueTicket.Status.SERVING
             next_ticket.called_at = now
             next_ticket.save(

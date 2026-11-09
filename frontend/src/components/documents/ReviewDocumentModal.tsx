@@ -433,6 +433,12 @@ export const ReviewDocumentModal = ({
                                         )}
                                     </div>
                                 )}
+                                {selectedRequest.system_reference && (
+                                    <p className="text-xs text-slate-600">
+                                        KapitBayan lookup reference: <span className="font-mono font-semibold">{selectedRequest.system_reference}</span>
+                                        {' '}(not an official receipt number)
+                                    </p>
+                                )}
 
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
@@ -457,7 +463,7 @@ export const ReviewDocumentModal = ({
                                             className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                                         />
                                         <p className="mt-1 text-[11px] text-slate-500">
-                                            Official Receipt can be saved independently before document release.
+                                            Enter the number from the Barangay-issued receipt. KapitBayan reference is generated separately and is not an O.R.
                                         </p>
                                     </div>
                                     <div>

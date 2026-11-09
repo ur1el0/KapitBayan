@@ -5,7 +5,22 @@ from gridy_auth.models import User, Resident, Barangay, RefreshSession
 from gridy_auth.guardianship import guardian_account_is_eligible
 
 
-class ResidentPrivateImageField(serializers.ImageField):
+MAX_RESIDENT_EVIDENCE_IMAGE_SIZE_BYTES = 5 * 1024 * 1024
+
+
+class ResidentEvidenceImageField(serializers.ImageField):
+    """Reject oversized resident evidence before sending it to media storage."""
+
+    def to_internal_value(self, data):
+        uploaded_file = super().to_internal_value(data)
+        if uploaded_file and uploaded_file.size > MAX_RESIDENT_EVIDENCE_IMAGE_SIZE_BYTES:
+            raise serializers.ValidationError(
+                "Resident ID and residency proof images must be 5 MiB or smaller."
+            )
+        return uploaded_file
+
+
+class ResidentPrivateImageField(ResidentEvidenceImageField):
     def to_representation(self, value):
         if not value:
             return None

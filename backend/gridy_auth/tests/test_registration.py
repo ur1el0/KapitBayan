@@ -16,10 +16,11 @@ from gridy_auth.models import Barangay, BarangayApplication, Resident, User
 from .base import IsolatedAuthAPITestCase
 
 
-def create_test_image_upload(name="registration-proof.png"):
+def create_test_image_upload(name="registration-proof.png", *, size=(1, 1), image_format="PNG"):
     image_data = BytesIO()
-    Image.new("RGB", (1, 1), color="white").save(image_data, format="PNG")
-    return SimpleUploadedFile(name, image_data.getvalue(), content_type="image/png")
+    Image.new("RGB", size, color="white").save(image_data, format=image_format)
+    content_type = Image.MIME[image_format]
+    return SimpleUploadedFile(name, image_data.getvalue(), content_type=content_type)
 
 
 class AuthRegistrationAPITests(IsolatedAuthAPITestCase):
@@ -117,6 +118,93 @@ class AuthRegistrationAPITests(IsolatedAuthAPITestCase):
             settings.PRIVACY_CONSENT_VERSION,
         )
         self.assertIsNotNone(resident.privacy_consent_at)
+
+    def test_registration_rejects_username_collision_regardless_of_case(self):
+        User.objects.create_user(
+            username="Resident_Existing",
+            password="SecurePassword123!",
+            email="existing-resident@example.com",
+            role=User.Role.RESIDENT,
+        )
+        response = self.client.post(
+            reverse("auth_register"),
+            {
+                "username": "resident_existing",
+                "email": "new-case-collision@example.com",
+                "password": "ValidPassword123!",
+                "full_name": "Case Collision Resident",
+                "birth_date": "2000-01-01",
+                "barangay_id": self.barangay.id,
+                "privacy_consent": True,
+                "privacy_consent_version": settings.PRIVACY_CONSENT_VERSION,
+                "purok": "Purok 1",
+                "philsys_id_photo": create_test_image_upload(),
+            },
+            format="multipart",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("username", response.data)
+        self.assertFalse(
+            User.objects.filter(username="resident_existing").exists()
+        )
+
+    def test_registration_rejects_oversized_identity_evidence(self):
+        oversized_bmp = create_test_image_upload(
+            "oversized-proof.bmp",
+            size=(1350, 1350),
+            image_format="BMP",
+        )
+        self.assertGreater(oversized_bmp.size, 5 * 1024 * 1024)
+        response = self.client.post(
+            reverse("auth_register"),
+            {
+                "username": "oversized_proof_resident",
+                "email": "oversized-proof@example.com",
+                "password": "ValidPassword123!",
+                "full_name": "Oversized Proof Resident",
+                "birth_date": "2000-01-01",
+                "barangay_id": self.barangay.id,
+                "privacy_consent": True,
+                "privacy_consent_version": settings.PRIVACY_CONSENT_VERSION,
+                "purok": "Purok 1",
+                "philsys_id_photo": oversized_bmp,
+            },
+            format="multipart",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("philsys_id_photo", response.data)
+        self.assertFalse(
+            User.objects.filter(username="oversized_proof_resident").exists()
+        )
+
+    @patch(
+        "gridy_auth.views.registration.send_welcome_email.delay",
+        side_effect=RuntimeError("broker unavailable"),
+    )
+    def test_mail_broker_failure_does_not_make_successful_registration_look_failed(self, _send_email):
+        response = self.client.post(
+            reverse("auth_register"),
+            {
+                "username": "mail_broker_outage_resident",
+                "email": "mail-broker-outage@example.com",
+                "password": "ValidPassword123!",
+                "full_name": "Mail Broker Outage Resident",
+                "birth_date": "2000-01-01",
+                "barangay_id": self.barangay.id,
+                "privacy_consent": True,
+                "privacy_consent_version": settings.PRIVACY_CONSENT_VERSION,
+                "purok": "Purok 1",
+                "philsys_id_photo": create_test_image_upload(),
+            },
+            format="multipart",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(
+            User.objects.filter(username="mail_broker_outage_resident").exists()
+        )
 
     def test_user_registration_requires_an_uploaded_id_or_residency_proof(self):
         response = self.client.post(

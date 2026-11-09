@@ -2,6 +2,7 @@ import toast from 'react-hot-toast';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { axiosPrivate } from '../../api/axios';
 import { getSafeApiErrorMessage } from '../../api/error-message';
+import { createIdempotencyKey } from '../../utils/idempotency';
 import { DocumentTable } from '../../components/documents/DocumentTable';
 import { ReviewDocumentModal } from '../../components/documents/ReviewDocumentModal';
 import { WalkinRequestModal } from '../../components/documents/WalkinRequestModal';
@@ -12,6 +13,7 @@ import { useLanguage } from '../../context/language-context';
 
 export interface DocumentRequest {
     id: number;
+    system_reference?: string;
     offering_id?: number | null;
     requirements_snapshot?: string[];
     published_fee_amount_snapshot?: string | null;
@@ -84,6 +86,7 @@ export const DocumentRequests: React.FC = () => {
     
     // Walk-in Dialog State
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const walkinSubmissionAttempt = useRef<{ fingerprint: string; key: string } | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [walkinName, setWalkinName] = useState('');
     const [walkinPurok, setWalkinPurok] = useState('');
@@ -339,15 +342,28 @@ export const DocumentRequests: React.FC = () => {
 
         setIsSubmitting(true);
         try {
-            await axiosPrivate.post('/document-requests/', {
+            const payload = {
                 walkin_name: walkinName.trim(),
                 walkin_purok: walkinPurok.trim(),
                 document_type: requestedDocumentType,
                 ...(selectedOffering ? { offering_id: selectedOffering.id } : {}),
                 purpose: newPurpose.trim(),
+            };
+            const fingerprint = JSON.stringify(payload);
+            if (walkinSubmissionAttempt.current?.fingerprint !== fingerprint) {
+                walkinSubmissionAttempt.current = {
+                    fingerprint,
+                    key: createIdempotencyKey(),
+                };
+            }
+            await axiosPrivate.post('/document-requests/', payload, {
+                headers: {
+                    'Idempotency-Key': walkinSubmissionAttempt.current.key,
+                },
             });
 
             toast.success('Walk-in request submitted for review.');
+            walkinSubmissionAttempt.current = null;
             await fetchRequests();
 
             setIsCreateModalOpen(false);
