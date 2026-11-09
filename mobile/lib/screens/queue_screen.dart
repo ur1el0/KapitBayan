@@ -57,7 +57,27 @@ class _QueueScreenState extends State<QueueScreen> with WidgetsBindingObserver {
   QueueTicketModel? _notificationTicket;
   bool _notificationTicketLoadingFailed = false;
 
+  bool get _canRequestTicket =>
+      !_isLoading &&
+      !_isRequestingTicket &&
+      !_hasError &&
+      !_queueStatus.hasUserTicketsError &&
+      !_queueStatus.isShowingOfflineTicketSnapshot;
+
+  String get _ticketingUnavailableMessage => _isLoading
+      ? context.tr('Your ticket status is still loading. Please wait.')
+      : context.tr(
+          'We cannot confirm your active tickets. Refresh the queue before requesting a ticket.',
+        );
+
   void _showRequestTicketModal() {
+    if (!_canRequestTicket) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_ticketingUnavailableMessage)),
+      );
+      return;
+    }
+
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -79,6 +99,16 @@ class _QueueScreenState extends State<QueueScreen> with WidgetsBindingObserver {
     if (service == null || _isRequestingTicket) return;
 
     final messenger = ScaffoldMessenger.of(context);
+    if (_isLoading ||
+        _hasError ||
+        _queueStatus.hasUserTicketsError ||
+        _queueStatus.isShowingOfflineTicketSnapshot) {
+      messenger.showSnackBar(
+        SnackBar(content: Text(_ticketingUnavailableMessage)),
+      );
+      return;
+    }
+
     setState(() => _isRequestingTicket = true);
     try {
       final ticket = await service.requestTicket(
@@ -432,7 +462,10 @@ class _QueueScreenState extends State<QueueScreen> with WidgetsBindingObserver {
         },
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: _showRequestTicketModal,
+        onPressed: _canRequestTicket ? _showRequestTicketModal : null,
+        tooltip: _canRequestTicket
+            ? context.tr('Get Ticket')
+            : _ticketingUnavailableMessage,
         backgroundColor: const Color(0xFF0047BA),
         icon: const Icon(
           Icons.confirmation_number_outlined,

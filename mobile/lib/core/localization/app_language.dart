@@ -144,6 +144,10 @@ const Map<String, String> _filipino = {
   'Estimated Call': 'Tinatayang Oras ng Tawag',
   'Live Capacity': 'Dami ng Naghihintay',
   'Get Ticket': 'Kumuha ng Numero',
+  'Your ticket status is still loading. Please wait.':
+      'Inaalam pa ang katayuan ng iyong tiket. Maghintay muna.',
+  'We cannot confirm your active tickets. Refresh the queue before requesting a ticket.':
+      'Hindi makumpirma ang iyong mga aktibong tiket. I-refresh muna ang pila bago kumuha ng tiket.',
   'General service visit': 'Pangkalahatang serbisyo',
   'General inquiry': 'Pangkalahatang tanong',
   'Follow-up or assistance': 'Follow-up o tulong',

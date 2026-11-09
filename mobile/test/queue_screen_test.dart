@@ -246,6 +246,12 @@ void main() {
       expect(find.text('Live Queue Unavailable'), findsOneWidget);
       expect(find.text('Network connection failed'), findsOneWidget);
       expect(find.text('Try again'), findsOneWidget);
+      expect(
+        tester
+            .widget<FloatingActionButton>(find.byType(FloatingActionButton))
+            .onPressed,
+        isNull,
+      );
 
       // 2. Tap retry
       await tester.tap(find.text('Try again'));
@@ -255,6 +261,12 @@ void main() {
       // 3. Verify recovered state
       expect(find.text('Live Queue Unavailable'), findsNothing);
       expect(find.text('B-201'), findsOneWidget);
+      expect(
+        tester
+            .widget<FloatingActionButton>(find.byType(FloatingActionButton))
+            .onPressed,
+        isNotNull,
+      );
     },
   );
 
@@ -298,6 +310,60 @@ void main() {
     // User ticket card shows error notice rather than "No Active Ticket"
     expect(find.text('Unable to Load Ticket'), findsOneWidget);
     expect(find.text('Unable to load active tickets'), findsOneWidget);
+    expect(
+      tester
+          .widget<FloatingActionButton>(find.byType(FloatingActionButton))
+          .onPressed,
+      isNull,
+    );
+  });
+
+  testWidgets('offline ticket snapshot disables new ticket requests', (
+    WidgetTester tester,
+  ) async {
+    final prefs = await SharedPreferences.getInstance();
+    final storage = StorageService(prefs);
+    await storage.saveUser(
+      const UserModel(
+        id: 5,
+        username: 'offline_resident',
+        email: 'offline@example.com',
+        role: 'RESIDENT',
+        fullName: 'Offline Resident',
+        isVerified: true,
+      ),
+    );
+
+    final offlineService = _DynamicQueueService(
+      storage: storage,
+      onFetch: () async => const QueueLiveStatusModel(
+        isShowingOfflineTicketSnapshot: true,
+        userTicket: QueueTicketModel(
+          id: 77,
+          ticketNumber: 'D-077',
+          serviceType: 'Barangay Clearance',
+          status: 'WAITING',
+        ),
+      ),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.lightTheme,
+        home: QueueScreen(queueService: offlineService),
+      ),
+    );
+    await tester.pump();
+    await tester.pumpAndSettle();
+
+    expect(find.text('D-077'), findsOneWidget);
+    expect(find.textContaining('Offline:'), findsOneWidget);
+    expect(
+      tester
+          .widget<FloatingActionButton>(find.byType(FloatingActionButton))
+          .onPressed,
+      isNull,
+    );
   });
 
   testWidgets(
