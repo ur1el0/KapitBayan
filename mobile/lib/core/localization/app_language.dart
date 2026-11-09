@@ -287,6 +287,8 @@ const Map<String, String> _filipino = {
   'Welcome back': 'Maligayang pagbabalik',
   'Your status is current. All your records are up to date.':
       'Maayos ang katayuan mo. Napapanahon ang lahat ng iyong tala.',
+  'We could not refresh your document requests. Open Documents to try again.':
+      'Hindi ma-update ang mga kahilingan mo. Buksan ang Mga Dokumento para subukang muli.',
   'Your status is current. There are': 'Maayos ang katayuan mo. Mayroon kang',
   'pending actions for your review.':
       'nakabinbing aksyon na kailangang suriin.',
