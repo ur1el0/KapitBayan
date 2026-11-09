@@ -246,12 +246,12 @@ void main() {
       expect(find.text('Live Queue Unavailable'), findsOneWidget);
       expect(find.text('Network connection failed'), findsOneWidget);
       expect(find.text('Try again'), findsOneWidget);
-      expect(
-        tester
-            .widget<FloatingActionButton>(find.byType(FloatingActionButton))
-            .onPressed,
-        isNull,
+      final unavailableTicketButton = tester.widget<FloatingActionButton>(
+        find.byType(FloatingActionButton),
       );
+      expect(unavailableTicketButton.onPressed, isNull);
+      expect(unavailableTicketButton.backgroundColor, const Color(0xFFE2E8F0));
+      expect(unavailableTicketButton.foregroundColor, const Color(0xFF475569));
 
       // 2. Tap retry
       await tester.tap(find.text('Try again'));
@@ -266,6 +266,12 @@ void main() {
             .widget<FloatingActionButton>(find.byType(FloatingActionButton))
             .onPressed,
         isNotNull,
+      );
+      expect(
+        tester
+            .widget<FloatingActionButton>(find.byType(FloatingActionButton))
+            .backgroundColor,
+        const Color(0xFF0047BA),
       );
     },
   );

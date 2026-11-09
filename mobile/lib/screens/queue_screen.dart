@@ -274,6 +274,7 @@ class _QueueScreenState extends State<QueueScreen> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     final user = _currentUser;
+    final canRequestTicket = _canRequestTicket;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -462,18 +463,20 @@ class _QueueScreenState extends State<QueueScreen> with WidgetsBindingObserver {
         },
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: _canRequestTicket ? _showRequestTicketModal : null,
-        tooltip: _canRequestTicket
+        onPressed: canRequestTicket ? _showRequestTicketModal : null,
+        tooltip: canRequestTicket
             ? context.tr('Get Ticket')
             : _ticketingUnavailableMessage,
-        backgroundColor: const Color(0xFF0047BA),
-        icon: const Icon(
-          Icons.confirmation_number_outlined,
-          color: Colors.white,
-        ),
+        backgroundColor: canRequestTicket
+            ? const Color(0xFF0047BA)
+            : const Color(0xFFE2E8F0),
+        foregroundColor: canRequestTicket
+            ? Colors.white
+            : const Color(0xFF475569),
+        icon: const Icon(Icons.confirmation_number_outlined),
         label: Text(
           context.tr('Get Ticket'),
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
     );
