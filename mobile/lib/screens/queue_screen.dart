@@ -57,7 +57,27 @@ class _QueueScreenState extends State<QueueScreen> with WidgetsBindingObserver {
   QueueTicketModel? _notificationTicket;
   bool _notificationTicketLoadingFailed = false;
 
+  bool get _canRequestTicket =>
+      !_isLoading &&
+      !_isRequestingTicket &&
+      !_hasError &&
+      !_queueStatus.hasUserTicketsError &&
+      !_queueStatus.isShowingOfflineTicketSnapshot;
+
+  String get _ticketingUnavailableMessage => _isLoading
+      ? context.tr('Your ticket status is still loading. Please wait.')
+      : context.tr(
+          'We cannot confirm your active tickets. Refresh the queue before requesting a ticket.',
+        );
+
   void _showRequestTicketModal() {
+    if (!_canRequestTicket) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_ticketingUnavailableMessage)),
+      );
+      return;
+    }
+
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -79,6 +99,16 @@ class _QueueScreenState extends State<QueueScreen> with WidgetsBindingObserver {
     if (service == null || _isRequestingTicket) return;
 
     final messenger = ScaffoldMessenger.of(context);
+    if (_isLoading ||
+        _hasError ||
+        _queueStatus.hasUserTicketsError ||
+        _queueStatus.isShowingOfflineTicketSnapshot) {
+      messenger.showSnackBar(
+        SnackBar(content: Text(_ticketingUnavailableMessage)),
+      );
+      return;
+    }
+
     setState(() => _isRequestingTicket = true);
     try {
       final ticket = await service.requestTicket(
@@ -244,6 +274,7 @@ class _QueueScreenState extends State<QueueScreen> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     final user = _currentUser;
+    final canRequestTicket = _canRequestTicket;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -432,15 +463,20 @@ class _QueueScreenState extends State<QueueScreen> with WidgetsBindingObserver {
         },
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: _showRequestTicketModal,
-        backgroundColor: const Color(0xFF0047BA),
-        icon: const Icon(
-          Icons.confirmation_number_outlined,
-          color: Colors.white,
-        ),
+        onPressed: canRequestTicket ? _showRequestTicketModal : null,
+        tooltip: canRequestTicket
+            ? context.tr('Get Ticket')
+            : _ticketingUnavailableMessage,
+        backgroundColor: canRequestTicket
+            ? const Color(0xFF0047BA)
+            : const Color(0xFFE2E8F0),
+        foregroundColor: canRequestTicket
+            ? Colors.white
+            : const Color(0xFF475569),
+        icon: const Icon(Icons.confirmation_number_outlined),
         label: Text(
           context.tr('Get Ticket'),
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
     );
