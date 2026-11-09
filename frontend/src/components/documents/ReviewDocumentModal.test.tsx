@@ -192,7 +192,7 @@ describe('ReviewDocumentModal', () => {
         // Verify transfer; the approved O.R. series assigns the number automatically.
         expect(screen.getByText('Assigned after payment confirmation')).toBeInTheDocument();
         expect(screen.queryByPlaceholderText('e.g. OR-89104')).not.toBeInTheDocument();
-        const verifyBtn = screen.getByRole('button', { name: 'Verify Transfer' });
+        const verifyBtn = screen.getByRole('button', { name: 'Verify & assign O.R.' });
         fireEvent.click(verifyBtn);
         expect(defaultProps.handlePaymentReview).toHaveBeenCalledWith('VERIFIED', '');
 
