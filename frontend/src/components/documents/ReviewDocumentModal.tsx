@@ -22,12 +22,10 @@ interface ReviewDocumentModalProps {
     getStatusBadge: (status: string) => string;
     handleStatusUpdate: (
         newStatus: string,
-        orNumber?: string,
         feeAmount?: string,
         feeWaiverReason?: string,
     ) => void;
-    handlePaymentReview: (status: 'VERIFIED' | 'REJECTED', note: string, orNumber?: string) => void;
-    handleSaveOrNumber?: (orNumber: string) => Promise<void> | void;
+    handlePaymentReview: (status: 'VERIFIED' | 'REJECTED', note: string) => void;
     handleRecordWalkinCashPayment?: () => Promise<void> | void;
     isUpdating: boolean;
     handleDownloadPDF: () => void;
@@ -171,12 +169,10 @@ export const ReviewDocumentModal = ({
     getStatusBadge,
     handleStatusUpdate,
     handlePaymentReview,
-    handleSaveOrNumber,
     handleRecordWalkinCashPayment,
     isUpdating,
     handleDownloadPDF,
 }: ReviewDocumentModalProps) => {
-    const [orNumber, setOrNumber] = useState('');
     const [feeAmount, setFeeAmount] = useState('50.00');
     const [isWaived, setIsWaived] = useState(false);
     const [feeWaiverReason, setFeeWaiverReason] = useState('');
@@ -209,12 +205,26 @@ export const ReviewDocumentModal = ({
             )
         ),
     );
+    const canConfirmResidentCashPayment = Boolean(
+        selectedRequest
+        && !selectedRequest.is_walkin
+        && selectedRequest.payment_method === 'CASH'
+        && selectedRequest.status.toLowerCase() === 'ready_for_pickup'
+        && hasPositiveAssessedFee
+        && ['UNPAID', 'REJECTED'].includes(selectedRequest.payment_status || ''),
+    );
+    const canAssignMissingReceipt = Boolean(
+        selectedRequest
+        && selectedRequest.status.toLowerCase() === 'ready_for_pickup'
+        && hasPositiveAssessedFee
+        && selectedRequest.payment_status === 'VERIFIED'
+        && !selectedRequest.or_number?.trim(),
+    );
     const dialogTitleId = useId();
     const dialogRef = useModalFocus<HTMLDivElement>(Boolean(selectedRequest), closeModal);
 
     useEffect(() => {
         if (selectedRequest) {
-            setOrNumber(selectedRequest.or_number || '');
             setPaymentReviewNote('');
             setCashReceiptConfirmed(false);
 
@@ -269,14 +279,12 @@ export const ReviewDocumentModal = ({
         if (effectiveReason) {
             handleStatusUpdate(
                 status,
-                orNumber.trim(),
                 effectiveFee,
                 effectiveReason,
             );
         } else {
             handleStatusUpdate(
                 status,
-                orNumber.trim(),
                 effectiveFee,
             );
         }
@@ -284,19 +292,14 @@ export const ReviewDocumentModal = ({
 
     const handleRelease = () => {
         const effectiveFee = isFeeExempt || isWaived ? '0.00' : feeAmount.trim();
-        if (!isFeeExempt && !isWaived && Number(effectiveFee) > 0 && !orNumber.trim()) {
-            toast.error('Official Receipt (O.R.) number is required before releasing a paid document.');
+        if (!isFeeExempt && !isWaived && Number(effectiveFee) > 0 && (
+            selectedRequest.payment_status !== 'VERIFIED'
+            || !selectedRequest.or_number?.trim()
+        )) {
+            toast.error('Confirm payment first. The approved O.R. number is assigned at confirmation.');
             return;
         }
         onUpdate('RELEASED');
-    };
-
-    const onSaveOr = () => {
-        if (handleSaveOrNumber) {
-            handleSaveOrNumber(orNumber);
-        } else {
-            onUpdate(selectedRequest.status);
-        }
     };
 
     return (
@@ -442,28 +445,12 @@ export const ReviewDocumentModal = ({
 
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
-                                        <div className="flex items-center justify-between mb-1">
-                                            <label className="text-xs font-semibold text-slate-600">O.R. Number</label>
-                                            {orNumber.trim() && (
-                                                <button
-                                                    type="button"
-                                                    onClick={onSaveOr}
-                                                    disabled={isUpdating}
-                                                    className="text-[11px] font-bold text-primary hover:underline disabled:opacity-50 cursor-pointer"
-                                                >
-                                                    Save O.R.
-                                                </button>
-                                            )}
+                                        <label className="block text-xs font-semibold text-slate-600 mb-1">O.R. Number</label>
+                                        <div className="rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm font-mono font-semibold text-slate-800">
+                                            {selectedRequest.or_number || 'Assigned after payment confirmation'}
                                         </div>
-                                        <input 
-                                            type="text"
-                                            value={orNumber}
-                                            onChange={(e) => setOrNumber(e.target.value)}
-                                            placeholder="e.g. OR-89104"
-                                            className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-                                        />
                                         <p className="mt-1 text-[11px] text-slate-500">
-                                            Enter the number from the Barangay-issued receipt. KapitBayan reference is generated separately and is not an O.R.
+                                            The next number comes from the Barangay-approved series after staff confirms payment.
                                         </p>
                                     </div>
                                     <div>
@@ -556,8 +543,29 @@ export const ReviewDocumentModal = ({
                                             ? selectedRequest.payment_status === 'VERIFIED'
                                                 ? 'Cash was recorded as received in person at the Barangay Treasurer desk.'
                                                 : 'Collect the payment at the Barangay Treasurer desk, then record it below.'
-                                            : 'Cash payment will be settled in person at the Barangay Treasurer desk upon pickup.'}
+                                            : selectedRequest.payment_status === 'VERIFIED'
+                                                ? 'Cash receipt is confirmed. The O.R. number was assigned from the Barangay series.'
+                                                : 'Cash payment will be settled in person at the Barangay Treasurer desk upon pickup.'}
                                     </p>
+                                </div>
+                            )}
+
+                            {canConfirmResidentCashPayment && (
+                                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 space-y-2 text-sm text-emerald-950">
+                                    <div>
+                                        <h4 className="font-bold">Confirm resident cash received</h4>
+                                        <p className="mt-1 text-xs text-emerald-800">
+                                            Confirm only after the Treasurer has physically received ₱{Number(selectedRequest.fee_amount ?? feeAmount).toFixed(2)}. The next O.R. number will be assigned at confirmation.
+                                        </p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => handlePaymentReview('VERIFIED', '')}
+                                        disabled={isUpdating}
+                                        className="rounded-lg bg-emerald-700 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                        Confirm cash & assign O.R.
+                                    </button>
                                 </div>
                             )}
 
@@ -674,11 +682,11 @@ export const ReviewDocumentModal = ({
                                             <div className="flex gap-2">
                                                 <button
                                                     type="button"
-                                                    onClick={() => handlePaymentReview('VERIFIED', paymentReviewNote, orNumber)}
+                                                    onClick={() => handlePaymentReview('VERIFIED', paymentReviewNote)}
                                                     disabled={isUpdating}
                                                     className="rounded-lg bg-emerald-700 hover:bg-emerald-800 px-3.5 py-2 text-xs font-bold text-white disabled:opacity-50 transition-colors shadow-sm cursor-pointer"
                                                 >
-                                                    Verify Transfer
+                                                    Verify & assign O.R.
                                                 </button>
                                                 <button
                                                     type="button"
@@ -691,6 +699,21 @@ export const ReviewDocumentModal = ({
                                             </div>
                                         </div>
                                     )}
+                                </div>
+                            )}
+
+                            {canAssignMissingReceipt && (
+                                <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 space-y-2 text-xs text-amber-900">
+                                    <p className="font-bold">Payment is already verified, but this request has no O.R. number.</p>
+                                    <p>Assign the missing number from the configured Barangay series before release.</p>
+                                    <button
+                                        type="button"
+                                        onClick={() => handlePaymentReview('VERIFIED', '')}
+                                        disabled={isUpdating}
+                                        className="rounded-lg bg-emerald-700 px-3.5 py-2 text-xs font-bold text-white disabled:opacity-50"
+                                    >
+                                        Assign missing O.R.
+                                    </button>
                                 </div>
                             )}
 

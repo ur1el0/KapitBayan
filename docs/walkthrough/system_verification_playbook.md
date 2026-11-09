@@ -16,7 +16,7 @@ Use this checklist in a local or disposable test environment. Do not use real re
 1. Use synthetic accounts with known barangay assignments and role scope.
 2. Verify an authorized staff member can review only the intended barangay's records.
 3. Test cross-tenant object IDs, unassigned staff, residents, and legacy/unknown role accounts against endpoint-specific authorization rules.
-4. Record an explicit fee assessment or waiver, manually verify electronic payment against a test transaction, record the O.R., and verify the server-side release gate.
+4. Record an explicit fee assessment or waiver. In the disposable environment, configure a synthetic receipt series, confirm a test cash receipt or manually verify a synthetic transfer, and confirm the next O.R. serial is assigned once. Verify the server-side release gate and that verified payments prevent later fee changes. Never use test serials against a real Barangay receipt series.
 5. Verify walk-in records keep barangay and treasury history without requiring a synthetic login account.
 
 ## Communications

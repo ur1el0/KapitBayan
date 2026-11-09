@@ -3,6 +3,10 @@
 ## Status
 Accepted
 
+## Current implementation note
+
+O.R. numbers are assigned from the Barangay's configured series when staff confirms payment; see [ADR 028](028-transactional-official-receipt-series.md). The fee assessment and verified-payment release gates in this ADR remain active.
+
 ## Context
 Under ADR 007, ADR 010, and ADR 017, KapitBayan established municipal revenue accounting and manual payment verification for barangay clearance and certification requests. Residents may pay out-of-band via GCash, Maya, or bank transfer once a request is marked `READY_FOR_PICKUP`, and staff must record an Official Receipt (O.R.) number before release whenever `fee_amount > 0`.
 

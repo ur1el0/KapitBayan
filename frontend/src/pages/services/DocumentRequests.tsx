@@ -178,7 +178,6 @@ export const DocumentRequests: React.FC = () => {
 
     const handleStatusUpdate = async (
         newStatus: string,
-        updatedOr?: string,
         updatedFee?: string,
         feeWaiverReason?: string,
     ) => {
@@ -188,7 +187,6 @@ export const DocumentRequests: React.FC = () => {
         try {
             const payload: Record<string, any> = {
                 status: newStatus,
-                or_number: updatedOr,
                 fee_amount: isFeeExemptDocumentType(selectedRequest.document_type) ? '0.00' : updatedFee,
             };
             if (feeWaiverReason !== undefined) {
@@ -230,7 +228,9 @@ export const DocumentRequests: React.FC = () => {
                 ? { ...current, ...response.data }
                 : current,
             );
-            toast.success('Walk-in cash payment recorded. You can now release the document.');
+            toast.success(
+                `Walk-in cash payment recorded${response.data.or_number ? `. O.R. ${response.data.or_number} assigned.` : '.'}`,
+            );
         } catch (err) {
             console.error('Failed to record walk-in cash payment', err);
             toast.error(getSafeApiErrorMessage(
@@ -242,17 +242,14 @@ export const DocumentRequests: React.FC = () => {
         }
     };
 
-    const handlePaymentReview = async (paymentStatus: 'VERIFIED' | 'REJECTED', note: string, orNumber?: string) => {
+    const handlePaymentReview = async (paymentStatus: 'VERIFIED' | 'REJECTED', note: string) => {
         if (!selectedRequest) return;
         setIsUpdating(true);
         try {
-            const payload: { status: 'VERIFIED' | 'REJECTED'; note: string; or_number?: string } = {
+            const payload: { status: 'VERIFIED' | 'REJECTED'; note: string } = {
                 status: paymentStatus,
                 note,
             };
-            if (orNumber?.trim()) {
-                payload.or_number = orNumber.trim();
-            }
             const response = await axiosPrivate.patch(
                 `/document-requests/${selectedRequest.id}/payment-review/`,
                 payload,
@@ -261,29 +258,11 @@ export const DocumentRequests: React.FC = () => {
                 request.id === selectedRequest.id ? { ...request, ...response.data } : request,
             ));
             setSelectedRequest((current) => current ? { ...current, ...response.data } : current);
-            toast.success(paymentStatus === 'VERIFIED' ? 'Electronic transfer verified.' : 'Transfer reference rejected with a reason.');
+            toast.success(paymentStatus === 'VERIFIED'
+                ? `Payment confirmed${response.data.or_number ? `. O.R. ${response.data.or_number} assigned.` : '.'}`
+                : 'Transfer reference rejected with a reason.');
         } catch (err: any) {
             toast.error(err.response?.data?.note?.[0] || err.response?.data?.detail || 'Could not review this electronic payment.');
-        } finally {
-            setIsUpdating(false);
-        }
-    };
-
-    const handleSaveOrNumber = async (orNumber: string) => {
-        if (!selectedRequest) return;
-        setIsUpdating(true);
-        try {
-            const response = await axiosPrivate.patch(`/document-requests/${selectedRequest.id}/or-number/`, {
-                or_number: orNumber.trim(),
-            });
-            setRequests((prev) => prev.map((req) =>
-                req.id === selectedRequest.id ? { ...req, ...response.data } : req,
-            ));
-            setSelectedRequest((prev) => prev ? { ...prev, ...response.data } : prev);
-            toast.success('Official Receipt (O.R.) number saved.');
-        } catch (err: any) {
-            console.error('Failed to save O.R. number', err);
-            toast.error(err?.response?.data?.or_number?.[0] || 'Failed to save O.R. number.');
         } finally {
             setIsUpdating(false);
         }
@@ -449,7 +428,6 @@ export const DocumentRequests: React.FC = () => {
                     getStatusBadge={getStatusBadge}
                     handleStatusUpdate={handleStatusUpdate}
                     handlePaymentReview={handlePaymentReview}
-                    handleSaveOrNumber={handleSaveOrNumber}
                     handleRecordWalkinCashPayment={handleRecordWalkinCashPayment}
                     isUpdating={isUpdating}
                     handleDownloadPDF={handleDownloadPDF}

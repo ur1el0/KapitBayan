@@ -7,6 +7,8 @@ Accepted
 
 The resident's payment-method choice and the available choice list are now governed by [ADR 026](026-resident-selected-document-payment-method.md). The UI details below describing the multi-provider selector are historical where they do not match that newer decision.
 
+O.R. number assignment is now governed by [ADR 028](028-transactional-official-receipt-series.md): staff confirm payment, and the server allocates the next number from the Barangay's configured series. The manual O.R. entry controls described below are historical.
+
 ## Context
 ADR 010 established manual GCash reference submission, and ADR 011 expanded manual electronic payment recipient configuration to support tenant-level providers (GCash, Maya, Bank Transfer) while keeping statutory cash payment at the barangay hall.
 

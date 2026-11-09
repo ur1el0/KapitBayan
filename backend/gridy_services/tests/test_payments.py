@@ -11,12 +11,22 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 from gridy_audit.models import AuditLog
 from gridy_auth.models import Barangay, Resident, User
-from gridy_services.models import DocumentRequest, PaymentRecipient
+from gridy_services.models import (
+    DocumentRequest,
+    OfficialReceiptSeries,
+    PaymentRecipient,
+)
 
 
 class DocumentPaymentWorkflowTests(APITestCase):
     def setUp(self):
         self.barangay = Barangay.objects.create(name="Payment Workflow Barangay")
+        OfficialReceiptSeries.objects.create(
+            barangay=self.barangay,
+            prefix="OR-TEST-",
+            next_number=1,
+            number_width=4,
+        )
         self.resident = User.objects.create_user(
             username="payment_resident",
             password="SecurePassword123!",
@@ -473,6 +483,7 @@ class DocumentPaymentWorkflowTests(APITestCase):
             document.payment_status,
             DocumentRequest.PaymentStatus.VERIFIED,
         )
+        self.assertEqual(document.or_number, "OR-TEST-0001")
         self.assertTrue(
             AuditLog.objects.filter(
                 action_by=self.official,
@@ -521,8 +532,6 @@ class DocumentPaymentWorkflowTests(APITestCase):
             reverse("document-request-validate", args=[document.pk]),
             {
                 "status": DocumentRequest.Status.RELEASED,
-                "or_number": "OR-1001",
-                "payment_method": DocumentRequest.PaymentMethod.GCASH,
             },
             format="json",
         )
@@ -531,7 +540,7 @@ class DocumentPaymentWorkflowTests(APITestCase):
         document.refresh_from_db()
         self.assertEqual(document.status, DocumentRequest.Status.READY_FOR_PICKUP)
 
-    def test_cash_can_be_recorded_at_release_with_official_receipt(self):
+    def test_cash_confirmation_assigns_receipt_before_release(self):
         document = self.make_request()
         self.client.force_login(self.resident)
         choice_response = self.choose_payment_method(document)
@@ -539,19 +548,25 @@ class DocumentPaymentWorkflowTests(APITestCase):
 
         self.client.force_login(self.official)
 
+        payment_response = self.client.patch(
+            reverse("document-request-payment-review", args=[document.pk]),
+            {"status": DocumentRequest.PaymentStatus.VERIFIED},
+            format="json",
+        )
+        self.assertEqual(payment_response.status_code, status.HTTP_200_OK, payment_response.data)
+        document.refresh_from_db()
+        self.assertEqual(document.or_number, "OR-TEST-0001")
+
         response = self.client.patch(
             reverse("document-request-validate", args=[document.pk]),
-            {
-                "status": DocumentRequest.Status.RELEASED,
-                "or_number": "OR-1002",
-                "payment_method": DocumentRequest.PaymentMethod.CASH,
-            },
+            {"status": DocumentRequest.Status.RELEASED},
             format="json",
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         document.refresh_from_db()
         self.assertEqual(document.status, DocumentRequest.Status.RELEASED)
+        self.assertEqual(document.or_number, "OR-TEST-0001")
         self.assertEqual(
             document.payment_status,
             DocumentRequest.PaymentStatus.VERIFIED,

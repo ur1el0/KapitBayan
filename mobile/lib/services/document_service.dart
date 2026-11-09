@@ -161,14 +161,12 @@ class DocumentService {
     required int requestId,
     required String status,
     required String adminNotes,
-    required String orNumber,
     required String? feeAmount,
     String? feeWaiverReason,
   }) async {
     final body = <String, dynamic>{
       'status': status,
       'admin_notes': adminNotes.trim(),
-      'or_number': orNumber.trim(),
     };
     if (feeAmount != null) body['fee_amount'] = feeAmount.trim();
     if (feeWaiverReason != null && feeWaiverReason.trim().isNotEmpty) {
@@ -204,36 +202,15 @@ class DocumentService {
     );
   }
 
-  /// Saves only an official receipt number without changing request status or fee data.
-  Future<DocumentRequestModel> saveOfficialReceiptNumber({
-    required int requestId,
-    required String orNumber,
-  }) async {
-    final response = await apiClient.patch(
-      '/document-requests/$requestId/or-number/',
-      body: {'or_number': orNumber.trim()},
-      requiresAuth: true,
-    );
-    return DocumentRequestModel.fromJson(
-      jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>,
-    );
-  }
-
   /// Verifies or rejects a pending manual electronic transfer reference.
   Future<DocumentRequestModel> reviewAdminPayment({
     required int requestId,
     required String status,
     required String note,
-    String? orNumber,
   }) async {
     final response = await apiClient.patch(
       '/document-requests/$requestId/payment-review/',
-      body: {
-        'status': status,
-        'note': note.trim(),
-        if (orNumber != null && orNumber.trim().isNotEmpty)
-          'or_number': orNumber.trim(),
-      },
+      body: {'status': status, 'note': note.trim()},
       requiresAuth: true,
     );
     return DocumentRequestModel.fromJson(

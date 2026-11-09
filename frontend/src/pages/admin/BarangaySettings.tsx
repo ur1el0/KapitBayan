@@ -3,6 +3,7 @@ import { axiosPrivate } from '../../api/axios';
 import { InlineErrorState } from '../../components/ui/InlineErrorState';
 import { useAuth } from '../../context/auth-context';
 import { PaymentRecipientSettings } from './PaymentRecipientSettings';
+import { OfficialReceiptSeriesSettings } from './OfficialReceiptSeriesSettings';
 import { StaffManagementSettings } from './StaffManagementSettings';
 
 export const BarangaySettings: React.FC = () => {
@@ -124,6 +125,7 @@ export const BarangaySettings: React.FC = () => {
                     retrying={retrying}
                 />
                 <PaymentRecipientSettings />
+                {canManageFieldStaff && <OfficialReceiptSeriesSettings />}
                 {canManageFieldStaff && <StaffManagementSettings />}
             </div>
         );
@@ -238,6 +240,7 @@ export const BarangaySettings: React.FC = () => {
             </form>
 
             <PaymentRecipientSettings />
+            {canManageFieldStaff && <OfficialReceiptSeriesSettings />}
             {canManageFieldStaff && <StaffManagementSettings />}
         </div>
     );

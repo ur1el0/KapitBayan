@@ -32,6 +32,7 @@ from gridy_services.models import (
     QueueTicket,
     manila_day_bounds,
 )
+from gridy_services.official_receipts import assign_official_receipt_number
 from gridy_services.signals import safe_delete_storage_file
 from gridy_services.serializers import (
     DocumentRequestSerializer,
@@ -525,63 +526,24 @@ class DocumentRequestViewSet(viewsets.ModelViewSet):
         url_name="or-number",
     )
     def save_or_number(self, request, pk=None):
-        """Save only the official receipt field, independent of workflow status edits."""
+        """Keep the legacy endpoint read-only; receipt numbers come from the configured series."""
+        document_request = self.get_object()
         serializer = OfficialReceiptNumberSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        or_number = serializer.validated_data["or_number"]
-
-        scoped_request = self.get_object()
-        barangay_id = _document_barangay_id(scoped_request)
-        try:
-            with transaction.atomic():
-                if barangay_id is not None:
-                    Barangay.objects.select_for_update().get(pk=barangay_id)
-                document_request = DocumentRequest.objects.select_for_update().get(
-                    pk=scoped_request.pk
-                )
-                if (
-                    document_request.status == DocumentRequest.Status.RELEASED
-                    and document_request.fee_amount > 0
-                    and not or_number
-                ):
-                    raise ValidationError({
-                        "or_number": "A paid released document must keep its official receipt number."
-                    })
-
-                _ensure_unique_barangay_or_number(document_request, or_number)
-                document_request.or_number = or_number or None
-                document_request.save(update_fields=["or_number", "updated_at"])
-                log_action(
-                    user=request.user,
-                    action_type=AuditLog.ActionType.DOCUMENT_ACTION,
-                    description=(
-                        f"Updated the official receipt number for document request #{document_request.id}."
-                    ),
-                    request=request,
-                )
-        except IntegrityError:
-            conflicting_request = DocumentRequest.objects.annotate(
-                normalized_or_number=Lower(Trim("or_number")),
-            ).filter(
-                barangay_id=barangay_id,
-                normalized_or_number=or_number.strip().lower(),
-            ).exclude(pk=scoped_request.pk)
-            if or_number and conflicting_request.exists():
-                raise ValidationError({
-                    "or_number": (
-                        "This O.R. number is already recorded for another request in "
-                        "this Barangay."
-                    )
-                })
-            raise
-
-        return Response(
-            DocumentRequestSerializer(
-                document_request,
-                context={"request": request},
-            ).data,
-            status=status.HTTP_200_OK,
-        )
+        submitted_number = serializer.validated_data["or_number"]
+        if submitted_number == (document_request.or_number or ""):
+            return Response(
+                DocumentRequestSerializer(
+                    document_request,
+                    context={"request": request},
+                ).data,
+                status=status.HTTP_200_OK,
+            )
+        raise ValidationError({
+            "or_number": (
+                "O.R. numbers are assigned automatically from the Barangay's approved series when staff confirms payment."
+            )
+        })
 
     @action(
         detail=True,
@@ -617,11 +579,15 @@ class DocumentRequestViewSet(viewsets.ModelViewSet):
                     "detail": "Assess a positive document fee before recording cash payment."
                 })
 
-            if (
-                document_request.payment_method == DocumentRequest.PaymentMethod.CASH
+            payment_was_already_confirmed = (
+                document_request.payment_method in (
+                    "",
+                    DocumentRequest.PaymentMethod.CASH,
+                )
                 and document_request.payment_status
                 == DocumentRequest.PaymentStatus.VERIFIED
-            ):
+            )
+            if payment_was_already_confirmed and document_request.or_number:
                 return Response(
                     DocumentRequestSerializer(
                         document_request,
@@ -639,7 +605,7 @@ class DocumentRequestViewSet(viewsets.ModelViewSet):
                         "This walk-in request has an electronic payment method. Review that payment instead."
                     )
                 })
-            if document_request.payment_status not in (
+            if not payment_was_already_confirmed and document_request.payment_status not in (
                 DocumentRequest.PaymentStatus.UNPAID,
                 DocumentRequest.PaymentStatus.REJECTED,
             ):
@@ -659,10 +625,12 @@ class DocumentRequestViewSet(viewsets.ModelViewSet):
             document_request.payment_recipient_identifier_snapshot = ""
             document_request.payment_instructions_snapshot = ""
             document_request.payment_reference = ""
-            document_request.payment_transacted_at = timezone.now()
+            if not payment_was_already_confirmed:
+                document_request.payment_transacted_at = timezone.now()
             document_request.payment_proof_image = None
             document_request.payment_status = DocumentRequest.PaymentStatus.VERIFIED
             document_request.payment_review_note = "Walk-in cash received in person."
+            assigned_or_number = assign_official_receipt_number(document_request)
             document_request.save(
                 update_fields=[
                     "payment_method",
@@ -675,6 +643,7 @@ class DocumentRequestViewSet(viewsets.ModelViewSet):
                     "payment_proof_image",
                     "payment_status",
                     "payment_review_note",
+                    "or_number",
                     "updated_at",
                 ]
             )
@@ -688,7 +657,7 @@ class DocumentRequestViewSet(viewsets.ModelViewSet):
                 action_type=AuditLog.ActionType.DOCUMENT_ACTION,
                 description=(
                     f"Recorded cash payment of ₱{document_request.fee_amount} for "
-                    f"walk-in document request #{document_request.pk}."
+                    f"walk-in document request #{document_request.pk}; assigned O.R. {assigned_or_number}."
                 ),
                 request=request,
             )
@@ -983,16 +952,21 @@ class DocumentRequestViewSet(viewsets.ModelViewSet):
                 data=request.data,
                 partial=True,
             )
+            if "or_number" in request.data:
+                submitted_or_number = request.data.get("or_number")
+                if submitted_or_number is None:
+                    submitted_or_number = ""
+                if (
+                    not isinstance(submitted_or_number, str)
+                    or submitted_or_number.strip() != (document_request.or_number or "")
+                ):
+                    raise ValidationError({
+                        "or_number": (
+                            "O.R. numbers are assigned automatically from the Barangay's approved series when staff confirms payment."
+                        )
+                    })
             serializer.is_valid(raise_exception=True)
             document_request = serializer.save()
-            if (
-                document_request.status == DocumentRequest.Status.RELEASED
-                or "or_number" in serializer.validated_data
-            ):
-                _ensure_unique_barangay_or_number(
-                    document_request,
-                    document_request.or_number,
-                )
             doc_type_clean = " ".join((document_request.document_type or "").split()).casefold()
             is_statutory = doc_type_clean in FEE_EXEMPT_DOCUMENT_TYPES
 
@@ -1112,6 +1086,14 @@ class DocumentRequestViewSet(viewsets.ModelViewSet):
                 document_request.payment_status = (
                     DocumentRequest.PaymentStatus.UNPAID
                 )
+
+            if (
+                document_request.is_walkin
+                and document_request.fee_amount > 0
+                and not document_request.payment_method
+            ):
+                # Walk-ins have no account to choose a method; collect their fee at the desk.
+                document_request.payment_method = DocumentRequest.PaymentMethod.CASH
 
             if document_request.payment_method == DocumentRequest.PaymentMethod.CASH:
                 document_request.payment_recipient = None
@@ -1379,28 +1361,82 @@ class DocumentRequestViewSet(viewsets.ModelViewSet):
         serializer = PaymentReviewSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         with transaction.atomic():
-            receipt_number = serializer.validated_data.get("or_number", "").strip()
-            if receipt_number and doc_barangay_id is not None:
-                Barangay.objects.select_for_update().get(pk=doc_barangay_id)
             document_request = DocumentRequest.objects.select_for_update().get(
                 pk=document_request.pk
             )
+            payment_status = serializer.validated_data["status"]
+            note = serializer.validated_data.get("note", "").strip()
+
             if (
-                document_request.payment_method not in {
+                payment_status == DocumentRequest.PaymentStatus.VERIFIED
+                and document_request.payment_status == DocumentRequest.PaymentStatus.VERIFIED
+                and document_request.or_number
+            ):
+                return Response(
+                    DocumentRequestSerializer(
+                        document_request,
+                        context={"request": request},
+                    ).data,
+                    status=status.HTTP_200_OK,
+                )
+
+            if document_request.status != DocumentRequest.Status.READY_FOR_PICKUP:
+                raise ValidationError({
+                    "detail": "Payment can be confirmed only while the document is ready for pickup."
+                })
+
+            is_cash_payment = (
+                document_request.payment_method == DocumentRequest.PaymentMethod.CASH
+            )
+            if is_cash_payment:
+                can_confirm_cash = (
+                    payment_status == DocumentRequest.PaymentStatus.VERIFIED
+                    and document_request.payment_status in {
+                        DocumentRequest.PaymentStatus.UNPAID,
+                        DocumentRequest.PaymentStatus.REJECTED,
+                    }
+                )
+                can_assign_missing_receipt = (
+                    payment_status == DocumentRequest.PaymentStatus.VERIFIED
+                    and document_request.payment_status == DocumentRequest.PaymentStatus.VERIFIED
+                    and not document_request.or_number
+                )
+                if not (can_confirm_cash or can_assign_missing_receipt):
+                    raise ValidationError({
+                        "detail": "Confirm cash only after the Treasurer receives it, or assign the missing O.R. to a previously confirmed payment."
+                    })
+            else:
+                is_supported_transfer = document_request.payment_method in {
                     DocumentRequest.PaymentMethod.GCASH,
                     DocumentRequest.PaymentMethod.MAYA,
                     DocumentRequest.PaymentMethod.BANK,
                     DocumentRequest.PaymentMethod.OTHER,
                 }
-                or document_request.payment_status
-                != DocumentRequest.PaymentStatus.PENDING_VERIFICATION
-            ):
-                raise ValidationError({
-                    "detail": "Only pending electronic transfer references can be reviewed."
-                })
+                can_review_pending_transfer = (
+                    is_supported_transfer
+                    and document_request.payment_status
+                    == DocumentRequest.PaymentStatus.PENDING_VERIFICATION
+                )
+                can_assign_missing_receipt = (
+                    is_supported_transfer
+                    and payment_status == DocumentRequest.PaymentStatus.VERIFIED
+                    and document_request.payment_status
+                    == DocumentRequest.PaymentStatus.VERIFIED
+                    and not document_request.or_number
+                )
+                if not (can_review_pending_transfer or can_assign_missing_receipt):
+                    raise ValidationError({
+                        "detail": "Only a pending electronic transfer or a previously verified payment missing its O.R. can be reviewed."
+                    })
 
-            payment_status = serializer.validated_data["status"]
-            note = serializer.validated_data.get("note", "").strip()
+            assigned_or_number = None
+            if payment_status == DocumentRequest.PaymentStatus.VERIFIED:
+                if document_request.fee_amount <= 0:
+                    raise ValidationError({
+                        "detail": "No receipt number is issued for a zero-fee request."
+                    })
+                assigned_or_number = assign_official_receipt_number(document_request)
+
             document_request.payment_status = payment_status
             document_request.payment_review_note = note
 
@@ -1409,25 +1445,17 @@ class DocumentRequestViewSet(viewsets.ModelViewSet):
                 "payment_review_note",
                 "updated_at",
             ]
-            if "or_number" in serializer.validated_data:
-                or_number_val = serializer.validated_data["or_number"].strip()
-                if or_number_val:
-                    _ensure_unique_barangay_or_number(
-                        document_request,
-                        or_number_val,
-                    )
-                    document_request.or_number = or_number_val
-                    update_fields.append("or_number")
+            if assigned_or_number:
+                update_fields.append("or_number")
 
-            document_request.save(
-                update_fields=update_fields
-            )
+            document_request.save(update_fields=update_fields)
             log_action(
                 user=request.user,
                 action_type=AuditLog.ActionType.DOCUMENT_ACTION,
                 description=(
                     f"Official {request.user.username} marked {document_request.get_payment_method_display()} "
                     f"payment for document request #{document_request.id} as {payment_status}."
+                    + (f" Assigned O.R. {assigned_or_number}." if assigned_or_number else "")
                     + (f" Note: {note}" if note else "")
                 ),
                 request=request,

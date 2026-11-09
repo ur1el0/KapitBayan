@@ -83,13 +83,6 @@ class PaymentReviewSerializer(serializers.Serializer):
         allow_blank=True,
         trim_whitespace=True,
     )
-    or_number = serializers.CharField(
-        max_length=50,
-        required=False,
-        allow_blank=True,
-        trim_whitespace=True,
-    )
-
     def validate(self, attrs):
         if (
             attrs["status"] == DocumentRequest.PaymentStatus.REJECTED

@@ -45,7 +45,6 @@ describe('ReviewDocumentModal', () => {
         getStatusBadge: vi.fn(() => 'bg-purple-100 text-purple-800'),
         handleStatusUpdate: vi.fn(),
         handlePaymentReview: vi.fn(),
-        handleSaveOrNumber: vi.fn(),
         isUpdating: false,
         handleDownloadPDF: vi.fn(),
     };
@@ -90,17 +89,11 @@ describe('ReviewDocumentModal', () => {
         expect(screen.queryByRole('dialog', { name: 'Inspect Payment Proof' })).not.toBeInTheDocument();
     });
 
-    it('allows entering O.R. number and persists it independently without advancing status', () => {
+    it('shows that the O.R. number is assigned after payment confirmation', () => {
         render(<ReviewDocumentModal {...defaultProps} />);
 
-        const orInput = screen.getByPlaceholderText('e.g. OR-89104');
-        fireEvent.change(orInput, { target: { value: 'OR-2026-9999' } });
-
-        const saveOrBtn = screen.getByRole('button', { name: 'Save O.R.' });
-        expect(saveOrBtn).toBeInTheDocument();
-
-        fireEvent.click(saveOrBtn);
-        expect(defaultProps.handleSaveOrNumber).toHaveBeenCalledWith('OR-2026-9999');
+        expect(screen.getByText('Assigned after payment confirmation')).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Save O.R.' })).not.toBeInTheDocument();
         expect(defaultProps.handleStatusUpdate).not.toHaveBeenCalled();
     });
 
@@ -110,22 +103,22 @@ describe('ReviewDocumentModal', () => {
         const releaseBtn = screen.getByRole('button', { name: 'Release to Resident' });
         fireEvent.click(releaseBtn);
 
-        expect(toast.error).toHaveBeenCalledWith('Official Receipt (O.R.) number is required before releasing a paid document.');
+        expect(toast.error).toHaveBeenCalledWith('Confirm payment first. The approved O.R. number is assigned at confirmation.');
         expect(defaultProps.handleStatusUpdate).not.toHaveBeenCalled();
     });
 
-    it('allows release when O.R. number is provided for paid document', () => {
-        render(<ReviewDocumentModal {...defaultProps} />);
-
-        const orInput = screen.getByPlaceholderText('e.g. OR-89104');
-        fireEvent.change(orInput, { target: { value: 'OR-554433' } });
+    it('allows release after payment review assigned an O.R. number', () => {
+        render(<ReviewDocumentModal {...defaultProps} selectedRequest={{
+            ...baseRequest,
+            payment_status: 'VERIFIED',
+            or_number: 'OR-TEST-0001',
+        }} />);
 
         const releaseBtn = screen.getByRole('button', { name: 'Release to Resident' });
         fireEvent.click(releaseBtn);
 
         expect(defaultProps.handleStatusUpdate).toHaveBeenCalledWith(
             'RELEASED',
-            'OR-554433',
             '50.00',
         );
     });
@@ -152,7 +145,6 @@ describe('ReviewDocumentModal', () => {
         expect(toast.error).not.toHaveBeenCalled();
         expect(defaultProps.handleStatusUpdate).toHaveBeenCalledWith(
             'RELEASED',
-            '',
             '0.00',
         );
     });
@@ -175,7 +167,6 @@ describe('ReviewDocumentModal', () => {
 
         expect(defaultProps.handleStatusUpdate).toHaveBeenCalledWith(
             'READY_FOR_PICKUP',
-            '',
             '50.00',
         );
     });
@@ -198,13 +189,12 @@ describe('ReviewDocumentModal', () => {
     it('handles verification and enforces mandatory note when rejecting payment', () => {
         render(<ReviewDocumentModal {...defaultProps} />);
 
-        // Verify transfer
-        const orInput = screen.getByPlaceholderText('e.g. OR-89104');
-        fireEvent.change(orInput, { target: { value: 'OR-7788' } });
-
-        const verifyBtn = screen.getByRole('button', { name: 'Verify Transfer' });
+        // Verify transfer; the approved O.R. series assigns the number automatically.
+        expect(screen.getByText('Assigned after payment confirmation')).toBeInTheDocument();
+        expect(screen.queryByPlaceholderText('e.g. OR-89104')).not.toBeInTheDocument();
+        const verifyBtn = screen.getByRole('button', { name: 'Verify & assign O.R.' });
         fireEvent.click(verifyBtn);
-        expect(defaultProps.handlePaymentReview).toHaveBeenCalledWith('VERIFIED', '', 'OR-7788');
+        expect(defaultProps.handlePaymentReview).toHaveBeenCalledWith('VERIFIED', '');
 
         // Reject reference with note
         const rejectBtn = screen.getByRole('button', { name: 'Reject Reference' });
@@ -272,7 +262,6 @@ describe('ReviewDocumentModal', () => {
         fireEvent.click(readyBtn);
         expect(defaultProps.handleStatusUpdate).toHaveBeenCalledWith(
             'READY_FOR_PICKUP',
-            '',
             '0.00',
             'Endorsed by Punong Barangay as indigent resident',
         );

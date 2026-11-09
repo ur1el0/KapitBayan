@@ -53,7 +53,7 @@ Do not alter a real deployed account or send a recovery email during the demo un
 Use an account assigned to one demo barangay.
 
 1. **Dashboard and residents:** Show barangay-scoped counts, resident records, and verification review. Registering a resident does not mean the account is verified; an authorized barangay administrator must complete the review before the resident can use protected services.
-2. **Documents and treasury controls:** Open a resident request, review it, record an explicit fee or supported waiver, and show the status change. Explain that staff manually verify payment evidence and record the Official Receipt before release where required.
+2. **Documents and treasury controls:** Open a resident request, review it, record an explicit fee or supported waiver, and show the status change. Explain that the Barangay configures its approved O.R. series, staff manually confirm payment, and the system assigns the next number before release where required. The Barangay still issues and controls the paper receipt.
 3. **Queue:** Add or select a ticket, advance the queue, show the serving ticket and waiting list, and open the public queue display. Use **Page resident** on a serving ticket to demonstrate a saved in-app alert and the optional email/push attempts.
 4. **Communications:** Create or edit an announcement and activity schedule; maintain the hotline directory and FAQs. Show the resident view after publishing. External sharing creates a share link; KapitBayan does not publish a Facebook post automatically.
 5. **Other service work:** Open an assistance request or incident report and show that staff record the outcome. The system does not automatically decide aid eligibility or replace an emergency response service.
