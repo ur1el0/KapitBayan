@@ -36,7 +36,7 @@ These entries describe the November 6 checkout only. They are not the latest ver
 
 - Reconcile the three duplicate O.R. records against Barangay source receipts; then rerun the production migration plan-only and apply only after it is clean.
 - Restore the production document/queue API first. Then reconnect the Redmi and check the affected screens, FCM receipt/deep-link, offline snapshots, and registration image compression. Avoid creating live requests/tickets while those APIs return HTTP 500. The app/build details and initial screen failures were recorded, but ADB is currently not enumerating the phone.
-- Confirm the authenticated HTTP 500 root cause from Render logs or a read-only production schema inspection. The pending migration is a likely lead, not a confirmed diagnosis.
+- Confirm the authenticated HTTP 500 root cause from Render logs or a read-only production schema inspection. The pending migration is a likely lead, not a confirmed diagnosis. Follow [the production API recovery runbook](../operations/production-api-recovery.md); it notes that migration plan output does not run the data checks.
 - Complete the browser matrix on actual Chrome, Edge, Firefox, and Chrome Android. Test authenticated document and queue workflows with controlled test accounts.
 - Arrange a scoped, authorized security assessment. Do not present source review, CI, HTTPS, or response headers as a penetration-test result.
 - Reconcile original study responses and age/role counts. If the 30-resident requirement applies, collect an approved additional sample; do not fabricate or relabel responses. Separate platform evaluations/SUS results require new data.

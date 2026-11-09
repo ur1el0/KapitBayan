@@ -60,7 +60,7 @@
 
 ## Evidence needed before signing the official matrix
 
-1. Verify the duplicate Barangay 5 receipt entries for request IDs 33, 37, and 41 against the official receipt records. Only then rerun migration plan-only and apply migration `0021`.
+1. Verify the duplicate Barangay 5 receipt entries for request IDs 33, 37, and 41 against the official receipt records. Follow the [production API recovery runbook](../operations/production-api-recovery.md); plan-only confirms the migration list but does not run migration data checks. Apply migration `0021` only after authoritative reconciliation.
 2. Restore production document/queue endpoints, then reconnect the Redmi and complete checks of the installed `1.0.9` (17) build, including push delivery/deep-link and offline read-only snapshots. The phone was used to inspect Dashboard, Documents, Queue, and Schedule, but document and queue flows returned errors. PR #318's registration compression is not in the installed build and still needs a device check after merge.
 3. Complete the full browser compatibility matrix on Chrome, Edge, Firefox, and real Chrome Android, including authenticated document and queue paths.
 4. Arrange an authorized security assessment and record its scope, findings, remediation, retest, and limitations. Dependabot is disabled and GitHub code scanning reports no analysis, so automated repository alerts do not substitute for this.
