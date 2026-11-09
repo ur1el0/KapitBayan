@@ -15,6 +15,8 @@ import '../widgets/resident_registration_details_section.dart';
 import '../widgets/kapitbayan_logo.dart';
 import 'login_screen.dart';
 
+const int _maxRegistrationEvidenceBytes = 5 * 1024 * 1024;
+
 class RegisterScreen extends StatefulWidget {
   final AuthService? authService;
 
@@ -172,8 +174,27 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     if (source != null) {
       try {
-        final XFile? picked = await _picker.pickImage(source: source);
+        final XFile? picked = await _picker.pickImage(
+          source: source,
+          maxWidth: 1600,
+          maxHeight: 1600,
+          imageQuality: 85,
+        );
         if (picked != null) {
+          if (await picked.length() > _maxRegistrationEvidenceBytes) {
+            if (!mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  context.tr(
+                    'The selected image is still larger than 5 MiB. Choose or capture a smaller image.',
+                  ),
+                ),
+              ),
+            );
+            return;
+          }
+          if (!mounted) return;
           setState(() {
             onSelected(picked);
           });
