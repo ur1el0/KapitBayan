@@ -38,7 +38,7 @@ Residents with a verified account can ask to move their account to another activ
 
 Resident web and mobile document submissions send an `Idempotency-Key` UUID. Retrying the exact same request with the same key returns the original request, while reusing a key for changed details returns a conflict. While the request form remains open, clients keep the key for retries and generate a new one when the request changes. The key is not persisted across app/browser restarts. Older clients that do not send this header remain supported but do not get this retry deduplication guarantee.
 
-The migration adds database uniqueness guards for O.R. numbers within a Barangay and queue numbers within a Barangay's Manila calendar day. It backfills tenant/day values where they can be recovered from request records, approved transfer history, and linked tickets. If historical records have no recoverable Barangay or contain duplicate identifiers, migration stops with example record IDs; reconcile them explicitly before retrying. It never silently renumbers a historic receipt or ticket.
+The migration backfills tenant/day values where they can be recovered from request records, approved transfer history, and linked tickets, then adds database uniqueness guards for queue numbers within a Barangay's Manila calendar day. It does not rewrite historical O.R. values or install the O.R. unique index while duplicate receipts are under review. O.R. assignment remains protected at the API by a Barangay row lock and normalized duplicate check; scans of ambiguous legacy O.R. values return a conflict for staff review. A later database constraint can be added after the Barangay confirms which historical records need correction.
 
 ## Minor registration
 

@@ -16,7 +16,7 @@ MANILA_TIME_ZONE = ZoneInfo("Asia/Manila")
 
 
 def backfill_scope_and_check_duplicates(apps, schema_editor):
-    """Backfill stable tenant/day keys, then fail safely on historical collisions."""
+    """Backfill tenant/day keys and fail on unresolved queue scope/collisions."""
     database = schema_editor.connection.alias
     DocumentRequest = apps.get_model("gridy_services", "DocumentRequest")
     QueueTicket = apps.get_model("gridy_services", "QueueTicket")
@@ -131,8 +131,7 @@ def backfill_scope_and_check_duplicates(apps, schema_editor):
             batch_size=500,
         )
 
-    # Empty/whitespace-only values are not receipt numbers and should not
-    # occupy the normalized unique index key.
+    # Empty/whitespace-only values are not receipt numbers.
     DocumentRequest.objects.using(database).annotate(
         trimmed_or_number=django.db.models.functions.text.Trim("or_number"),
     ).filter(
@@ -145,32 +144,6 @@ def backfill_scope_and_check_duplicates(apps, schema_editor):
         .filter(barangay_id__isnull=True)
         .values_list("pk", flat=True)[:20]
     )
-    unscoped_receipt_ids = list(
-        DocumentRequest.objects.using(database)
-        .annotate(
-            trimmed_or_number=django.db.models.functions.text.Trim("or_number"),
-        )
-        .filter(
-            barangay_id__isnull=True,
-            or_number__isnull=False,
-        )
-        .exclude(trimmed_or_number="")
-        .values_list("pk", flat=True)[:20]
-    )
-
-    duplicate_receipts = list(
-        DocumentRequest.objects.using(database)
-        .annotate(
-            normalized_or_number=django.db.models.functions.text.Lower(
-                django.db.models.functions.text.Trim("or_number")
-            )
-        )
-        .filter(barangay_id__isnull=False, or_number__isnull=False)
-        .values("barangay_id", "normalized_or_number")
-        .annotate(record_count=Count("pk"))
-        .filter(record_count__gt=1)[:10]
-    )
-
     duplicate_tickets = list(
         QueueTicket.objects.using(database)
         .annotate(
@@ -194,10 +167,8 @@ def backfill_scope_and_check_duplicates(apps, schema_editor):
     )
 
     if (
-        duplicate_receipts
-        or duplicate_tickets
+        duplicate_tickets
         or unscoped_document_ids
-        or unscoped_receipt_ids
         or unscoped_active_ticket_ids
     ):
         details = []
@@ -205,31 +176,9 @@ def backfill_scope_and_check_duplicates(apps, schema_editor):
             details.append(
                 f"document requests with no recoverable Barangay: {unscoped_document_ids}"
             )
-        if unscoped_receipt_ids:
-            details.append(
-                f"receipt-bearing requests with no recoverable Barangay: {unscoped_receipt_ids}"
-            )
         if unscoped_active_ticket_ids:
             details.append(
                 f"active queue tickets with no recoverable Barangay: {unscoped_active_ticket_ids}"
-            )
-        for group in duplicate_receipts:
-            ids = list(
-                DocumentRequest.objects.using(database)
-                .annotate(
-                    normalized_or_number=django.db.models.functions.text.Lower(
-                        django.db.models.functions.text.Trim("or_number")
-                    )
-                )
-                .filter(
-                    barangay_id=group["barangay_id"],
-                    normalized_or_number=group["normalized_or_number"],
-                )
-                .values_list("pk", flat=True)[:10]
-            )
-            details.append(
-                f"Barangay {group['barangay_id']} receipt "
-                f"{group['normalized_or_number']!r}: requests {ids}"
             )
         for group in duplicate_tickets:
             ids = list(
@@ -252,8 +201,8 @@ def backfill_scope_and_check_duplicates(apps, schema_editor):
                 f"tickets {ids}"
             )
         raise RuntimeError(
-            "Cannot add document/queue uniqueness constraints until historical "
-            "duplicate identifiers are reconciled. No ticket or receipt numbers "
+            "Cannot add queue uniqueness constraints until historical duplicate "
+            "ticket identifiers are reconciled. No ticket or receipt numbers "
             "were changed. Examples: " + "; ".join(details)
         )
 
@@ -300,10 +249,9 @@ class Migration(migrations.Migration):
             model_name='documentrequest',
             constraint=models.UniqueConstraint(condition=models.Q(('submission_key__isnull', False), ('submitted_by__isnull', False)), fields=('submitted_by', 'submission_key'), name='unique_document_submission_key_per_actor'),
         ),
-        migrations.AddConstraint(
-            model_name='documentrequest',
-            constraint=models.UniqueConstraint(models.F('barangay'), django.db.models.functions.text.Lower(django.db.models.functions.text.Trim('or_number')), condition=models.Q(('barangay__isnull', False), ('or_number__isnull', False), models.Q(('or_number', ''), _negated=True)), name='unique_document_or_per_barangay_ci'),
-        ),
+        # Receipt uniqueness remains checked by the API while historical O.R.
+        # collisions are reviewed. Do not make this schema migration depend on
+        # changing or discarding official receipt records.
         migrations.AddConstraint(
             model_name='queueticket',
             constraint=models.UniqueConstraint(models.F('barangay'), models.F('ticket_day'), django.db.models.functions.text.Lower(django.db.models.functions.text.Trim('ticket_number')), condition=models.Q(('barangay__isnull', False), ('ticket_day__isnull', False)), name='unique_queue_ticket_number_per_barangay_day_ci'),

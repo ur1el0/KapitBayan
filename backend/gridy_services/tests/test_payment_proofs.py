@@ -994,6 +994,33 @@ class PaymentSubmissionAndReviewWorkflowTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
+    def test_field_official_ambiguous_legacy_receipt_is_not_accepted(self):
+        DocumentRequest.objects.create(
+            barangay=self.barangay,
+            is_walkin=True,
+            walkin_name="Legacy Resident One",
+            document_type="Barangay Clearance",
+            status=DocumentRequest.Status.RELEASED,
+            or_number="LEGACY-123",
+        )
+        DocumentRequest.objects.create(
+            barangay=self.barangay,
+            is_walkin=True,
+            walkin_name="Legacy Resident Two",
+            document_type="Barangay Clearance",
+            status=DocumentRequest.Status.RELEASED,
+            or_number=" legacy-123 ",
+        )
+        self.client.force_login(self.field_official)
+
+        response = self.client.get(
+            reverse("document-request-verify"),
+            {"identifier": "LEGACY-123"},
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+        self.assertIn("multiple records", response.data["detail"])
+
     def test_receipt_digits_are_not_misread_as_a_tracking_id(self):
         self.client.force_login(self.field_official)
 
