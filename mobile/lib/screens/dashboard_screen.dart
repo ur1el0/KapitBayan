@@ -286,6 +286,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ResidentHeroCard(
                       user: _data.user,
                       pendingCount: _data.pendingRequestsCount,
+                      hasDocumentRequestsError: _data.hasDocumentRequestsError,
                     ),
 
                     const SizedBox(height: 18),
@@ -307,6 +308,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     MetricSummaryRow(
                       announcementCount: _data.announcements.length,
                       pendingRequestCount: _data.pendingRequestsCount,
+                      hasPendingRequestError: _data.hasDocumentRequestsError,
                       hasNewAnnouncements: _data.announcements.isNotEmpty,
                       onAnnouncementsTap: () {
                         Navigator.push(

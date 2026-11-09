@@ -294,6 +294,54 @@ void main() {
       expect(find.text('Clearance Ready'), findsOneWidget);
     },
   );
+
+  testWidgets(
+    'document request fetch failure does not present a zero count or current status',
+    (WidgetTester tester) async {
+      final prefs = await SharedPreferences.getInstance();
+      final storage = StorageService(prefs);
+      final unavailableService = _DynamicDashboardService(
+        storage: storage,
+        onFetch: () async => const DashboardData(
+          user: UserModel(
+            id: 1,
+            username: 'resident_juan',
+            email: 'juan@example.com',
+            role: 'RESIDENT',
+            fullName: 'Juan Dela Cruz',
+            isVerified: true,
+          ),
+          hasDocumentRequestsError: true,
+          hasNotificationsError: true,
+          notificationsErrorMessage:
+              'Unable to load document request updates (HTTP 500)',
+        ),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.lightTheme,
+          home: DashboardScreen(dashboardService: unavailableService),
+        ),
+      );
+      await tester.pump();
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(
+          'We could not refresh your document requests. Open Documents to try again.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('\u2014'), findsOneWidget);
+      expect(
+        find.textContaining('All your records are up to date.'),
+        findsNothing,
+      );
+      // Announcements remain available at zero; pending requests are unknown.
+      expect(find.text('00'), findsOneWidget);
+    },
+  );
 }
 
 class _DynamicDashboardService extends DashboardService {

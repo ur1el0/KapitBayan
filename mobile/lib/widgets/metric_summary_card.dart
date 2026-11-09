@@ -8,6 +8,7 @@ import 'app_surface.dart';
 class MetricSummaryRow extends StatelessWidget {
   final int announcementCount;
   final int pendingRequestCount;
+  final bool hasPendingRequestError;
   final bool hasNewAnnouncements;
   final VoidCallback? onAnnouncementsTap;
   final VoidCallback? onPendingRequestsTap;
@@ -16,6 +17,7 @@ class MetricSummaryRow extends StatelessWidget {
     super.key,
     required this.announcementCount,
     required this.pendingRequestCount,
+    this.hasPendingRequestError = false,
     this.hasNewAnnouncements = true,
     this.onAnnouncementsTap,
     this.onPendingRequestsTap,
@@ -24,7 +26,9 @@ class MetricSummaryRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final annCountStr = announcementCount.toString().padLeft(2, '0');
-    final reqCountStr = pendingRequestCount.toString().padLeft(2, '0');
+    final reqCountStr = hasPendingRequestError
+        ? '\u2014'
+        : pendingRequestCount.toString().padLeft(2, '0');
 
     return Row(
       children: [

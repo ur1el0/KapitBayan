@@ -7,11 +7,13 @@ import '../core/localization/app_language.dart';
 class ResidentHeroCard extends StatelessWidget {
   final UserModel? user;
   final int pendingCount;
+  final bool hasDocumentRequestsError;
 
   const ResidentHeroCard({
     super.key,
     this.user,
     this.pendingCount = 2,
+    this.hasDocumentRequestsError = false,
   });
 
   @override
@@ -104,7 +106,11 @@ class ResidentHeroCard extends StatelessWidget {
 
                   // Status & Pending Actions Subtitle
                   Text(
-                    pendingCount > 0
+                    hasDocumentRequestsError
+                        ? context.tr(
+                            'We could not refresh your document requests. Open Documents to try again.',
+                          )
+                        : pendingCount > 0
                         ? '${context.tr('Your status is current. There are')} $pendingCount ${context.tr('pending actions for your review.')}'
                         : context.tr('Your status is current. All your records are up to date.'),
                     style: TextStyle(
