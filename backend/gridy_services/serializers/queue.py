@@ -57,6 +57,12 @@ class QueueTicketSerializer(serializers.ModelSerializer):
             'updated_at'
         ]
         read_only_fields = ['status', 'ticket_number', 'created_at', 'updated_at']
+        # DRF 3.18's generated conditional UniqueTogetherValidator marks the
+        # nullable document_request_id as required on ticket creation. Walk-in
+        # tickets intentionally have no linked request; the view rechecks the
+        # active-request rule under a transaction and the database constraint
+        # remains the final guard.
+        validators = []
 
     def validate(self, attrs):
         attrs = super().validate(attrs)
