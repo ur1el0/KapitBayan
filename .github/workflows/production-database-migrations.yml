@@ -135,10 +135,12 @@ jobs:
               "gridy_auth.0025_private_media_cleanup_profile_picture",
               "gridy_auth.0026_loginevent_residenttransferrequest",
               "gridy_auth.0027_resident_guardianship_review",
+              "gridy_auth.0028_residenttransferrequest_address_details_and_more",
               "gridy_communications.0012_alter_adminnotification_notification_type",
               "gridy_communications.0013_alter_residentnotification_notification_type",
               "gridy_services.0020_documentcertificateverification",
               "gridy_services.0021_documentrequest_submission_fingerprint_and_more",
+              "gridy_services.0022_official_receipt_series",
           }
 
           if os.environ.get("CONFIRM_PRODUCTION", "").lower() != "true":
