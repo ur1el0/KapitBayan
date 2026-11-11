@@ -1,25 +1,28 @@
 # Resident Web Browser Compatibility Record
 
-This checklist tracks revision-matrix item 26. The matrix accepts a responsive resident web portal **or** a PWA, then asks for checks on Chrome, Edge, Firefox, and mobile Chrome. KapitBayan uses the responsive-web option; this record must contain actual manual results before the item is marked complete.
+This tracks revision-matrix browser compatibility. KapitBayan uses responsive web; the matrix wording “responsive or PWA” does not make PWA mandatory. A smoke pass on login/register is not a pass on authenticated service workflows.
 
-## Test record
+## Results recorded November 12, 2026
 
-| Browser | Version / OS | Viewport or device | Login and registration | Documents and queue | Layout / navigation | Result and evidence |
-|---|---|---|---|---|---|---|
-| Chrome desktop | Not recorded | Not recorded | Not tested | Not tested | Not tested | Pending manual verification |
-| Microsoft Edge desktop | Not recorded | Not recorded | Not tested | Not tested | Not tested | Pending manual verification |
-| Firefox desktop | Not recorded | Not recorded | Not tested | Not tested | Not tested | Pending manual verification |
-| Chrome Android | Not recorded | Not recorded | Not tested | Not tested | Not tested | Pending manual verification |
+| Browser | Version / OS | Viewport | Login / registration | Authenticated documents / queue | Layout / errors | Status |
+|---|---|---:|---|---|---|---|
+| Google Chrome desktop | 157.0.8103.38 / Fedora Linux 44 | 1365×900 | Both routes HTTP 200; forms rendered | Not tested; protected pages redirected to login | No horizontal overflow or page JS errors observed | Partial smoke pass |
+| Google Chrome responsive viewport | 157.0.8103.38 / Fedora Linux 44 | 390×844 | Both routes HTTP 200; forms rendered | Not tested | No horizontal overflow or page JS errors observed | Partial smoke pass |
+| Microsoft Edge desktop | Not installed | — | Not tested | Not tested | Browser installation attempted; failed because system dependencies require sudo authorization unavailable in this environment | Blocked |
+| Firefox desktop | 159.0.1 / Fedora Linux 44 | 1365×900 | Both routes HTTP 200; forms rendered | Not tested; protected pages redirected to login | No horizontal overflow or page JS errors observed | Partial smoke pass |
+| Firefox responsive viewport | 159.0.1 / Fedora Linux 44 | 390×844 | Both routes HTTP 200; forms rendered | Not tested | No horizontal overflow or page JS errors observed | Partial smoke pass |
+| Chrome Android | Physical device not connected in this pass | — | Not tested | Not tested | No current phone/browser evidence | Blocked |
 
-## Limited automated smoke test — November 9, 2026
+## Authenticated and production workflow gaps
 
-Playwright Chromium `153.0.8010.12` and Firefox `155.0` each loaded the deployed login and resident-registration routes at `1365×900` and `390×844`. Both routes returned HTTP 200, the forms rendered, and `document.documentElement.scrollWidth` matched the viewport width. This used Firefox plus Playwright's Chromium engine; it did not exercise Google Chrome, Microsoft Edge, a physical Android Chrome browser, authentication submissions, or the protected document and queue screens. It is useful smoke evidence but does not close any of the four required browser rows above.
+- No authorized resident or staff test session was used. Production `/api/v1/document-requests/` and `/api/v1/tickets/` returned `401` without authentication, as expected; this does not verify the flows after login.
+- The successful plan-only migration run on November 11 reported two pending production migrations: `gridy_auth.0028_residenttransferrequest_address_details_and_more` and `gridy_services.0022_official_receipt_series`. Do not submit production requests until the exact plan is reviewed and migrations are safely applied.
+- No verified end-to-end checks exist in this pass for document create/status transitions, linked queue completion, payment-role denials, QR issuance/phone scan, push delivery/deep links, or offline/reconnect behavior.
 
-## Minimum checks
+## Earlier limited automated smoke
 
-1. Record the tested production or preview URL, date, browser version, operating system, and viewport/device.
-2. Check resident registration and login, then open dashboard, document request, queue, announcements, and profile views.
-3. Check horizontal overflow, readable text, form controls, navigation, dialogs, and keyboard focus where relevant.
-4. Record failed cases with a screenshot and console/network details. Do not mark an unexecuted check as passed.
+On November 9, Playwright Chromium 153.0.8010.12 and Firefox 155.0 loaded production login and registration at 1365×900 and 390×844. The pages returned 200, rendered, and had no horizontal overflow. That run was unauthenticated and did not represent Google Chrome, Microsoft Edge, physical Android Chrome, or document/queue workflow coverage.
 
-The current React web client has responsive CSS but no web app manifest or service worker. Flutter remains the separate Android app for residents and officials; this checklist does not claim PWA installation or offline web behavior.
+## Completion criteria
+
+For each target browser, record URL, date, version, operating system, viewport/device, login/registration, protected resident navigation, document and queue lifecycle, payment visibility/permissions, notification/deep link where supported, responsive layout, console/network failures, and a privacy-safe screenshot or run record. Use controlled test accounts and avoid creating real payment or service records. Mark a row complete only after its required workflows and evidence are available.
