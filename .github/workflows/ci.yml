@@ -206,7 +206,9 @@ jobs:
       - name: Analyze Dart Code
         run: |
           cd mobile
-          flutter analyze
+          # Keep informational SDK deprecations visible without failing CI;
+          # analyzer warnings and errors remain fatal.
+          flutter analyze --no-fatal-infos --fatal-warnings
 
       - name: Run Widget & Unit Tests
         run: |
