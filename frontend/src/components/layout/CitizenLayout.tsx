@@ -16,6 +16,7 @@ import kapitBayanSymbol from '../../assets/kapitbayan/symbol.png';
 import { useLanguage } from '../../context/language-context';
 import { LanguageSwitcher } from '../language/LanguageSwitcher';
 import { ResidentNotificationBanner } from './ResidentNotificationBanner';
+import { PwaInstallPrompt } from '../pwa/PwaInstallPrompt';
 
 export const CitizenLayout: React.FC = () => {
     const { user, logout } = useAuth();
@@ -39,6 +40,7 @@ export const CitizenLayout: React.FC = () => {
 
     return (
         <div className="min-h-screen min-h-[100dvh] flex flex-col bg-[#F8FAFD] text-slate-900 font-sans antialiased">
+            <PwaInstallPrompt />
             {/* Top Citizen Navigation Bar */}
             <header className="bg-primary text-primary-foreground sticky top-0 z-50 shadow-md">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

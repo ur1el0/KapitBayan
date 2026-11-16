@@ -8,6 +8,7 @@ import { AdminLayout } from "./components/layout/AdminLayout";
 import { CitizenLayout } from "./components/layout/CitizenLayout";
 import { ErrorBoundary } from "./components/core/ErrorBoundary";
 import { RouteLoadingFallback } from "./components/core/RouteLoadingFallback";
+import { OfflineBanner } from "./components/pwa/OfflineBanner";
 
 const Login = lazy(() =>
     import("./pages/auth/Login").then(({ Login }) => ({ default: Login })),
@@ -174,15 +175,18 @@ export function App() {
 
 function AppRouteContent() {
     const location = useLocation();
-    if (location.pathname.replace(/\/+$/, '') === '/kiosk') {
-        return (
-            <Suspense fallback={<RouteLoadingFallback />}>
-                <PublicKiosk />
-            </Suspense>
-        );
-    }
-
-    return <AuthenticatedAppRoutes />;
+    return (
+        <>
+            <OfflineBanner />
+            {location.pathname.replace(/\/+$/, '') === '/kiosk' ? (
+                <Suspense fallback={<RouteLoadingFallback />}>
+                    <PublicKiosk />
+                </Suspense>
+            ) : (
+                <AuthenticatedAppRoutes />
+            )}
+        </>
+    );
 }
 
 function AuthenticatedAppRoutes() {
