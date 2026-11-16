@@ -3,10 +3,12 @@ from channels.testing import WebsocketCommunicator
 from config.asgi import application
 from gridy_services.websocket_events import broadcast_queue_update
 
+TEST_HEADERS = [(b"origin", b"http://localhost")]
+
 
 @pytest.mark.asyncio
 async def test_websocket_queue_connect_and_receive_broadcast():
-    communicator = WebsocketCommunicator(application, "/ws/queue/10/")
+    communicator = WebsocketCommunicator(application, "/ws/queue/10/", headers=TEST_HEADERS)
     connected, _ = await communicator.connect()
     assert connected, "WebSocket connection failed to establish."
 
@@ -31,12 +33,12 @@ async def test_websocket_queue_connect_and_receive_broadcast():
 @pytest.mark.asyncio
 async def test_websocket_queue_tenant_isolation():
     # Client A in Barangay 10
-    client_a = WebsocketCommunicator(application, "/ws/queue/10/")
+    client_a = WebsocketCommunicator(application, "/ws/queue/10/", headers=TEST_HEADERS)
     connected_a, _ = await client_a.connect()
     assert connected_a
 
     # Client B in Barangay 20
-    client_b = WebsocketCommunicator(application, "/ws/queue/20/")
+    client_b = WebsocketCommunicator(application, "/ws/queue/20/", headers=TEST_HEADERS)
     connected_b, _ = await client_b.connect()
     assert connected_b
 
@@ -62,7 +64,7 @@ async def test_websocket_queue_tenant_isolation():
 
 @pytest.mark.asyncio
 async def test_websocket_queue_generic_route():
-    communicator = WebsocketCommunicator(application, "/ws/queue/")
+    communicator = WebsocketCommunicator(application, "/ws/queue/", headers=TEST_HEADERS)
     connected, _ = await communicator.connect()
     assert connected
 
