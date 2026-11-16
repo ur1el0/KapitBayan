@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { axiosPrivate } from '../../api/axios';
 import { useAuth } from '../../context/auth-context';
 import { AppointmentsTable } from '../../components/admin-dashboard/AppointmentsTable';
+import { AccomplishmentReportCard } from '../../components/admin-dashboard/AccomplishmentReportCard';
 import { DemographicsCharts } from '../../components/admin-dashboard/DemographicsCharts';
 import { MetricCards } from '../../components/admin-dashboard/MetricCards';
 import { ScenarioBreakdownChart } from '../../components/admin-dashboard/ScenarioBreakdownChart';
@@ -244,6 +245,7 @@ export const Dashboard: React.FC = () => {
                         />
                     )}
                     <MetricCards loading={isLoadingSummary} summary={summaryData} />
+                    <AccomplishmentReportCard />
                     <ScenarioBreakdownChart loading={isLoadingSummary} data={scenarioData} />
                     {!isLoadingSummary && <DemographicsCharts purokData={purokData} ageData={ageData} />}
                 </>

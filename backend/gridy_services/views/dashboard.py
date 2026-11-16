@@ -1,15 +1,26 @@
 from django.db.models import Count, Q, Sum
+from django.http import HttpResponse
 from django.utils import timezone
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import permissions, status
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from gridy_auth.models import Resident, User
 from gridy_auth.permissions import IsBarangayOfficial
 from gridy_reports.models import IssueReport
+from gridy_services.accomplishment_report import (
+    build_accomplishment_report,
+    build_safe_report_filename,
+    render_accomplishment_report_csv,
+    render_accomplishment_report_pdf,
+)
 from gridy_services.models import DocumentRequest, QueueTicket, manila_day_bounds
-from gridy_services.serializers import DashboardSummarySerializer
+from gridy_services.serializers import (
+    AccomplishmentReportSerializer,
+    DashboardSummarySerializer,
+)
 
 
 @extend_schema(
@@ -145,3 +156,84 @@ class DashboardSummaryView(APIView):
             }
         }
         return Response(data, status=status.HTTP_200_OK)
+
+
+def _get_scoped_accomplishment_report_for_request(request):
+    user = request.user
+    if not user or not user.barangay_id or not user.barangay:
+        raise PermissionDenied(
+            "Your account must be assigned to a barangay to access accomplishment reports."
+        )
+    try:
+        return build_accomplishment_report(
+            barangay=user.barangay,
+            year=request.query_params.get("year"),
+            month=request.query_params.get("month"),
+        )
+    except (TypeError, ValueError) as exc:
+        raise ValidationError({"detail": str(exc)})
+
+
+@extend_schema(
+    summary="Get Monthly Barangay Accomplishment Report",
+    description="Returns tenant-scoped monthly executive summary metrics for the Barangay Admin's barangay.",
+    parameters=[
+        OpenApiParameter(name="year", type=int, required=False, description="Report year (YYYY)"),
+        OpenApiParameter(name="month", type=int, required=False, description="Report month (1-12)"),
+    ],
+    responses={200: AccomplishmentReportSerializer},
+)
+class AccomplishmentReportView(APIView):
+    permission_classes = [permissions.IsAuthenticated, IsBarangayOfficial]
+
+    def get(self, request, *args, **kwargs):
+        report = _get_scoped_accomplishment_report_for_request(request)
+        return Response(report, status=status.HTTP_200_OK)
+
+
+@extend_schema(
+    summary="Export Monthly Barangay Accomplishment Report (CSV or PDF)",
+    description="Exports the monthly accomplishment report for the Barangay Admin's barangay as CSV or PDF.",
+    parameters=[
+        OpenApiParameter(name="year", type=int, required=False, description="Report year (YYYY)"),
+        OpenApiParameter(name="month", type=int, required=False, description="Report month (1-12)"),
+        OpenApiParameter(name="export_format", type=str, required=False, enum=["csv", "pdf"]),
+    ],
+    responses={200: bytes},
+)
+class AccomplishmentReportExportView(APIView):
+    permission_classes = [permissions.IsAuthenticated, IsBarangayOfficial]
+
+    def get(self, request, *args, **kwargs):
+        report = _get_scoped_accomplishment_report_for_request(request)
+        export_format = (
+            request.query_params.get("export_format")
+            or request.query_params.get("format_type")
+            or "csv"
+        ).strip().lower()
+
+        if export_format == "csv":
+            payload = render_accomplishment_report_csv(report)
+            filename = build_safe_report_filename(
+                report["barangay_name"],
+                report["year"],
+                report["month"],
+                "csv",
+            )
+            response = HttpResponse(payload, content_type="text/csv; charset=utf-8")
+        elif export_format == "pdf":
+            payload = render_accomplishment_report_pdf(report)
+            filename = build_safe_report_filename(
+                report["barangay_name"],
+                report["year"],
+                report["month"],
+                "pdf",
+            )
+            response = HttpResponse(payload, content_type="application/pdf")
+        else:
+            raise ValidationError({"export_format": "Select 'csv' or 'pdf'."})
+
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
+        response["Cache-Control"] = "private, no-store, max-age=0"
+        response["X-Content-Type-Options"] = "nosniff"
+        return response

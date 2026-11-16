@@ -8,6 +8,7 @@ import {
     LogOut, 
     Building2,
     HandHeart,
+    Package,
     CircleHelp,
     Settings,
 } from 'lucide-react';
@@ -86,6 +87,10 @@ export const CitizenLayout: React.FC = () => {
                                 <HandHeart className="w-4 h-4" />
                                 <span>{t('Assistance')}</span>
                             </NavLink>
+                            <NavLink to="/portal/equipment" aria-label={t('Equipment & Facility Borrowing')} className={navLinkClass}>
+                                <Package className="w-4 h-4" />
+                                <span>{t('Equipment')}</span>
+                            </NavLink>
                             <NavLink to="/portal/help" aria-label="FAQs" className={navLinkClass}>
                                 <CircleHelp className="w-4 h-4" aria-hidden="true" />
                                 <span>{t('FAQs')}</span>
@@ -146,6 +151,10 @@ export const CitizenLayout: React.FC = () => {
                     <NavLink to="/portal/aid" className={navLinkClass}>
                         <HandHeart className="w-4 h-4" />
                         <span className="text-xs">{t('Assistance')}</span>
+                    </NavLink>
+                    <NavLink to="/portal/equipment" className={navLinkClass}>
+                        <Package className="w-4 h-4" />
+                        <span className="text-xs">{t('Equipment')}</span>
                     </NavLink>
                     <NavLink to="/portal/help" className={`${navLinkClass} whitespace-nowrap`}>
                         <CircleHelp className="w-4 h-4" aria-hidden="true" />

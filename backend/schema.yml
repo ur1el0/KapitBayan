@@ -4,6 +4,1405 @@ info:
   version: 1.0.0
   description: KapitBayan Barangay Information and Service Management System API
 paths:
+  /api/services/aid-requests/:
+    get:
+      operationId: api_services_aid_requests_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAidRequestList'
+          description: ''
+    post:
+      operationId: api_services_aid_requests_create
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AidRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AidRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AidRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AidRequest'
+          description: ''
+  /api/services/aid-requests/{id}/:
+    get:
+      operationId: api_services_aid_requests_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this aid request.
+        required: true
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AidRequest'
+          description: ''
+    patch:
+      operationId: api_services_aid_requests_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this aid request.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedAidRequestReview'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedAidRequestReview'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedAidRequestReview'
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AidRequestReview'
+          description: ''
+  /api/services/dashboard/accomplishment-report/:
+    get:
+      operationId: api_services_dashboard_accomplishment_report_retrieve
+      description: Returns tenant-scoped monthly executive summary metrics for the
+        Barangay Admin's barangay.
+      summary: Get Monthly Barangay Accomplishment Report
+      parameters:
+      - in: query
+        name: month
+        schema:
+          type: integer
+        description: Report month (1-12)
+      - in: query
+        name: year
+        schema:
+          type: integer
+        description: Report year (YYYY)
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccomplishmentReport'
+          description: ''
+  /api/services/dashboard/accomplishment-report/export/:
+    get:
+      operationId: api_services_dashboard_accomplishment_report_export_retrieve
+      description: Exports the monthly accomplishment report for the Barangay Admin's
+        barangay as CSV or PDF.
+      summary: Export Monthly Barangay Accomplishment Report (CSV or PDF)
+      parameters:
+      - in: query
+        name: export_format
+        schema:
+          type: string
+          enum:
+          - csv
+          - pdf
+      - in: query
+        name: month
+        schema:
+          type: integer
+        description: Report month (1-12)
+      - in: query
+        name: year
+        schema:
+          type: integer
+        description: Report year (YYYY)
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: string
+                format: binary
+          description: ''
+  /api/services/dashboard/summary/:
+    get:
+      operationId: api_services_dashboard_summary_retrieve
+      description: Returns pre-calculated counters and urgency distributions for reports,
+        document queues, and clearances.
+      summary: Get Dashboard Statistics
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardSummary'
+          description: ''
+  /api/services/document-catalog/:
+    get:
+      operationId: api_services_document_catalog_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedDocumentServiceOfferingList'
+          description: ''
+    post:
+      operationId: api_services_document_catalog_create
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentServiceOffering'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DocumentServiceOffering'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DocumentServiceOffering'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentServiceOffering'
+          description: ''
+  /api/services/document-catalog/{id}/:
+    get:
+      operationId: api_services_document_catalog_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this document service offering.
+        required: true
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentServiceOffering'
+          description: ''
+    put:
+      operationId: api_services_document_catalog_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this document service offering.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentServiceOffering'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DocumentServiceOffering'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DocumentServiceOffering'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentServiceOffering'
+          description: ''
+    patch:
+      operationId: api_services_document_catalog_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this document service offering.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedDocumentServiceOffering'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedDocumentServiceOffering'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedDocumentServiceOffering'
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentServiceOffering'
+          description: ''
+    delete:
+      operationId: api_services_document_catalog_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this document service offering.
+        required: true
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/services/document-requests/:
+    get:
+      operationId: api_services_document_requests_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedDocumentRequestList'
+          description: ''
+    post:
+      operationId: api_services_document_requests_create
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DocumentRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DocumentRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentRequest'
+          description: ''
+  /api/services/document-requests/{id}/:
+    get:
+      operationId: api_services_document_requests_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this document request.
+        required: true
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentRequest'
+          description: ''
+    put:
+      operationId: api_services_document_requests_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this document request.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DocumentRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DocumentRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentRequest'
+          description: ''
+    patch:
+      operationId: api_services_document_requests_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this document request.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedDocumentRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedDocumentRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedDocumentRequest'
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentRequest'
+          description: ''
+    delete:
+      operationId: api_services_document_requests_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this document request.
+        required: true
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/services/document-requests/{id}/certificate-verification/:
+    get:
+      operationId: api_services_document_requests_certificate_verification_retrieve
+      description: Manage an opaque public verification token for a released paper
+        certificate.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this document request.
+        required: true
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentRequest'
+          description: ''
+    post:
+      operationId: api_services_document_requests_certificate_verification_create
+      description: Manage an opaque public verification token for a released paper
+        certificate.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this document request.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DocumentRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DocumentRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentRequest'
+          description: ''
+    delete:
+      operationId: api_services_document_requests_certificate_verification_destroy
+      description: Manage an opaque public verification token for a released paper
+        certificate.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this document request.
+        required: true
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/services/document-requests/{id}/generate-pdf/:
+    get:
+      operationId: api_services_document_requests_generate_pdf_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this document request.
+        required: true
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentRequest'
+          description: ''
+  /api/services/document-requests/{id}/or-number/:
+    patch:
+      operationId: api_services_document_requests_or_number_partial_update
+      description: Keep the legacy endpoint read-only; receipt numbers come from the
+        configured series.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this document request.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedDocumentRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedDocumentRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedDocumentRequest'
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentRequest'
+          description: ''
+  /api/services/document-requests/{id}/payment-choice/:
+    post:
+      operationId: api_services_document_requests_payment_choice_create
+      description: Save a resident's choice of cash or an active same-Barangay e-payment
+        recipient.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this document request.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentChoice'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PaymentChoice'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PaymentChoice'
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentRequest'
+          description: ''
+  /api/services/document-requests/{id}/payment-proof/:
+    get:
+      operationId: api_services_document_requests_payment_proof_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this document request.
+        required: true
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentRequest'
+          description: ''
+  /api/services/document-requests/{id}/payment-reference/:
+    post:
+      operationId: api_services_document_requests_payment_reference_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this document request.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DocumentRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DocumentRequest'
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentRequest'
+          description: ''
+  /api/services/document-requests/{id}/payment-review/:
+    patch:
+      operationId: api_services_document_requests_payment_review_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this document request.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedDocumentRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedDocumentRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedDocumentRequest'
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentRequest'
+          description: ''
+  /api/services/document-requests/{id}/record-cash-payment/:
+    post:
+      operationId: api_services_document_requests_record_cash_payment_create
+      description: Record cash received for a walk-in request that has no resident
+        account.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this document request.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DocumentRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DocumentRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentRequest'
+          description: ''
+  /api/services/document-requests/{id}/validate/:
+    patch:
+      operationId: api_services_document_requests_validate_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this document request.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedDocumentRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedDocumentRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedDocumentRequest'
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentRequest'
+          description: ''
+  /api/services/document-requests/verify/:
+    get:
+      operationId: api_services_document_requests_verify_retrieve
+      description: Find a same-Barangay document by exact O.R. number or printed tracking
+        ID.
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentRequest'
+          description: ''
+  /api/services/documents/{id}/payment-proof/:
+    get:
+      operationId: api_services_documents_payment_proof_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentRequest'
+          description: ''
+  /api/services/equipment-requests/:
+    get:
+      operationId: api_services_equipment_requests_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedEquipmentBorrowRequestList'
+          description: ''
+    post:
+      operationId: api_services_equipment_requests_create
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EquipmentBorrowRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/EquipmentBorrowRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/EquipmentBorrowRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EquipmentBorrowRequest'
+          description: ''
+  /api/services/equipment-requests/{id}/:
+    get:
+      operationId: api_services_equipment_requests_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this equipment borrow request.
+        required: true
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EquipmentBorrowRequest'
+          description: ''
+    patch:
+      operationId: api_services_equipment_requests_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this equipment borrow request.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedEquipmentBorrowRequestReview'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedEquipmentBorrowRequestReview'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedEquipmentBorrowRequestReview'
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EquipmentBorrowRequestReview'
+          description: ''
+  /api/services/official-receipt-series/:
+    get:
+      operationId: api_services_official_receipt_series_retrieve
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          description: No response body
+    patch:
+      operationId: api_services_official_receipt_series_partial_update
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/services/payment-recipients/:
+    get:
+      operationId: api_services_payment_recipients_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedPaymentRecipientList'
+          description: ''
+    post:
+      operationId: api_services_payment_recipients_create
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentRecipient'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PaymentRecipient'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PaymentRecipient'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentRecipient'
+          description: ''
+  /api/services/payment-recipients/{id}/:
+    get:
+      operationId: api_services_payment_recipients_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this payment recipient.
+        required: true
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentRecipient'
+          description: ''
+    patch:
+      operationId: api_services_payment_recipients_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this payment recipient.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedPaymentRecipient'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedPaymentRecipient'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedPaymentRecipient'
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentRecipient'
+          description: ''
+  /api/services/public/barangays/{barangay_id}/queue-status/:
+    get:
+      operationId: api_services_public_barangays_queue_status_retrieve
+      description: Returns only public lobby fields for the specified barangay. Resident
+        names and ticket records are not exposed.
+      summary: Get public queue status for one barangay
+      parameters:
+      - in: path
+        name: barangay_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicQueueStatus'
+          description: ''
+  /api/services/public/certificate-verifications/{token}/:
+    get:
+      operationId: api_services_public_certificate_verifications_retrieve
+      description: Publicly confirm a Barangay certificate record without exposing
+        resident data.
+      parameters:
+      - in: path
+        name: token
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/services/tickets/:
+    get:
+      operationId: api_services_tickets_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedQueueTicketList'
+          description: ''
+    post:
+      operationId: api_services_tickets_create
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QueueTicket'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/QueueTicket'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/QueueTicket'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueueTicket'
+          description: ''
+  /api/services/tickets/{id}/:
+    get:
+      operationId: api_services_tickets_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this queue ticket.
+        required: true
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueueTicket'
+          description: ''
+    put:
+      operationId: api_services_tickets_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this queue ticket.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QueueTicket'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/QueueTicket'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/QueueTicket'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueueTicket'
+          description: ''
+    patch:
+      operationId: api_services_tickets_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this queue ticket.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedQueueTicket'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedQueueTicket'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedQueueTicket'
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueueTicket'
+          description: ''
+    delete:
+      operationId: api_services_tickets_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this queue ticket.
+        required: true
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/services/tickets/{id}/cancel/:
+    post:
+      operationId: api_services_tickets_cancel_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this queue ticket.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QueueTicket'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/QueueTicket'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/QueueTicket'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueueTicket'
+          description: ''
+  /api/services/tickets/{id}/complete/:
+    post:
+      operationId: api_services_tickets_complete_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this queue ticket.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QueueTicket'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/QueueTicket'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/QueueTicket'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueueTicket'
+          description: ''
+  /api/services/tickets/{id}/notify/:
+    post:
+      operationId: api_services_tickets_notify_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this queue ticket.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QueueTicket'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/QueueTicket'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/QueueTicket'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueueTicket'
+          description: ''
+  /api/services/tickets/{id}/priority/:
+    post:
+      operationId: api_services_tickets_priority_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this queue ticket.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QueueTicketPriority'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/QueueTicketPriority'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/QueueTicketPriority'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueueTicket'
+          description: ''
+  /api/services/tickets/live-status/:
+    get:
+      operationId: api_services_tickets_live_status_retrieve
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueueTicket'
+          description: ''
+  /api/services/tickets/next/:
+    post:
+      operationId: api_services_tickets_next_create
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QueueTicketCompletion'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/QueueTicketCompletion'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/QueueTicketCompletion'
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueueTicket'
+          description: ''
   /api/v1/activities/:
     get:
       operationId: api_v1_activities_list
@@ -1963,6 +3362,70 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+  /api/v1/dashboard/accomplishment-report/:
+    get:
+      operationId: api_v1_dashboard_accomplishment_report_retrieve
+      description: Returns tenant-scoped monthly executive summary metrics for the
+        Barangay Admin's barangay.
+      summary: Get Monthly Barangay Accomplishment Report
+      parameters:
+      - in: query
+        name: month
+        schema:
+          type: integer
+        description: Report month (1-12)
+      - in: query
+        name: year
+        schema:
+          type: integer
+        description: Report year (YYYY)
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccomplishmentReport'
+          description: ''
+  /api/v1/dashboard/accomplishment-report/export/:
+    get:
+      operationId: api_v1_dashboard_accomplishment_report_export_retrieve
+      description: Exports the monthly accomplishment report for the Barangay Admin's
+        barangay as CSV or PDF.
+      summary: Export Monthly Barangay Accomplishment Report (CSV or PDF)
+      parameters:
+      - in: query
+        name: export_format
+        schema:
+          type: string
+          enum:
+          - csv
+          - pdf
+      - in: query
+        name: month
+        schema:
+          type: integer
+        description: Report month (1-12)
+      - in: query
+        name: year
+        schema:
+          type: integer
+        description: Report year (YYYY)
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: string
+                format: binary
+          description: ''
   /api/v1/dashboard/summary/:
     get:
       operationId: api_v1_dashboard_summary_retrieve
@@ -2517,8 +3980,8 @@ paths:
   /api/v1/document-requests/{id}/or-number/:
     patch:
       operationId: api_v1_document_requests_or_number_partial_update
-      description: Compatibility endpoint. Accepts only an unchanged existing O.R.; new
-        numbers are assigned from the Barangay series after payment confirmation.
+      description: Keep the legacy endpoint read-only; receipt numbers come from the
+        configured series.
       parameters:
       - in: path
         name: id
@@ -2770,6 +4233,104 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/DocumentRequest'
+          description: ''
+  /api/v1/equipment-requests/:
+    get:
+      operationId: api_v1_equipment_requests_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedEquipmentBorrowRequestList'
+          description: ''
+    post:
+      operationId: api_v1_equipment_requests_create
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EquipmentBorrowRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/EquipmentBorrowRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/EquipmentBorrowRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EquipmentBorrowRequest'
+          description: ''
+  /api/v1/equipment-requests/{id}/:
+    get:
+      operationId: api_v1_equipment_requests_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this equipment borrow request.
+        required: true
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EquipmentBorrowRequest'
+          description: ''
+    patch:
+      operationId: api_v1_equipment_requests_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this equipment borrow request.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedEquipmentBorrowRequestReview'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedEquipmentBorrowRequestReview'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedEquipmentBorrowRequestReview'
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EquipmentBorrowRequestReview'
           description: ''
   /api/v1/faqs/:
     get:
@@ -3142,72 +4703,16 @@ paths:
       - cookieAuth: []
       responses:
         '200':
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  configured:
-                    type: boolean
-                  prefix:
-                    type: string
-                  next_number:
-                    type: integer
-                    nullable: true
-                  number_width:
-                    type: integer
-                  last_issued_number:
-                    type: integer
-                    nullable: true
-                  updated_at:
-                    type: string
-                    format: date-time
-          description: ''
+          description: No response body
     patch:
       operationId: api_v1_official_receipt_series_partial_update
       tags:
       - api
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                prefix:
-                  type: string
-                  maxLength: 40
-                next_number:
-                  type: integer
-                  minimum: 1
-                number_width:
-                  type: integer
-                  minimum: 0
-                  maximum: 12
-        required: true
       security:
       - cookieAuth: []
       responses:
         '200':
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  configured:
-                    type: boolean
-                  prefix:
-                    type: string
-                  next_number:
-                    type: integer
-                  number_width:
-                    type: integer
-                  last_issued_number:
-                    type: integer
-                    nullable: true
-                  updated_at:
-                    type: string
-                    format: date-time
-          description: ''
+          description: No response body
   /api/v1/payment-recipients/:
     get:
       operationId: api_v1_payment_recipients_list
@@ -3931,6 +5436,50 @@ paths:
           description: No response body
 components:
   schemas:
+    AccomplishmentReport:
+      type: object
+      properties:
+        barangay_name:
+          type: string
+        municipality:
+          type: string
+        province:
+          type: string
+        captain_name:
+          type: string
+        year:
+          type: integer
+        month:
+          type: integer
+        period_label:
+          type: string
+        generated_at:
+          type: string
+        residents_rbi:
+          type: object
+          additionalProperties: {}
+        certificates_issuance:
+          type: object
+          additionalProperties: {}
+        community_services:
+          type: object
+          additionalProperties: {}
+        communications_activities:
+          type: object
+          additionalProperties: {}
+      required:
+      - barangay_name
+      - captain_name
+      - certificates_issuance
+      - communications_activities
+      - community_services
+      - generated_at
+      - month
+      - municipality
+      - period_label
+      - province
+      - residents_rbi
+      - year
     ActivitySchedule:
       type: object
       properties:
@@ -4502,7 +6051,8 @@ components:
           type: string
           readOnly: true
           nullable: true
-          description: Barangay-approved O.R. number assigned from the configured series after payment confirmation.
+          description: Barangay-approved O.R. number assigned from the configured
+            series after payment confirmation.
         fee_amount:
           type: string
           format: decimal
@@ -4748,6 +6298,165 @@ components:
         * `MEDICAL` - Medical / Hospital
         * `BARANGAY` - Barangay Desk
         * `OTHER` - Other
+    EquipmentBorrowRequest:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        resident:
+          type: integer
+          readOnly: true
+          nullable: true
+        resident_name:
+          type: string
+          readOnly: true
+        item_type:
+          $ref: '#/components/schemas/ItemTypeEnum'
+        quantity:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        borrow_date:
+          type: string
+          format: date
+        return_date:
+          type: string
+          format: date
+        time_slot:
+          type: string
+          maxLength: 100
+        purpose:
+          type: string
+          maxLength: 2000
+        status:
+          allOf:
+          - $ref: '#/components/schemas/Status3ddEnum'
+          readOnly: true
+        admin_notes:
+          type: string
+          readOnly: true
+        reviewed_by:
+          type: integer
+          readOnly: true
+          nullable: true
+        reviewed_by_name:
+          type: string
+          nullable: true
+          readOnly: true
+        reviewed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        returned_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - admin_notes
+      - borrow_date
+      - created_at
+      - id
+      - purpose
+      - resident
+      - resident_name
+      - return_date
+      - returned_at
+      - reviewed_at
+      - reviewed_by
+      - reviewed_by_name
+      - status
+      - updated_at
+    EquipmentBorrowRequestReview:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        resident:
+          type: integer
+          readOnly: true
+          nullable: true
+        resident_name:
+          type: string
+          readOnly: true
+        item_type:
+          allOf:
+          - $ref: '#/components/schemas/ItemTypeEnum'
+          readOnly: true
+        quantity:
+          type: integer
+          readOnly: true
+        borrow_date:
+          type: string
+          format: date
+          readOnly: true
+        return_date:
+          type: string
+          format: date
+          readOnly: true
+        time_slot:
+          type: string
+          readOnly: true
+        purpose:
+          type: string
+          readOnly: true
+        status:
+          $ref: '#/components/schemas/Status3ddEnum'
+        admin_notes:
+          type: string
+        reviewed_by:
+          type: integer
+          readOnly: true
+          nullable: true
+        reviewed_by_name:
+          type: string
+          nullable: true
+          readOnly: true
+        reviewed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        returned_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - borrow_date
+      - created_at
+      - id
+      - item_type
+      - purpose
+      - quantity
+      - resident
+      - resident_name
+      - return_date
+      - returned_at
+      - reviewed_at
+      - reviewed_by
+      - reviewed_by_name
+      - time_slot
+      - updated_at
     FAQ:
       type: object
       properties:
@@ -4960,6 +6669,22 @@ components:
       - resolved
       - total
       - urgency_breakdown
+    ItemTypeEnum:
+      enum:
+      - Monoblock Chairs
+      - Tent / Canopy
+      - Sound System
+      - Tables
+      - Covered Court / Multi-Purpose Hall
+      - Other
+      type: string
+      description: |-
+        * `Monoblock Chairs` - Monoblock Chairs
+        * `Tent / Canopy` - Tent / Canopy
+        * `Sound System` - Sound System
+        * `Tables` - Tables
+        * `Covered Court / Multi-Purpose Hall` - Covered Court / Multi-Purpose Hall
+        * `Other` - Other
     LoginEvent:
       type: object
       properties:
@@ -5201,6 +6926,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/EmergencyHotline'
+    PaginatedEquipmentBorrowRequestList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/EquipmentBorrowRequest'
     PaginatedFAQList:
       type: object
       required:
@@ -5651,7 +7399,8 @@ components:
           type: string
           readOnly: true
           nullable: true
-          description: Barangay-approved O.R. number assigned from the configured series after payment confirmation.
+          description: Barangay-approved O.R. number assigned from the configured
+            series after payment confirmation.
         fee_amount:
           type: string
           format: decimal
@@ -5787,6 +7536,70 @@ components:
           type: boolean
         created_by:
           type: integer
+          readOnly: true
+    PatchedEquipmentBorrowRequestReview:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        resident:
+          type: integer
+          readOnly: true
+          nullable: true
+        resident_name:
+          type: string
+          readOnly: true
+        item_type:
+          allOf:
+          - $ref: '#/components/schemas/ItemTypeEnum'
+          readOnly: true
+        quantity:
+          type: integer
+          readOnly: true
+        borrow_date:
+          type: string
+          format: date
+          readOnly: true
+        return_date:
+          type: string
+          format: date
+          readOnly: true
+        time_slot:
+          type: string
+          readOnly: true
+        purpose:
+          type: string
+          readOnly: true
+        status:
+          $ref: '#/components/schemas/Status3ddEnum'
+        admin_notes:
+          type: string
+        reviewed_by:
+          type: integer
+          readOnly: true
+          nullable: true
+        reviewed_by_name:
+          type: string
+          nullable: true
+          readOnly: true
+        reviewed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        returned_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
           readOnly: true
     PatchedFAQ:
       type: object
@@ -7285,6 +9098,18 @@ components:
       - email
       - first_name
       - last_name
+    Status3ddEnum:
+      enum:
+      - PENDING
+      - APPROVED
+      - DECLINED
+      - RETURNED
+      type: string
+      description: |-
+        * `PENDING` - Pending
+        * `APPROVED` - Approved
+        * `DECLINED` - Declined
+        * `RETURNED` - Returned
     StatusB97Enum:
       enum:
       - PENDING

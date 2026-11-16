@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>Monthly Barangay Accomplishment Report - {{ report.period_label }}</title>
+    <style>
+        @page {
+            size: a4 portrait;
+            margin: 1.8cm;
+        }
+        body {
+            font-family: Helvetica, Arial, sans-serif;
+            color: #0f172a;
+            font-size: 11px;
+            line-height: 1.45;
+        }
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #092b66;
+            padding-bottom: 12px;
+            margin-bottom: 18px;
+        }
+        .header p {
+            margin: 2px 0;
+            font-size: 11px;
+            letter-spacing: 0.5px;
+        }
+        .header h1 {
+            margin: 6px 0 2px 0;
+            font-size: 18px;
+            color: #092b66;
+            text-transform: uppercase;
+        }
+        .header h2 {
+            margin: 4px 0 0 0;
+            font-size: 13px;
+            font-weight: bold;
+            color: #1e293b;
+        }
+        .meta-table {
+            width: 100%;
+            margin-bottom: 16px;
+            border-collapse: collapse;
+        }
+        .meta-table td {
+            padding: 4px 6px;
+            font-size: 11px;
+        }
+        .section-title {
+            background-color: #092b66;
+            color: #ffffff;
+            font-weight: bold;
+            font-size: 11.5px;
+            padding: 6px 10px;
+            margin-top: 14px;
+            margin-bottom: 0;
+            text-transform: uppercase;
+        }
+        .report-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 10px;
+        }
+        .report-table th,
+        .report-table td {
+            border: 1px solid #cbd5e1;
+            padding: 6px 10px;
+            text-align: left;
+        }
+        .report-table th {
+            background-color: #f1f5f9;
+            font-weight: bold;
+            color: #334155;
+        }
+        .report-table td.count-col,
+        .report-table th.count-col {
+            width: 110px;
+            text-align: right;
+            font-weight: bold;
+        }
+        .signatories {
+            width: 100%;
+            margin-top: 38px;
+            border-collapse: collapse;
+        }
+        .signatories td {
+            width: 50%;
+            vertical-align: top;
+            padding-top: 24px;
+            text-align: center;
+        }
+        .sig-line {
+            border-top: 1px solid #0f172a;
+            width: 200px;
+            margin: 28px auto 4px auto;
+            padding-top: 4px;
+            font-weight: bold;
+        }
+        .sig-role {
+            font-size: 10px;
+            color: #475569;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <p>REPUBLIC OF THE PHILIPPINES</p>
+        {% if report.province %}<p>PROVINCE OF {{ report.province|upper }}</p>{% endif %}
+        {% if report.municipality %}<p>{{ report.municipality|upper }}</p>{% endif %}
+        <h1>BARANGAY {{ report.barangay_name|upper }}</h1>
+        <h2>MONTHLY BARANGAY ACCOMPLISHMENT REPORT</h2>
+        <p><strong>Period Covered:</strong> {{ report.period_label }}</p>
+    </div>
+
+    <div class="section-title">1. Residents &amp; Registry of Barangay Inhabitants (RBI) Updates</div>
+    <table class="report-table">
+        <thead>
+            <tr>
+                <th>Indicator</th>
+                <th class="count-col">Accomplishment</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>New Registered Residents (Selected Month)</td>
+                <td class="count-col">{{ report.residents_rbi.new_registered_residents }}</td>
+            </tr>
+            <tr>
+                <td>New Verified Residents (Selected Month)</td>
+                <td class="count-col">{{ report.residents_rbi.new_verified_residents }}</td>
+            </tr>
+            <tr>
+                <td>Approved Resident Transfers / RBI Updates</td>
+                <td class="count-col">{{ report.residents_rbi.approved_rbi_transfers }}</td>
+            </tr>
+            <tr>
+                <td>Total Active Verified Residents (Cumulative Baseline)</td>
+                <td class="count-col">{{ report.residents_rbi.total_active_verified_residents }}</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="section-title">2. Certificates &amp; Document Issuance</div>
+    <table class="report-table">
+        <thead>
+            <tr>
+                <th>Document / Indicator</th>
+                <th class="count-col">Issued Count</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Total Certificates &amp; Clearances Issued (Released)</strong></td>
+                <td class="count-col">{{ report.certificates_issuance.total_issued }}</td>
+            </tr>
+            <tr>
+                <td>Fee-Waived / Statutory Exempt Certificates (RA 11261 &amp; Indigency)</td>
+                <td class="count-col">{{ report.certificates_issuance.fee_waived_or_exempt_count }}</td>
+            </tr>
+            {% for item in report.certificates_issuance.by_document_type %}
+            <tr>
+                <td>&bull; {{ item.document_type }}</td>
+                <td class="count-col">{{ item.count }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="2">No released certificates recorded for this period.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="section-title">3. Community Issues, Social Aid &amp; Equipment Services</div>
+    <table class="report-table">
+        <thead>
+            <tr>
+                <th>Service Area</th>
+                <th class="count-col">Count</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Community Issue Reports Submitted</td>
+                <td class="count-col">{{ report.community_services.issues_submitted }}</td>
+            </tr>
+            <tr>
+                <td>Community Issue Reports Resolved</td>
+                <td class="count-col">{{ report.community_services.issues_resolved }}</td>
+            </tr>
+            <tr>
+                <td>Barangay Assistance (Aid) Requests Fulfilled / Approved</td>
+                <td class="count-col">{{ report.community_services.aid_requests_approved }}</td>
+            </tr>
+            <tr>
+                <td>Equipment &amp; Facility Borrowing Requests Approved / Returned</td>
+                <td class="count-col">{{ report.community_services.equipment_requests_fulfilled }}</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="section-title">4. Public Communications &amp; Community Activities</div>
+    <table class="report-table">
+        <thead>
+            <tr>
+                <th>Communication / Activity Metric</th>
+                <th class="count-col">Count</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Public Bulletins &amp; Announcements Published</td>
+                <td class="count-col">{{ report.communications_activities.announcements_published }}</td>
+            </tr>
+            <tr>
+                <td>Community Activities &amp; Schedules Conducted</td>
+                <td class="count-col">{{ report.communications_activities.activities_conducted }}</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <table class="signatories">
+        <tr>
+            <td>
+                <div>Prepared by:</div>
+                <div class="sig-line">Barangay Secretary</div>
+                <div class="sig-role">Barangay {{ report.barangay_name }}</div>
+            </td>
+            <td>
+                <div>Attested &amp; Approved by:</div>
+                <div class="sig-line">{{ report.captain_name }}</div>
+                <div class="sig-role">Punong Barangay</div>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

@@ -36,3 +36,18 @@ class DashboardSummarySerializer(serializers.Serializer):
     document_requests = DocumentStatsSerializer()
     issue_reports = IssueStatsSerializer()
     queue_activity = QueueActivitySerializer()
+
+
+class AccomplishmentReportSerializer(serializers.Serializer):
+    barangay_name = serializers.CharField()
+    municipality = serializers.CharField(allow_blank=True)
+    province = serializers.CharField(allow_blank=True)
+    captain_name = serializers.CharField()
+    year = serializers.IntegerField()
+    month = serializers.IntegerField()
+    period_label = serializers.CharField()
+    generated_at = serializers.CharField()
+    residents_rbi = serializers.DictField()
+    certificates_issuance = serializers.DictField()
+    community_services = serializers.DictField()
+    communications_activities = serializers.DictField()

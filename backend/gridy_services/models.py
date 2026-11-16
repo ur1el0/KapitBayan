@@ -413,6 +413,83 @@ class AidRequest(models.Model):
         return f"{self.assistance_type} request by {self.requester_id} ({self.status})"
 
 
+class EquipmentBorrowRequest(models.Model):
+    class ItemType(models.TextChoices):
+        MONOBLOCK_CHAIRS = "Monoblock Chairs", "Monoblock Chairs"
+        TENT_CANOPY = "Tent / Canopy", "Tent / Canopy"
+        SOUND_SYSTEM = "Sound System", "Sound System"
+        TABLES = "Tables", "Tables"
+        COVERED_COURT = (
+            "Covered Court / Multi-Purpose Hall",
+            "Covered Court / Multi-Purpose Hall",
+        )
+        OTHER = "Other", "Other"
+
+    class Status(models.TextChoices):
+        PENDING = "PENDING", "Pending"
+        APPROVED = "APPROVED", "Approved"
+        DECLINED = "DECLINED", "Declined"
+        RETURNED = "RETURNED", "Returned"
+
+    barangay = models.ForeignKey(
+        Barangay,
+        on_delete=models.CASCADE,
+        related_name="equipment_borrow_requests",
+    )
+    resident = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="equipment_borrow_requests",
+    )
+    item_type = models.CharField(
+        max_length=100,
+        choices=ItemType.choices,
+        default=ItemType.MONOBLOCK_CHAIRS,
+    )
+    quantity = models.PositiveIntegerField(default=1)
+    borrow_date = models.DateField()
+    return_date = models.DateField()
+    time_slot = models.CharField(max_length=100, blank=True, default="")
+    purpose = models.TextField(max_length=2000)
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PENDING,
+    )
+    admin_notes = models.TextField(blank=True)
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="reviewed_equipment_borrow_requests",
+    )
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    returned_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["barangay", "status", "created_at"]),
+            models.Index(fields=["resident", "created_at"]),
+        ]
+        ordering = ["-created_at", "-id"]
+
+    def clean(self):
+        super().clean()
+        if self.borrow_date and self.return_date and self.return_date < self.borrow_date:
+            raise ValidationError({
+                "return_date": "Return date must be on or after the borrow date."
+            })
+
+    def __str__(self):
+        return f"{self.item_type} (x{self.quantity}) by {self.resident_id} ({self.status})"
+
+
+
 class QueueTicket(models.Model):
     class Status(models.TextChoices):
         WAITING = 'WAITING', 'Waiting'

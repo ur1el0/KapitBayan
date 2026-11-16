@@ -264,4 +264,100 @@ describe('Dashboard', () => {
         expect(axiosPrivate.patch).not.toHaveBeenCalled();
         expect(axiosPrivate.delete).not.toHaveBeenCalled();
     });
+
+    it('renders the monthly accomplishment report, filters by month/year, and exports PDF and CSV', async () => {
+        const accomplishmentReport = {
+            barangay_name: 'Cotta',
+            municipality: 'City of Lucena',
+            province: 'Quezon',
+            captain_name: 'Hon. Juan Dela Cruz',
+            year: 2026,
+            month: 10,
+            period_label: 'October 2026',
+            generated_at: '2026-10-31T12:00:00Z',
+            residents_rbi: {
+                new_registered_residents: 14,
+                new_verified_residents: 11,
+                approved_rbi_transfers: 3,
+                total_active_verified_residents: 120,
+            },
+            certificates_issuance: {
+                total_requests: 25,
+                total_issued: 21,
+                fee_waived_or_exempt_count: 6,
+                by_document_type: [
+                    { document_type: 'Barangay Clearance', count: 15 },
+                    { document_type: 'Certificate of Indigency', count: 6 },
+                ],
+            },
+            community_services: {
+                issues_submitted: 9,
+                issues_resolved: 7,
+                aid_requests_submitted: 5,
+                aid_requests_approved: 4,
+                equipment_requests_fulfilled: 5,
+                equipment_requests_returned: 4,
+            },
+            communications_activities: {
+                announcements_published: 8,
+                activities_conducted: 4,
+            },
+        };
+
+        vi.mocked(axiosPrivate.get).mockReset();
+        vi.mocked(axiosPrivate.get).mockImplementation((url: string) => {
+            if (url === '/dashboard/summary/') return Promise.resolve({ data: summary }) as never;
+            if (url === '/activities/') return Promise.resolve({ data: { results: activities } }) as never;
+            if (url === '/dashboard/accomplishment-report/') {
+                return Promise.resolve({ data: accomplishmentReport }) as never;
+            }
+            if (url === '/dashboard/accomplishment-report/export/') {
+                return Promise.resolve({ data: new Blob(['report-bytes']) }) as never;
+            }
+            return Promise.resolve({ data: { count: 0 } }) as never;
+        });
+
+        renderDashboard();
+
+        expect(await screen.findByText('Monthly Barangay Accomplishment Report')).toBeInTheDocument();
+        expect(await screen.findByText('14', { exact: true })).toBeInTheDocument();
+        expect(screen.getByText('21', { exact: true })).toBeInTheDocument();
+        expect(screen.getByText('Barangay Clearance')).toBeInTheDocument();
+        expect(screen.getByText('Certificate of Indigency')).toBeInTheDocument();
+
+        fireEvent.change(screen.getByLabelText('Report Month'), {
+            target: { value: '10' },
+        });
+
+        await waitFor(() =>
+            expect(axiosPrivate.get).toHaveBeenCalledWith(
+                '/dashboard/accomplishment-report/',
+                expect.objectContaining({
+                    params: expect.objectContaining({ month: 10 }),
+                }),
+            ),
+        );
+
+        fireEvent.click(screen.getByRole('button', { name: 'Export PDF' }));
+        await waitFor(() =>
+            expect(axiosPrivate.get).toHaveBeenCalledWith(
+                '/dashboard/accomplishment-report/export/',
+                expect.objectContaining({
+                    params: expect.objectContaining({ month: 10, export_format: 'pdf' }),
+                    responseType: 'blob',
+                }),
+            ),
+        );
+
+        fireEvent.click(screen.getByRole('button', { name: 'Export CSV' }));
+        await waitFor(() =>
+            expect(axiosPrivate.get).toHaveBeenCalledWith(
+                '/dashboard/accomplishment-report/export/',
+                expect.objectContaining({
+                    params: expect.objectContaining({ month: 10, export_format: 'csv' }),
+                    responseType: 'blob',
+                }),
+            ),
+        );
+    });
 });

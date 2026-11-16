@@ -9,6 +9,7 @@ import '../models/user_model.dart';
 import '../services/storage_service.dart';
 import 'admin_document_requests_screen.dart';
 import 'admin_residents_screen.dart';
+import 'equipment_borrowing_screen.dart';
 import 'field_official_screen.dart';
 import 'login_screen.dart';
 
@@ -384,6 +385,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       subtitle: 'Review requests, fees, and e-payment proofs',
                       onTap: () =>
                           _openWorkflow(const AdminDocumentRequestsScreen()),
+                    ),
+                    const SizedBox(height: 10),
+                    _buildActionTile(
+                      icon: Icons.chair_alt_outlined,
+                      iconBg: const Color(0xFF7C3AED),
+                      title: 'Equipment Borrowing',
+                      subtitle: 'Approve, decline, and track returned equipment',
+                      onTap: () => _openWorkflow(
+                        const EquipmentBorrowingScreen(isAdmin: true),
+                      ),
                     ),
                   ],
                 ),
