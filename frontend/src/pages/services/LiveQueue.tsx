@@ -13,6 +13,7 @@ import { QueueActionControls } from '../../components/queue/QueueActionControls'
 import { QueueHistoryModal } from '../../components/queue/QueueHistoryModal';
 import type { QueueTicket } from '../../components/queue/types';
 import { useAuth } from '../../context/auth-context';
+import { resolveQueueWsUrl } from '../../api/websocket';
 
 export const LiveQueue: React.FC = () => {
     const { user } = useAuth();
@@ -117,10 +118,64 @@ export const LiveQueue: React.FC = () => {
 
     useEffect(() => {
         fetchTickets();
-        // Auto-poll live queue updates every 3 seconds
-        const interval = setInterval(fetchTickets, 3000);
-        return () => clearInterval(interval);
-    }, [fetchTickets]);
+
+        let socket: WebSocket | null = null;
+        let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
+        let isMounted = true;
+
+        const connectWebSocket = () => {
+            if (!isMounted || typeof WebSocket === 'undefined') return;
+            try {
+                const wsUrl = resolveQueueWsUrl(user?.barangay_id);
+                socket = new WebSocket(wsUrl);
+
+                socket.onmessage = (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+                        if (data.type === 'queue_update') {
+                            void fetchTickets();
+                        }
+                    } catch {
+                        void fetchTickets();
+                    }
+                };
+
+                socket.onclose = () => {
+                    if (isMounted) {
+                        reconnectTimeout = setTimeout(connectWebSocket, 5000);
+                    }
+                };
+
+                socket.onerror = () => {
+                    if (socket) {
+                        socket.close();
+                    }
+                };
+            } catch {
+                if (isMounted) {
+                    reconnectTimeout = setTimeout(connectWebSocket, 5000);
+                }
+            }
+        };
+
+        connectWebSocket();
+
+        // Fallback polling interval ensures consistency if WebSocket drops
+        const interval = setInterval(() => {
+            void fetchTickets();
+        }, 3000);
+
+        return () => {
+            isMounted = false;
+            if (reconnectTimeout) clearTimeout(reconnectTimeout);
+            clearInterval(interval);
+            if (socket) {
+                socket.onclose = null;
+                socket.onerror = null;
+                socket.close();
+            }
+        };
+    }, [fetchTickets, user?.barangay_id]);
     
     // Filtered lists
     const servingTicket = useMemo(() => {
