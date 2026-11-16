@@ -20,7 +20,6 @@ interface PublicQueueStatus {
     total_waiting: number
 }
 
-const POLL_INTERVAL_MS = 5000
 const FALLBACK_BRAND_COLOR = '#123456'
 
 function getReadableTextColor(hexColor: string): string {
@@ -148,7 +147,6 @@ export function PublicQueueDisplay() {
         }
 
         let active = true
-        let nextPollTimer: number | undefined
         let reconnectTimer: number | undefined
         let socket: WebSocket | null = null
         const controller = new AbortController()
@@ -187,13 +185,6 @@ export function PublicQueueDisplay() {
 
                 setLoading(false)
                 setError('Queue status is temporarily unavailable. Retrying.')
-            } finally {
-                if (active) {
-                    nextPollTimer = window.setTimeout(
-                        () => void pollQueue(),
-                        POLL_INTERVAL_MS,
-                    )
-                }
             }
         }
 
@@ -202,6 +193,12 @@ export function PublicQueueDisplay() {
             try {
                 const wsUrl = resolveQueueWsUrl(routeBarangayId)
                 socket = new WebSocket(wsUrl)
+
+                socket.onopen = () => {
+                    if (active) {
+                        void pollQueue()
+                    }
+                }
 
                 socket.onmessage = (event) => {
                     try {
@@ -216,7 +213,10 @@ export function PublicQueueDisplay() {
 
                 socket.onclose = () => {
                     if (active) {
-                        reconnectTimer = window.setTimeout(connectWebSocket, 5000)
+                        reconnectTimer = window.setTimeout(() => {
+                            connectWebSocket()
+                            void pollQueue()
+                        }, 5000)
                     }
                 }
 
@@ -235,15 +235,23 @@ export function PublicQueueDisplay() {
         void pollQueue()
         connectWebSocket()
 
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible' && active) {
+                void pollQueue()
+            }
+        }
+        document.addEventListener('visibilitychange', handleVisibilityChange)
+        window.addEventListener('focus', handleVisibilityChange)
+
         return () => {
             active = false
             controller.abort()
 
+            document.removeEventListener('visibilitychange', handleVisibilityChange)
+            window.removeEventListener('focus', handleVisibilityChange)
+
             if (reconnectTimer !== undefined) {
                 window.clearTimeout(reconnectTimer)
-            }
-            if (nextPollTimer !== undefined) {
-                window.clearTimeout(nextPollTimer)
             }
             if (socket) {
                 socket.onclose = null
@@ -411,7 +419,7 @@ export function PublicQueueDisplay() {
                 )}
 
                 <p className="public-queue__refresh-note">
-                    {t('Queue status refreshes automatically every five seconds.')}
+                    {t('Live queue updates in real time.')}
                 </p>
             </section>
         </main>
