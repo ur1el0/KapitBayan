@@ -104,6 +104,7 @@ FRONTEND_URL = env('FRONTEND_URL', default='http://localhost:5173')
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -111,6 +112,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'cloudinary_storage',
     'django.contrib.staticfiles',
+    'channels',
     'rest_framework',
     'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
@@ -158,9 +160,18 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Add ASGI application for WebSockets
 ASGI_APPLICATION = 'config.asgi.application'
 
-# Use the in-memory channel layer during tests.
-
-if IS_TESTING:
+# Configure Channel Layers for Django Channels (WebSockets)
+redis_channel_url = env.str("REDIS_URL", default=None)
+if redis_channel_url and not IS_TESTING:
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels_redis.core.RedisChannelLayer",
+            "CONFIG": {
+                "hosts": [redis_channel_url],
+            },
+        },
+    }
+else:
     CHANNEL_LAYERS = {
         "default": {
             "BACKEND": "channels.layers.InMemoryChannelLayer"
