@@ -14,6 +14,7 @@ import {
     Users, 
     Building,
     HandHeart,
+    Package,
     ArrowRightLeft,
 } from 'lucide-react';
 import kapitBayanSymbol from '../../assets/kapitbayan/symbol.png';
@@ -29,6 +30,7 @@ const navItems: NavItem[] = [
     { name: 'Queue', path: '/queue', icon: ListOrdered },
     { name: 'Documents', path: '/documents', icon: FileText },
     { name: 'Aid Requests', path: '/aid-requests', icon: HandHeart },
+    { name: 'Equipment Borrowing', path: '/equipment-requests', icon: Package },
     { name: 'Communications', path: '/communications', icon: Radio },
     { name: 'Residents', path: '/residents', icon: Users },
     { name: 'Transfer Requests', path: '/resident-transfers', icon: ArrowRightLeft },

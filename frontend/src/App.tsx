@@ -96,6 +96,9 @@ const CertificateVerification = lazy(() =>
 const AidRequests = lazy(() =>
     import("./pages/citizen/AidRequests").then(({ AidRequests }) => ({ default: AidRequests })),
 );
+const EquipmentBorrowing = lazy(() =>
+    import("./pages/citizen/EquipmentBorrowing").then(({ EquipmentBorrowing }) => ({ default: EquipmentBorrowing })),
+);
 const ResidentHelp = lazy(() =>
     import("./pages/citizen/ResidentHelp").then(({ ResidentHelp }) => ({ default: ResidentHelp })),
 );
@@ -196,6 +199,7 @@ export function App() {
                                     <Route path="/reports" element={<IssueReports />} />
                                     <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
                                         <Route path="/aid-requests" element={<AidRequests />} />
+                                        <Route path="/equipment-requests" element={<EquipmentBorrowing />} />
                                     </Route>
                                     <Route path="/profile" element={<AdminProfile />} />
                                 </Route>
@@ -221,6 +225,7 @@ export function App() {
                                     <Route path="/portal/queue" element={<CitizenQueue />} />
                                     <Route path="/portal/bulletin" element={<CitizenBulletin />} />
                                     <Route path="/portal/aid" element={<AidRequests />} />
+                                    <Route path="/portal/equipment" element={<EquipmentBorrowing />} />
                                     <Route path="/portal/help" element={<ResidentHelp />} />
                                     <Route path="/portal/tutorial" element={<ResidentTutorial />} />
                                     <Route path="/portal/profile" element={<ResidentProfileSettings />} />
