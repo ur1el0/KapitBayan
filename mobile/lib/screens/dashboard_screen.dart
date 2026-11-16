@@ -33,6 +33,7 @@ import 'profile_screen.dart';
 import 'my_issues_screen.dart';
 import 'announcements_screen.dart';
 import 'aid_requests_screen.dart';
+import 'equipment_borrowing_screen.dart';
 import 'resident_help_screen.dart';
 
 void _openNotificationDestination(RemoteMessage message) {
@@ -368,6 +369,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           context,
                           MaterialPageRoute(
                             builder: (_) => const AidRequestsScreen(),
+                          ),
+                        );
+                      },
+                      onBorrowEquipment: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const EquipmentBorrowingScreen(),
                           ),
                         );
                       },
