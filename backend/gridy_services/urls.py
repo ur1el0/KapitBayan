@@ -2,6 +2,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
     AidRequestViewSet,
+    EquipmentBorrowRequestViewSet,
     DocumentRequestViewSet,
     QueueTicketViewSet,
     DashboardSummaryView,
@@ -16,6 +17,7 @@ router = DefaultRouter()
 router.register(r'document-requests', DocumentRequestViewSet, basename='document-request')
 router.register(r'document-catalog', DocumentServiceOfferingViewSet, basename='document-catalog')
 router.register(r'aid-requests', AidRequestViewSet, basename='aid-request')
+router.register(r'equipment-requests', EquipmentBorrowRequestViewSet, basename='equipment-request')
 router.register(r'tickets', QueueTicketViewSet, basename='ticket')
 router.register(r'payment-recipients', PaymentRecipientViewSet, basename='payment-recipient')
 

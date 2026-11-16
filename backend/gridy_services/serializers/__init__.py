@@ -17,6 +17,11 @@ from .aid import (
     AidRequestReviewSerializer,
 )
 
+from .equipment import (
+    EquipmentBorrowRequestSerializer,
+    EquipmentBorrowRequestReviewSerializer,
+)
+
 from .queue import (
     QueueTicketSerializer,
     QueueTicketCompletionSerializer,
@@ -43,6 +48,8 @@ __all__ = [
     'WalkInCashPaymentConfirmationSerializer',
     'AidRequestSerializer',
     'AidRequestReviewSerializer',
+    'EquipmentBorrowRequestSerializer',
+    'EquipmentBorrowRequestReviewSerializer',
     'QueueTicketSerializer',
     'QueueTicketCompletionSerializer',
     'QueueTicketPrioritySerializer',

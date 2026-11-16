@@ -2517,8 +2517,8 @@ paths:
   /api/v1/document-requests/{id}/or-number/:
     patch:
       operationId: api_v1_document_requests_or_number_partial_update
-      description: Compatibility endpoint. Accepts only an unchanged existing O.R.; new
-        numbers are assigned from the Barangay series after payment confirmation.
+      description: Keep the legacy endpoint read-only; receipt numbers come from the
+        configured series.
       parameters:
       - in: path
         name: id
@@ -2770,6 +2770,104 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/DocumentRequest'
+          description: ''
+  /api/v1/equipment-requests/:
+    get:
+      operationId: api_v1_equipment_requests_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedEquipmentBorrowRequestList'
+          description: ''
+    post:
+      operationId: api_v1_equipment_requests_create
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EquipmentBorrowRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/EquipmentBorrowRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/EquipmentBorrowRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EquipmentBorrowRequest'
+          description: ''
+  /api/v1/equipment-requests/{id}/:
+    get:
+      operationId: api_v1_equipment_requests_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this equipment borrow request.
+        required: true
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EquipmentBorrowRequest'
+          description: ''
+    patch:
+      operationId: api_v1_equipment_requests_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this equipment borrow request.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedEquipmentBorrowRequestReview'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedEquipmentBorrowRequestReview'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedEquipmentBorrowRequestReview'
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EquipmentBorrowRequestReview'
           description: ''
   /api/v1/faqs/:
     get:
@@ -3142,72 +3240,16 @@ paths:
       - cookieAuth: []
       responses:
         '200':
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  configured:
-                    type: boolean
-                  prefix:
-                    type: string
-                  next_number:
-                    type: integer
-                    nullable: true
-                  number_width:
-                    type: integer
-                  last_issued_number:
-                    type: integer
-                    nullable: true
-                  updated_at:
-                    type: string
-                    format: date-time
-          description: ''
+          description: No response body
     patch:
       operationId: api_v1_official_receipt_series_partial_update
       tags:
       - api
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                prefix:
-                  type: string
-                  maxLength: 40
-                next_number:
-                  type: integer
-                  minimum: 1
-                number_width:
-                  type: integer
-                  minimum: 0
-                  maximum: 12
-        required: true
       security:
       - cookieAuth: []
       responses:
         '200':
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  configured:
-                    type: boolean
-                  prefix:
-                    type: string
-                  next_number:
-                    type: integer
-                  number_width:
-                    type: integer
-                  last_issued_number:
-                    type: integer
-                    nullable: true
-                  updated_at:
-                    type: string
-                    format: date-time
-          description: ''
+          description: No response body
   /api/v1/payment-recipients/:
     get:
       operationId: api_v1_payment_recipients_list
@@ -4502,7 +4544,8 @@ components:
           type: string
           readOnly: true
           nullable: true
-          description: Barangay-approved O.R. number assigned from the configured series after payment confirmation.
+          description: Barangay-approved O.R. number assigned from the configured
+            series after payment confirmation.
         fee_amount:
           type: string
           format: decimal
@@ -4748,6 +4791,165 @@ components:
         * `MEDICAL` - Medical / Hospital
         * `BARANGAY` - Barangay Desk
         * `OTHER` - Other
+    EquipmentBorrowRequest:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        resident:
+          type: integer
+          readOnly: true
+          nullable: true
+        resident_name:
+          type: string
+          readOnly: true
+        item_type:
+          $ref: '#/components/schemas/ItemTypeEnum'
+        quantity:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        borrow_date:
+          type: string
+          format: date
+        return_date:
+          type: string
+          format: date
+        time_slot:
+          type: string
+          maxLength: 100
+        purpose:
+          type: string
+          maxLength: 2000
+        status:
+          allOf:
+          - $ref: '#/components/schemas/Status3ddEnum'
+          readOnly: true
+        admin_notes:
+          type: string
+          readOnly: true
+        reviewed_by:
+          type: integer
+          readOnly: true
+          nullable: true
+        reviewed_by_name:
+          type: string
+          nullable: true
+          readOnly: true
+        reviewed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        returned_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - admin_notes
+      - borrow_date
+      - created_at
+      - id
+      - purpose
+      - resident
+      - resident_name
+      - return_date
+      - returned_at
+      - reviewed_at
+      - reviewed_by
+      - reviewed_by_name
+      - status
+      - updated_at
+    EquipmentBorrowRequestReview:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        resident:
+          type: integer
+          readOnly: true
+          nullable: true
+        resident_name:
+          type: string
+          readOnly: true
+        item_type:
+          allOf:
+          - $ref: '#/components/schemas/ItemTypeEnum'
+          readOnly: true
+        quantity:
+          type: integer
+          readOnly: true
+        borrow_date:
+          type: string
+          format: date
+          readOnly: true
+        return_date:
+          type: string
+          format: date
+          readOnly: true
+        time_slot:
+          type: string
+          readOnly: true
+        purpose:
+          type: string
+          readOnly: true
+        status:
+          $ref: '#/components/schemas/Status3ddEnum'
+        admin_notes:
+          type: string
+        reviewed_by:
+          type: integer
+          readOnly: true
+          nullable: true
+        reviewed_by_name:
+          type: string
+          nullable: true
+          readOnly: true
+        reviewed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        returned_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - borrow_date
+      - created_at
+      - id
+      - item_type
+      - purpose
+      - quantity
+      - resident
+      - resident_name
+      - return_date
+      - returned_at
+      - reviewed_at
+      - reviewed_by
+      - reviewed_by_name
+      - time_slot
+      - updated_at
     FAQ:
       type: object
       properties:
@@ -4960,6 +5162,22 @@ components:
       - resolved
       - total
       - urgency_breakdown
+    ItemTypeEnum:
+      enum:
+      - Monoblock Chairs
+      - Tent / Canopy
+      - Sound System
+      - Tables
+      - Covered Court / Multi-Purpose Hall
+      - Other
+      type: string
+      description: |-
+        * `Monoblock Chairs` - Monoblock Chairs
+        * `Tent / Canopy` - Tent / Canopy
+        * `Sound System` - Sound System
+        * `Tables` - Tables
+        * `Covered Court / Multi-Purpose Hall` - Covered Court / Multi-Purpose Hall
+        * `Other` - Other
     LoginEvent:
       type: object
       properties:
@@ -5201,6 +5419,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/EmergencyHotline'
+    PaginatedEquipmentBorrowRequestList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/EquipmentBorrowRequest'
     PaginatedFAQList:
       type: object
       required:
@@ -5651,7 +5892,8 @@ components:
           type: string
           readOnly: true
           nullable: true
-          description: Barangay-approved O.R. number assigned from the configured series after payment confirmation.
+          description: Barangay-approved O.R. number assigned from the configured
+            series after payment confirmation.
         fee_amount:
           type: string
           format: decimal
@@ -5787,6 +6029,70 @@ components:
           type: boolean
         created_by:
           type: integer
+          readOnly: true
+    PatchedEquipmentBorrowRequestReview:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        resident:
+          type: integer
+          readOnly: true
+          nullable: true
+        resident_name:
+          type: string
+          readOnly: true
+        item_type:
+          allOf:
+          - $ref: '#/components/schemas/ItemTypeEnum'
+          readOnly: true
+        quantity:
+          type: integer
+          readOnly: true
+        borrow_date:
+          type: string
+          format: date
+          readOnly: true
+        return_date:
+          type: string
+          format: date
+          readOnly: true
+        time_slot:
+          type: string
+          readOnly: true
+        purpose:
+          type: string
+          readOnly: true
+        status:
+          $ref: '#/components/schemas/Status3ddEnum'
+        admin_notes:
+          type: string
+        reviewed_by:
+          type: integer
+          readOnly: true
+          nullable: true
+        reviewed_by_name:
+          type: string
+          nullable: true
+          readOnly: true
+        reviewed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        returned_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
           readOnly: true
     PatchedFAQ:
       type: object
@@ -7285,6 +7591,18 @@ components:
       - email
       - first_name
       - last_name
+    Status3ddEnum:
+      enum:
+      - PENDING
+      - APPROVED
+      - DECLINED
+      - RETURNED
+      type: string
+      description: |-
+        * `PENDING` - Pending
+        * `APPROVED` - Approved
+        * `DECLINED` - Declined
+        * `RETURNED` - Returned
     StatusB97Enum:
       enum:
       - PENDING
