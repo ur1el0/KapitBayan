@@ -40,7 +40,7 @@ class ProductionSettingsValidationTests(SimpleTestCase):
 
         for key, val in env_overrides.items():
             if val is None:
-                env.pop(key, None)
+                env[key] = ""
             else:
                 env[key] = val
 
