@@ -65,3 +65,43 @@ export interface NamedCount {
     name: string;
     count: number;
 }
+
+export interface AccomplishmentDocumentBreakdown {
+    document_type: string;
+    count: number;
+}
+
+export interface AccomplishmentReport {
+    barangay_name: string;
+    municipality: string;
+    province: string;
+    captain_name: string;
+    year: number;
+    month: number;
+    period_label: string;
+    generated_at: string;
+    residents_rbi: {
+        new_registered_residents: number;
+        new_verified_residents: number;
+        approved_rbi_transfers: number;
+        total_active_verified_residents: number;
+    };
+    certificates_issuance: {
+        total_requests: number;
+        total_issued: number;
+        fee_waived_or_exempt_count: number;
+        by_document_type: AccomplishmentDocumentBreakdown[];
+    };
+    community_services: {
+        issues_submitted: number;
+        issues_resolved: number;
+        aid_requests_submitted: number;
+        aid_requests_approved: number;
+        equipment_requests_fulfilled: number;
+        equipment_requests_returned: number;
+    };
+    communications_activities: {
+        announcements_published: number;
+        activities_conducted: number;
+    };
+}
