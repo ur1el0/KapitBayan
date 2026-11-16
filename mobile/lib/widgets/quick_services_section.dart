@@ -11,6 +11,7 @@ class QuickServicesSection extends StatelessWidget {
   final VoidCallback? onBarangayHotline;
   final VoidCallback? onMyReports;
   final VoidCallback? onRequestAid;
+  final VoidCallback? onBorrowEquipment;
   final VoidCallback? onHelpFAQs;
 
   const QuickServicesSection({
@@ -20,6 +21,7 @@ class QuickServicesSection extends StatelessWidget {
     this.onBarangayHotline,
     this.onMyReports,
     this.onRequestAid,
+    this.onBorrowEquipment,
     this.onHelpFAQs,
   });
 
@@ -56,6 +58,12 @@ class QuickServicesSection extends StatelessWidget {
           icon: Icons.volunteer_activism_outlined,
           title: context.tr('Request Assistance'),
           onTap: onRequestAid,
+        ),
+        const SizedBox(height: 8),
+        _QuickServiceCard(
+          icon: Icons.chair_alt_outlined,
+          title: context.tr('Equipment Borrowing'),
+          onTap: onBorrowEquipment,
         ),
         const SizedBox(height: 8),
 

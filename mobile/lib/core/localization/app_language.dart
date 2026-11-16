@@ -702,4 +702,53 @@ const Map<String, String> _filipino = {
   'Could not load this saved information. Reconnect and refresh to get the latest data.':
       'Hindi ma-load ang naka-save na impormasyon. Kumonekta muli at i-refresh para makuha ang pinakabagong datos.',
   'OK': 'Sige',
+  'Equipment Borrowing': 'Paghiram ng Kagamitan',
+  'Equipment & Facility Borrowing': 'Paghiram ng Kagamitan at Pasilidad',
+  'Request Equipment or Facility': 'Humiram ng Kagamitan o Pasilidad',
+  'Borrow barangay chairs, tents, tables, sound systems, or reserve community facilities. Requests are reviewed manually by barangay staff.':
+      'Humiram ng mga upuan, tent, mesa, sound system, o gumamit ng pasilidad ng barangay. Manu-manong susuriin ng kawani ang iyong kahilingan.',
+  'Item or facility': 'Kagamitan o pasilidad',
+  'Monoblock Chairs': 'Mga Upuang Monoblock',
+  'Tent / Canopy': 'Tent / Canopy',
+  'Sound System': 'Sound System',
+  'Tables': 'Mga Mesa',
+  'Covered Court / Multi-Purpose Hall': 'Covered Court / Multi-Purpose Hall',
+  'Other': 'Iba pa',
+  'Quantity': 'Bilang / Dami',
+  'Borrow date': 'Petsa ng paghiram',
+  'Return date': 'Petsa ng pagsasauli',
+  'Time slot': 'Oras ng paggamit',
+  'Purpose': 'Layunin',
+  'Submit Borrowing Request': 'Ipadala ang Kahilingan sa Paghiram',
+  'Borrowing requests for your barangay':
+      'Mga kahilingan sa paghiram sa inyong barangay',
+  'Your borrowing requests': 'Iyong mga kahilingan sa paghiram',
+  'No equipment borrowing requests found.':
+      'Walang nahanap na kahilingan sa paghiram ng kagamitan.',
+  'Could not load equipment borrowing requests.':
+      'Hindi ma-load ang mga kahilingan sa paghiram ng kagamitan.',
+  'Please select both borrow and return dates.':
+      'Piliin ang petsa ng paghiram at petsa ng pagsasauli.',
+  'Return date must be on or after the borrow date.':
+      'Ang petsa ng pagsasauli ay dapat kasabay o pagkatapos ng petsa ng paghiram.',
+  'Quantity must be at least 1.': 'Ang bilang ay dapat hindi bababa sa 1.',
+  'Please provide the purpose for borrowing.': 'Ilagay ang layunin ng paghiram.',
+  'Equipment borrowing request submitted for review.':
+      'Naipadala na ang kahilingan sa paghiram para suriin.',
+  'Could not submit your borrowing request.':
+      'Hindi naipadala ang iyong kahilingan sa paghiram.',
+  'Add a reason before declining this borrowing request.':
+      'Maglagay ng dahilan bago tanggihan ang kahilingang ito.',
+  'Borrowing request updated.': 'Na-update ang kahilingan sa paghiram.',
+  'Could not update this borrowing request.':
+      'Hindi ma-update ang kahilingang ito sa paghiram.',
+  'Admin remarks: ': 'Tala ng admin: ',
+  'Admin remarks': 'Tala ng admin',
+  'Approve': 'Aprubahan',
+  'Decline': 'Tanggihan',
+  'Mark Returned': 'Markahang Naisoli',
+  'Pending': 'Nakabinbin',
+  'Returned': 'Naisoli na',
+  'Approve, decline, and track returned equipment':
+      'Aprubahan, tanggihan, at subaybayan ang mga naisoling kagamitan',
 };
