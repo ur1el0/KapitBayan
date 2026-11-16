@@ -14,7 +14,7 @@ from gridy_auth.throttling import SharedDatabaseScopedRateThrottle
 from gridy_communications.admin_notifications import notify_barangay_admins
 from gridy_communications.models import AdminNotification
 from gridy_reports.models import IssueReport
-from gridy_services.models import DocumentRequest, QueueTicket
+from gridy_services.models import DocumentRequest, EquipmentBorrowRequest, QueueTicket
 from gridy_services.websocket_events import broadcast_queue_update
 
 
@@ -23,6 +23,7 @@ QUEUE_SERVICE_TYPES = (
     "Document Processing & Clearances",
     "Barangay ID Application",
     "Certificate of Indigency",
+    "Equipment & Facility Borrowing",
     "General Inquiries & Complaints",
 )
 
@@ -80,6 +81,27 @@ class KioskIssueReportSerializer(KioskSubmissionSerializer):
     title = serializers.CharField(min_length=3, max_length=255, trim_whitespace=True)
     description = serializers.CharField(min_length=10, max_length=5000, trim_whitespace=True)
     location = serializers.CharField(min_length=2, max_length=255, trim_whitespace=True)
+
+
+class KioskEquipmentBorrowSerializer(KioskSubmissionSerializer):
+    walkin_name = serializers.CharField(min_length=2, max_length=255, trim_whitespace=True)
+    walkin_contact = serializers.CharField(max_length=50, allow_blank=True, required=False, trim_whitespace=True)
+    item_type = serializers.ChoiceField(choices=EquipmentBorrowRequest.ItemType.choices)
+    quantity = serializers.IntegerField(min_value=1, default=1)
+    borrow_date = serializers.DateField()
+    return_date = serializers.DateField()
+    time_slot = serializers.CharField(max_length=100, allow_blank=True, required=False, trim_whitespace=True)
+    purpose = serializers.CharField(min_length=2, max_length=2000, trim_whitespace=True)
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        borrow_date = attrs.get("borrow_date")
+        return_date = attrs.get("return_date")
+        if borrow_date and return_date and return_date < borrow_date:
+            raise serializers.ValidationError({
+                "return_date": "Return date cannot be earlier than borrow date."
+            })
+        return attrs
 
 
 class KioskSubmissionView(APIView):
@@ -197,4 +219,31 @@ class KioskIssueReportView(KioskSubmissionView):
         return {
             "reference": f"IR-{record.pk:06d}",
             "status": IssueReport.Status.PENDING,
+        }
+
+
+class KioskEquipmentBorrowRequestView(KioskSubmissionView):
+    serializer_class = KioskEquipmentBorrowSerializer
+    notification_type = AdminNotification.Type.SYSTEM
+
+    def create_record(self, data):
+        return EquipmentBorrowRequest.objects.create(
+            resident=None,
+            barangay=data["barangay"],
+            is_walkin=True,
+            walkin_name=data["walkin_name"],
+            walkin_contact=data.get("walkin_contact", ""),
+            item_type=data["item_type"],
+            quantity=data.get("quantity", 1),
+            borrow_date=data["borrow_date"],
+            return_date=data["return_date"],
+            time_slot=data.get("time_slot", ""),
+            purpose=data["purpose"],
+            status=EquipmentBorrowRequest.Status.PENDING,
+        )
+
+    def response_data(self, record):
+        return {
+            "reference": f"EQ-{record.pk:06d}",
+            "status": EquipmentBorrowRequest.Status.PENDING,
         }

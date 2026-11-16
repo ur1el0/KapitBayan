@@ -82,4 +82,54 @@ describe('PublicKiosk Component', () => {
 
         printSpy.mockRestore();
     });
+
+    it('switches to Borrow Equipment tab, fills form, submits, and renders equipment slip', async () => {
+        render(
+            <MemoryRouter>
+                <LanguageProvider>
+                    <PublicKiosk />
+                </LanguageProvider>
+            </MemoryRouter>
+        );
+
+        await waitFor(() => {
+            expect(screen.getByText('Ibabang Dupay (Lucena, Quezon)')).toBeInTheDocument();
+        });
+
+        fireEvent.change(screen.getByLabelText(/Barangay/i), { target: { value: '1' } });
+
+        // Switch to Borrow Equipment tab
+        const equipTab = screen.getByRole('tab', { name: /Borrow Equipment/i });
+        expect(equipTab).toBeInTheDocument();
+        fireEvent.click(equipTab);
+
+        // Fill out fields
+        fireEvent.change(screen.getByLabelText(/Full name/i), { target: { value: 'Elena Ramos' } });
+        fireEvent.change(screen.getByLabelText(/Equipment or Facility/i), { target: { value: 'Monoblock Chairs' } });
+        fireEvent.change(screen.getByLabelText(/Purpose of borrowing/i), { target: { value: 'Community Gathering' } });
+
+        fireEvent.click(screen.getByLabelText(/I have read the privacy notice and agree/i));
+
+        // Mock response
+        vi.mocked(globalThis.fetch).mockImplementation((url: string | URL | Request) => {
+            const urlStr = String(url);
+            if (urlStr.includes('/kiosk/equipment/')) {
+                return Promise.resolve({
+                    ok: true,
+                    json: () => Promise.resolve({ reference: 'EQ-000042', status: 'PENDING' }),
+                } as Response);
+            }
+            return Promise.resolve({
+                ok: true,
+                json: () => Promise.resolve({}),
+            } as Response);
+        });
+
+        fireEvent.click(screen.getByRole('button', { name: /Submit request/i }));
+
+        await waitFor(() => {
+            expect(screen.getByText('EQ-000042')).toBeInTheDocument();
+        });
+        expect(screen.getByText(/Monoblock Chairs/i)).toBeInTheDocument();
+    });
 });

@@ -12,6 +12,9 @@ class EquipmentBorrowRequestSerializer(serializers.ModelSerializer):
             "id",
             "resident",
             "resident_name",
+            "is_walkin",
+            "walkin_name",
+            "walkin_contact",
             "item_type",
             "quantity",
             "borrow_date",
@@ -31,6 +34,7 @@ class EquipmentBorrowRequestSerializer(serializers.ModelSerializer):
             "id",
             "resident",
             "resident_name",
+            "is_walkin",
             "status",
             "admin_notes",
             "reviewed_by",
@@ -43,6 +47,8 @@ class EquipmentBorrowRequestSerializer(serializers.ModelSerializer):
 
     def get_resident_name(self, obj) -> str:
         if obj.resident is None:
+            if obj.is_walkin and obj.walkin_name:
+                return f"{obj.walkin_name} (Walk-in)"
             return "Former resident"
 
         profile = getattr(obj.resident, "profile", None)

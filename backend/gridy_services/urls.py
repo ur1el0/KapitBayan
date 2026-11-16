@@ -14,7 +14,12 @@ from .views import (
     OfficialReceiptSeriesView,
 )
 from .views.certificate_verification import PublicCertificateVerificationView
-from .kiosk import KioskDocumentRequestView, KioskIssueReportView, KioskQueueTicketView
+from .kiosk import (
+    KioskDocumentRequestView,
+    KioskEquipmentBorrowRequestView,
+    KioskIssueReportView,
+    KioskQueueTicketView,
+)
 
 router = DefaultRouter()
 router.register(r'document-requests', DocumentRequestViewSet, basename='document-request')
@@ -33,6 +38,7 @@ urlpatterns = [
     ),
     path('kiosk/queue/', KioskQueueTicketView.as_view(), name='kiosk-queue-ticket'),
     path('kiosk/documents/', KioskDocumentRequestView.as_view(), name='kiosk-document-request'),
+    path('kiosk/equipment/', KioskEquipmentBorrowRequestView.as_view(), name='kiosk-equipment-borrow-request'),
     path('kiosk/reports/', KioskIssueReportView.as_view(), name='kiosk-issue-report'),
     path(
         'documents/<int:pk>/payment-proof/',

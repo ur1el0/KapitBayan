@@ -1,7 +1,7 @@
 from django.urls import reverse
 from rest_framework import status
 from gridy_auth.models import Barangay, BarangayApplication
-from gridy_services.models import DocumentRequest, QueueTicket
+from gridy_services.models import DocumentRequest, EquipmentBorrowRequest, QueueTicket
 from gridy_reports.models import IssueReport
 from .base import ServiceAPIBaseTestCase
 
@@ -120,3 +120,62 @@ class KioskAPITests(ServiceAPIBaseTestCase):
         response = self.client.post(url, payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("barangay_id", response.data)
+
+    def test_kiosk_equipment_borrow_request_success(self):
+        url = reverse("kiosk-equipment-borrow-request")
+        payload = {
+            "barangay_id": self.kiosk_barangay.id,
+            "walkin_name": "Elena Ramos",
+            "walkin_contact": "09181234567",
+            "item_type": EquipmentBorrowRequest.ItemType.MONOBLOCK_CHAIRS,
+            "quantity": 50,
+            "borrow_date": "2026-11-20",
+            "return_date": "2026-11-21",
+            "time_slot": "Whole Day",
+            "purpose": "Barangay Youth Fellowship Assembly",
+            "privacy_acknowledged": True,
+        }
+        response = self.client.post(url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertIn("reference", response.data)
+        self.assertTrue(response.data["reference"].startswith("EQ-"))
+        self.assertEqual(response.data["status"], EquipmentBorrowRequest.Status.PENDING)
+
+        borrow = EquipmentBorrowRequest.objects.filter(
+            barangay=self.kiosk_barangay,
+            walkin_name="Elena Ramos",
+        ).first()
+        self.assertIsNotNone(borrow)
+        self.assertTrue(borrow.is_walkin)
+        self.assertIsNone(borrow.resident)
+        self.assertEqual(borrow.quantity, 50)
+        self.assertEqual(borrow.status, EquipmentBorrowRequest.Status.PENDING)
+
+    def test_kiosk_equipment_borrow_date_validation(self):
+        url = reverse("kiosk-equipment-borrow-request")
+        payload = {
+            "barangay_id": self.kiosk_barangay.id,
+            "walkin_name": "Elena Ramos",
+            "item_type": EquipmentBorrowRequest.ItemType.TENT_CANOPY,
+            "quantity": 2,
+            "borrow_date": "2026-11-22",
+            "return_date": "2026-11-20",  # Invalid: earlier than borrow_date
+            "purpose": "Family gathering",
+            "privacy_acknowledged": True,
+        }
+        response = self.client.post(url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("return_date", response.data)
+
+    def test_kiosk_queue_ticket_with_equipment_service_type(self):
+        url = reverse("kiosk-queue-ticket")
+        payload = {
+            "barangay_id": self.kiosk_barangay.id,
+            "walkin_name": "Rosa Martinez",
+            "service_type": "Equipment & Facility Borrowing",
+            "privacy_acknowledged": True,
+        }
+        response = self.client.post(url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertIn("reference", response.data)
+        self.assertEqual(response.data["status"], QueueTicket.Status.WAITING)
