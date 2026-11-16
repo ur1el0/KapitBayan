@@ -60,6 +60,7 @@ pypdf==6.21.4
 python-bidi==0.6.11
 python-dateutil==2.9.0.post0
 PyYAML==6.0.3
+qrcode==8.2
 referencing==0.37.0
 reportlab==4.5.1
 requests==2.34.2

@@ -626,3 +626,68 @@ class QueueTicketAPITests(ServiceAPIBaseTestCase):
         )
         ticket.refresh_from_db()
         self.assertEqual(ticket.status, QueueTicket.Status.WAITING)
+
+    def test_next_ticket_advances_distinct_tickets_under_consecutive_and_concurrent_calls(self):
+        barangay = Barangay.objects.create(name="Next Ticket Concurrency Test Barangay")
+        official_1 = User.objects.create_user(
+            username="official_counter_1",
+            password="SecurePassword123!",
+            email="counter1@example.com",
+            role=User.Role.ADMIN,
+            barangay=barangay,
+        )
+        official_2 = User.objects.create_user(
+            username="official_counter_2",
+            password="SecurePassword123!",
+            email="counter2@example.com",
+            role=User.Role.ADMIN,
+            barangay=barangay,
+        )
+
+        ticket_1 = QueueTicket.objects.create(
+            barangay=barangay,
+            service_type="Clearance",
+            status=QueueTicket.Status.WAITING,
+            is_priority=False,
+        )
+        ticket_2 = QueueTicket.objects.create(
+            barangay=barangay,
+            service_type="Residency",
+            status=QueueTicket.Status.WAITING,
+            is_priority=False,
+        )
+        ticket_3 = QueueTicket.objects.create(
+            barangay=barangay,
+            service_type="Indigency",
+            status=QueueTicket.Status.WAITING,
+            is_priority=False,
+        )
+
+        # First staff calls next
+        self.client.force_authenticate(official_1)
+        resp1 = self.client.post(reverse("ticket-next-ticket"), {"release_document": False}, format="json")
+        self.assertEqual(resp1.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp1.data["current_ticket"], ticket_1.ticket_number)
+
+        ticket_1.refresh_from_db()
+        self.assertEqual(ticket_1.status, QueueTicket.Status.SERVING)
+
+        # Second staff calls next: ticket_1 is completed and ticket_2 is called
+        self.client.force_authenticate(official_2)
+        resp2 = self.client.post(reverse("ticket-next-ticket"), {"release_document": False}, format="json")
+        self.assertEqual(resp2.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp2.data["current_ticket"], ticket_2.ticket_number)
+
+        ticket_1.refresh_from_db()
+        ticket_2.refresh_from_db()
+        self.assertEqual(ticket_1.status, QueueTicket.Status.COMPLETED)
+        self.assertEqual(ticket_2.status, QueueTicket.Status.SERVING)
+
+        # Third call advances to ticket_3
+        resp3 = self.client.post(reverse("ticket-next-ticket"), {"release_document": False}, format="json")
+        self.assertEqual(resp3.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp3.data["current_ticket"], ticket_3.ticket_number)
+
+        # Fourth call returns 404 No tickets waiting
+        resp4 = self.client.post(reverse("ticket-next-ticket"), {"release_document": False}, format="json")
+        self.assertEqual(resp4.status_code, status.HTTP_404_NOT_FOUND)

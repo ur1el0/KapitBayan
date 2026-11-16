@@ -717,19 +717,22 @@ class QueueTicketViewSet(viewsets.ModelViewSet):
                     )
                 )
 
+            waiting_qs = today_tickets.filter(status=QueueTicket.Status.WAITING)
+            from django.db import connection
+            if getattr(connection.features, 'has_select_for_update_skip_locked', False):
+                waiting_candidates = waiting_qs.select_for_update(skip_locked=True)
+            elif getattr(connection.features, 'has_select_for_update', False):
+                waiting_candidates = waiting_qs.select_for_update()
+            else:
+                waiting_candidates = waiting_qs
+
             regular_ticket = (
-                today_tickets.filter(
-                    status=QueueTicket.Status.WAITING,
-                    is_priority=False,
-                )
+                waiting_candidates.filter(is_priority=False)
                 .order_by("created_at", "id")
                 .first()
             )
             priority_ticket = (
-                today_tickets.filter(
-                    status=QueueTicket.Status.WAITING,
-                    is_priority=True,
-                )
+                waiting_candidates.filter(is_priority=True)
                 .order_by("created_at", "id")
                 .first()
             )

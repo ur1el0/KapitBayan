@@ -1652,6 +1652,23 @@ class DocumentRequestViewSet(viewsets.ModelViewSet):
             "issued_at": record.issued_at,
         }
 
+    @staticmethod
+    def _build_qr_code_data_uri(content: str) -> str:
+        try:
+            import base64
+            import io
+            import qrcode
+
+            qr = qrcode.QRCode(box_size=4, border=2)
+            qr.add_data(content)
+            qr.make(fit=True)
+            img = qr.make_image(fill_color="black", back_color="white")
+            buf = io.BytesIO()
+            img.save(buf, format="PNG")
+            return f"data:image/png;base64,{base64.b64encode(buf.getvalue()).decode('ascii')}"
+        except Exception:
+            return ""
+
     @action(detail=True, methods=['get'], url_path='generate-pdf')
     def generate_pdf(self, request, pk=None):
         document = self.get_object()
@@ -1666,8 +1683,26 @@ class DocumentRequestViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_409_CONFLICT,
             )
 
+        verification_record = DocumentCertificateVerification.objects.filter(
+            document_request=document,
+            revoked_at__isnull=True,
+        ).first()
+        if verification_record is None:
+            verification_record = DocumentCertificateVerification.objects.create(
+                document_request=document,
+                issued_by=request.user if request.user.role == User.Role.ADMIN else None,
+            )
+
+        verification_url = f"{settings.FRONTEND_URL.rstrip('/')}/verify-certificate/{verification_record.token}"
+        qr_code_data_uri = self._build_qr_code_data_uri(verification_url)
+
         template = get_template('gridy_services/pdf_or_number.html')
-        html = template.render({'or_number': document.or_number})
+        html = template.render({
+            'or_number': document.or_number,
+            'document_type': document.document_type,
+            'verification_url': verification_url,
+            'qr_code_data_uri': qr_code_data_uri,
+        })
         response = HttpResponse(content_type='application/pdf')
         safe_filename = re.sub(r'[^A-Za-z0-9_-]', '_', document.or_number)[:50] or f'request_{document.id}'
         response['Content-Disposition'] = f'attachment; filename="OR_{safe_filename}.pdf"'
