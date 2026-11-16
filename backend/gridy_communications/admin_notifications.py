@@ -21,6 +21,10 @@ EVENT_COPY = {
         "Resident registration pending review",
         "A new resident account is pending verification.",
     ),
+    AdminNotification.Type.SYSTEM: (
+        "New equipment borrow request",
+        "A resident submitted an equipment borrow request.",
+    ),
 }
 
 

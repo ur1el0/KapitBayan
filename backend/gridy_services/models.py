@@ -443,6 +443,9 @@ class EquipmentBorrowRequest(models.Model):
         blank=True,
         related_name="equipment_borrow_requests",
     )
+    is_walkin = models.BooleanField(default=False)
+    walkin_name = models.CharField(max_length=255, blank=True, default="")
+    walkin_contact = models.CharField(max_length=50, blank=True, default="")
     item_type = models.CharField(
         max_length=100,
         choices=ItemType.choices,
