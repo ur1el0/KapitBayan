@@ -1,13 +1,20 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { AlertTriangle, FileText, Loader2, ShieldCheck, TicketCheck, UsersRound } from 'lucide-react';
+import { AlertTriangle, FileText, Loader2, Printer, ShieldCheck, TicketCheck, UsersRound } from 'lucide-react';
 import { LanguageSwitcher } from '../../components/language/LanguageSwitcher';
 import { useLanguage } from '../../context/language-context';
 import { resolveApiBaseUrl } from '../../api/axios';
 
 type Service = 'queue' | 'documents' | 'reports';
 type PublicBarangay = { id: number; name: string; municipality: string; province: string };
-type SubmissionResult = { reference: string; status: string; service: Service };
+type SubmissionResult = {
+    reference: string;
+    status: string;
+    service: Service;
+    name?: string;
+    detail?: string;
+    timestamp?: string;
+};
 
 const INITIAL_FORM = {
     walkin_name: '',
@@ -158,7 +165,25 @@ export function PublicKiosk() {
             if (!response.ok || typeof body.reference !== 'string') {
                 throw new Error('submission failed');
             }
-            setResult({ reference: body.reference, status: body.status, service });
+            const detailText =
+                service === 'queue'
+                    ? form.service_type
+                    : service === 'documents'
+                      ? form.document_type
+                      : form.title;
+            const nowTime = new Date().toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true,
+            });
+            setResult({
+                reference: body.reference,
+                status: body.status,
+                service,
+                name: form.walkin_name.trim(),
+                detail: detailText,
+                timestamp: nowTime,
+            });
             setForm(INITIAL_FORM);
         } catch {
             setError(t('We could not submit this request. Check the information and try again, or ask barangay staff for help.'));
@@ -176,8 +201,8 @@ export function PublicKiosk() {
     ];
 
     return (
-        <main className="min-h-screen bg-slate-50 text-slate-900">
-            <header className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 bg-white px-5 py-4 sm:px-8">
+        <main className="min-h-screen bg-slate-50 text-slate-900 print:bg-white print:p-0">
+            <header className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 bg-white px-5 py-4 sm:px-8 print:hidden">
                 <div>
                     <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">KapitBayan</p>
                     <h1 className="mt-1 text-xl font-extrabold">{t('Barangay Public Service Kiosk')}</h1>
@@ -190,30 +215,34 @@ export function PublicKiosk() {
                 </div>
             </header>
 
-            <div className="mx-auto grid max-w-6xl gap-6 px-4 py-6 sm:px-8 lg:grid-cols-[minmax(0,1fr)_280px] lg:py-10">
-                <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-8">
-                    <div className="mb-6">
-                        <h2 className="text-2xl font-extrabold">{t('How can we help you today?')}</h2>
-                        <p className="mt-2 text-sm leading-6 text-slate-600">{t('Choose a service to make a walk-in request without signing in.')}</p>
-                    </div>
+            <div className="mx-auto grid max-w-6xl gap-6 px-4 py-6 sm:px-8 lg:grid-cols-[minmax(0,1fr)_280px] lg:py-10 print:block print:max-w-xl print:p-0">
+                <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-8 print:border-none print:p-0 print:shadow-none">
+                    {!result && (
+                        <>
+                            <div className="mb-6">
+                                <h2 className="text-2xl font-extrabold">{t('How can we help you today?')}</h2>
+                                <p className="mt-2 text-sm leading-6 text-slate-600">{t('Choose a service to make a walk-in request without signing in.')}</p>
+                            </div>
 
-                    <label className="mb-6 block text-sm font-semibold text-slate-800">
-                        {t('Barangay')}
-                        <select
-                            required
-                            value={barangayId}
-                            disabled={directoryLoading || barangays.length === 0}
-                            onChange={(event) => setBarangayId(event.target.value)}
-                            className="mt-2 min-h-12 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm"
-                        >
-                            <option value="">{directoryLoading ? t('Loading…') : t('Select your Barangay')}</option>
-                            {barangays.map((barangay) => (
-                                <option key={barangay.id} value={barangay.id}>
-                                    {barangay.name} ({barangay.municipality}, {barangay.province})
-                                </option>
-                            ))}
-                        </select>
-                    </label>
+                            <label className="mb-6 block text-sm font-semibold text-slate-800">
+                                {t('Barangay')}
+                                <select
+                                    required
+                                    value={barangayId}
+                                    disabled={directoryLoading || barangays.length === 0}
+                                    onChange={(event) => setBarangayId(event.target.value)}
+                                    className="mt-2 min-h-12 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm"
+                                >
+                                    <option value="">{directoryLoading ? t('Loading…') : t('Select your Barangay')}</option>
+                                    {barangays.map((barangay) => (
+                                        <option key={barangay.id} value={barangay.id}>
+                                            {barangay.name} ({barangay.municipality}, {barangay.province})
+                                        </option>
+                                    ))}
+                                </select>
+                            </label>
+                        </>
+                    )}
 
                     {directoryError && (
                         <div role="alert" className="mb-5 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
@@ -341,19 +370,60 @@ export function PublicKiosk() {
                     )}
 
                     {result && (
-                        <div role="status" aria-live="polite" className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6 text-center">
-                            <ShieldCheck className="mx-auto h-12 w-12 text-emerald-700" aria-hidden="true" />
-                            <h3 className="mt-3 text-xl font-extrabold text-emerald-950">{t('Request submitted')}</h3>
-                            <p className="mt-2 text-sm text-emerald-900">{t('Keep this reference and give it to Barangay staff when asked.')}</p>
-                            <p className="mt-4 text-xs font-bold uppercase tracking-wider text-emerald-800">{t('Reference number')}</p>
-                            <p className="mt-1 text-3xl font-black tracking-wide text-emerald-950">{result.reference}</p>
-                            <p className="mt-3 text-sm text-emerald-900">{t('Your request is waiting for Barangay staff review.')}</p>
-                            <button type="button" onClick={resetKiosk} className="mt-6 min-h-12 rounded-xl bg-emerald-800 px-6 font-bold text-white hover:bg-emerald-900">{t('Done')}</button>
+                        <div role="status" aria-live="polite" className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6 text-center print:border print:border-slate-800 print:bg-white print:p-8 print:shadow-none">
+                            <ShieldCheck className="mx-auto h-12 w-12 text-emerald-700 print:hidden" aria-hidden="true" />
+                            <div className="hidden print:block print:mb-4 print:border-b print:border-slate-300 print:pb-3">
+                                <p className="text-xs font-bold tracking-widest text-slate-500 uppercase">KapitBayan</p>
+                                <h2 className="text-xl font-black text-slate-900">{selectedBarangay?.name || t('Barangay Public Service Kiosk')}</h2>
+                                <p className="text-xs text-slate-600">{selectedBarangay ? `${selectedBarangay.municipality}, ${selectedBarangay.province}` : ''}</p>
+                                <p className="mt-1 text-[11px] text-slate-500 font-mono">{t('Public Walk-in Slip')} • {result.timestamp || new Date().toLocaleTimeString()}</p>
+                            </div>
+                            <h3 className="mt-3 text-xl font-extrabold text-emerald-950 print:hidden">{t('Request submitted')}</h3>
+                            <p className="mt-2 text-sm text-emerald-900 print:hidden">{t('Keep this reference and give it to Barangay staff when asked.')}</p>
+
+                            <div className="my-4 rounded-xl border border-dashed border-emerald-300 bg-white p-5 shadow-sm print:my-3 print:border-2 print:border-slate-800 print:p-6 print:shadow-none">
+                                <p className="text-xs font-bold uppercase tracking-wider text-emerald-800 print:text-slate-600">{t('Reference number')}</p>
+                                <p className="mt-1 font-mono text-4xl font-black tracking-wider text-emerald-950 print:text-5xl print:text-slate-950">{result.reference}</p>
+                                {result.name && (
+                                    <p className="mt-3 text-sm font-bold text-slate-800 print:text-base">{t('Applicant')}: {result.name}</p>
+                                )}
+                                {result.detail && (
+                                    <p className="text-xs text-slate-600 print:text-sm">{t('Service')}: {result.detail}</p>
+                                )}
+                                {result.timestamp && (
+                                    <p className="mt-1 text-[11px] text-slate-400 print:hidden">{t('Time Issued')}: {result.timestamp}</p>
+                                )}
+                            </div>
+
+                            <p className="mt-2 text-xs text-emerald-800 print:hidden">
+                                {t('Take a photo with your phone or click "Print Slip" to keep a paper ticket copy.')}
+                            </p>
+                            <p className="hidden print:block print:mt-4 print:text-xs print:font-semibold print:text-slate-700">
+                                {t('Please present this slip at the Barangay service counter when your reference is called.')}
+                            </p>
+
+                            <div className="mt-6 flex flex-wrap items-center justify-center gap-3 print:hidden">
+                                <button
+                                    type="button"
+                                    onClick={() => window.print()}
+                                    className="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-slate-900 px-6 font-bold text-white shadow hover:bg-slate-800 transition-colors"
+                                >
+                                    <Printer className="h-4 w-4" aria-hidden="true" />
+                                    {t('Print Slip')}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={resetKiosk}
+                                    className="min-h-12 rounded-xl bg-emerald-800 px-6 font-bold text-white shadow hover:bg-emerald-900 transition-colors"
+                                >
+                                    {t('Done')}
+                                </button>
+                            </div>
                         </div>
                     )}
                 </section>
 
-                <aside className="space-y-5">
+                <aside className="space-y-5 print:hidden">
                     <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                         <div className="flex items-center gap-3">
                             <UsersRound className="h-5 w-5 text-primary" aria-hidden="true" />
