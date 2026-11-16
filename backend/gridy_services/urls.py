@@ -6,6 +6,8 @@ from .views import (
     DocumentRequestViewSet,
     QueueTicketViewSet,
     DashboardSummaryView,
+    AccomplishmentReportView,
+    AccomplishmentReportExportView,
     PublicQueueStatusView,
     PaymentRecipientViewSet,
     DocumentServiceOfferingViewSet,
@@ -36,4 +38,14 @@ urlpatterns = [
     path('', include(router.urls)),
     path('public/barangays/<int:barangay_id>/queue-status/', PublicQueueStatusView.as_view(), name='public-queue-status'),
     path('dashboard/summary/', DashboardSummaryView.as_view(), name='dashboard-summary'),
+    path(
+        'dashboard/accomplishment-report/',
+        AccomplishmentReportView.as_view(),
+        name='dashboard-accomplishment-report',
+    ),
+    path(
+        'dashboard/accomplishment-report/export/',
+        AccomplishmentReportExportView.as_view(),
+        name='dashboard-accomplishment-report-export',
+    ),
 ]

@@ -35,6 +35,7 @@ from .dashboard import (
     IssueStatsSerializer,
     QueueActivitySerializer,
     DashboardSummarySerializer,
+    AccomplishmentReportSerializer,
 )
 
 __all__ = [
@@ -59,4 +60,5 @@ __all__ = [
     'IssueStatsSerializer',
     'QueueActivitySerializer',
     'DashboardSummarySerializer',
+    'AccomplishmentReportSerializer',
 ]
