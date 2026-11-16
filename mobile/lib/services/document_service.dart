@@ -8,23 +8,40 @@ import '../core/network/api_exception.dart';
 import '../models/document_request_model.dart';
 import '../models/document_offering_model.dart';
 import '../models/payment_recipient_model.dart';
+import 'offline_outbox_service.dart';
 import 'storage_service.dart';
 
 /// Service coordinating document request fetching, creation, and PDF downloads
 class DocumentService {
   final ApiClient apiClient;
   final StorageService storageService;
+  final OfflineOutboxService outboxService;
   bool lastRequestsUsedOfflineSnapshot = false;
   DateTime? lastRequestsSnapshotSavedAt;
   bool lastRequestsSnapshotTruncated = false;
 
-  DocumentService({required this.apiClient, required this.storageService});
+  DocumentService({
+    required this.apiClient,
+    required this.storageService,
+    OfflineOutboxService? outboxService,
+  }) : outboxService = outboxService ??
+            OfflineOutboxService(
+              storageService: storageService,
+              apiClient: apiClient,
+            );
 
   /// Fetches all document requests for the authenticated user from the backend API
   Future<List<DocumentRequestModel>> fetchDocumentRequests() async {
     lastRequestsUsedOfflineSnapshot = false;
     lastRequestsSnapshotSavedAt = null;
     lastRequestsSnapshotTruncated = false;
+
+    // Automatically attempt flushing queued submissions when connectivity allows
+    try {
+      await outboxService.flushOutbox();
+    } catch (_) {
+      // Non-fatal if offline
+    }
     try {
       final response = await apiClient.get(
         '/document-requests/',
@@ -256,6 +273,7 @@ class DocumentService {
     String? purpose,
     String? idempotencyKey,
   }) async {
+    final key = idempotencyKey ?? OfflineOutboxService.generateIdempotencyKey();
     try {
       final response = await apiClient.post(
         '/document-requests/',
@@ -266,8 +284,7 @@ class DocumentService {
           'purpose': ?purpose,
         },
         headers: {
-          if (idempotencyKey != null && idempotencyKey.isNotEmpty)
-            'Idempotency-Key': idempotencyKey,
+          'Idempotency-Key': key,
         },
         requiresAuth: true,
       );
@@ -276,7 +293,34 @@ class DocumentService {
         utf8.decode(response.bodyBytes),
       );
       return DocumentRequestModel.fromJson(data);
+    } on NetworkException {
+      await outboxService.enqueueDocumentRequest(
+        documentType: documentType,
+        offeringId: offeringId,
+        urgencyTag: urgencyTag,
+        purpose: purpose,
+        idempotencyKey: key,
+      );
+      throw OfflineQueuedException(
+        idempotencyKey: key,
+        message:
+            'Network unavailable. Your request has been saved to the Outbox and will be submitted automatically when online.',
+      );
     } catch (e) {
+      if (e is http.ClientException) {
+        await outboxService.enqueueDocumentRequest(
+          documentType: documentType,
+          offeringId: offeringId,
+          urgencyTag: urgencyTag,
+          purpose: purpose,
+          idempotencyKey: key,
+        );
+        throw OfflineQueuedException(
+          idempotencyKey: key,
+          message:
+              'Network unavailable. Your request has been saved to the Outbox and will be submitted automatically when online.',
+        );
+      }
       rethrow;
     }
   }

@@ -327,6 +327,8 @@ const Map<String, String> _filipino = {
   'LOCAL BARANGAY JURISDICTION': 'IYONG BARANGAY',
   'Loading approved barangays…':
       'Kinukuha ang listahan ng mga aprubadong barangay…',
+  'Saved to Outbox: Your document request is queued and will automatically submit when online.':
+      'Nai-save sa Outbox: Naka-pila ang iyong kahilingan at awtomatikong ipapadala kapag may internet na.',
   'PASSWORD': 'PASSWORD',
   'PUROK / ZONE': 'PUROK / SONA',
   'Password must be at least 8 characters':

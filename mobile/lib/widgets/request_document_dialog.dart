@@ -11,6 +11,7 @@ import '../core/theme/app_colors.dart';
 import '../models/document_request_model.dart';
 import '../models/document_offering_model.dart';
 import '../services/document_service.dart';
+import '../services/offline_outbox_service.dart';
 import 'custom_button.dart';
 
 /// Modal dialog allowing residents to submit a new document request
@@ -231,6 +232,21 @@ class _RequestDocumentDialogState extends State<RequestDocumentDialog> {
       }
     } catch (e) {
       if (mounted) {
+        if (e is OfflineQueuedException) {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                context.tr(
+                  'Saved to Outbox: Your document request is queued and will automatically submit when online.',
+                ),
+              ),
+              backgroundColor: const Color(0xFFD97706),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+          return;
+        }
         setState(() {
           _isSubmitting = false;
           _errorMessage = e is NetworkException

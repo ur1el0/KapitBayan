@@ -12,6 +12,7 @@ class StorageService {
   static const String _keyUser = 'kapitbayan_cached_user';
   static const String _keyRememberMe = 'kapitbayan_remember_me';
   static const String _keySavedUsername = 'kapitbayan_saved_username';
+  static const String _keyOfflineOutbox = 'kapitbayan_offline_outbox';
   static const String _offlineCachePrefix = 'kapitbayan_offline_cache_';
   static const Duration _offlineCacheMaxAge = Duration(days: 30);
   static const int _offlineCacheRecordLimit = 100;
@@ -323,6 +324,50 @@ class StorageService {
     }
   }
 
+  /// Persists queued outbox items to secure storage.
+  Future<void> saveOutboxRecords(List<Map<String, dynamic>> records) async {
+    final user = _cachedUser;
+    if (user == null || !user.isResident || user.id <= 0) return;
+
+    if (records.isEmpty) {
+      await _secureStorage.delete(key: _keyOfflineOutbox);
+      return;
+    }
+
+    final value = jsonEncode({
+      'owner_id': user.id,
+      'owner_barangay_id': user.barangayId,
+      'records': records.take(20).toList(),
+    });
+    if (value.length > _offlineCacheCharacterLimit) return;
+    await _secureStorage.write(key: _keyOfflineOutbox, value: value);
+  }
+
+  /// Reads pending outbox submissions for the authenticated resident.
+  Future<List<Map<String, dynamic>>> readOutboxRecords() async {
+    final user = _cachedUser;
+    if (user == null || !user.isResident || user.id <= 0) return const [];
+
+    final value = await _secureStorage.read(key: _keyOfflineOutbox);
+    if (value == null || value.isEmpty) return const [];
+    try {
+      final decoded = jsonDecode(value);
+      if (decoded is! Map<String, dynamic> ||
+          decoded['owner_id'] != user.id ||
+          decoded['owner_barangay_id'] != user.barangayId) {
+        return const [];
+      }
+      final rawRecords = decoded['records'];
+      if (rawRecords is! List) return const [];
+      return rawRecords
+          .whereType<Map>()
+          .map((record) => Map<String, dynamic>.from(record))
+          .toList(growable: false);
+    } catch (_) {
+      return const [];
+    }
+  }
+
   /// Saves the "Remember Me" preference and username.
   Future<void> saveRememberMe({
     required bool rememberMe,
@@ -366,6 +411,7 @@ class StorageService {
         _secureStorage.delete(key: _offlineCacheKey('queue_tickets')),
         _secureStorage.delete(key: _offlineCacheKey('aid_requests')),
         _secureStorage.delete(key: _offlineCacheKey('issue_reports')),
+        _secureStorage.delete(key: _keyOfflineOutbox),
       ]);
     } finally {
       // Also remove plaintext copies in both namespaces and cached user data.
@@ -397,6 +443,7 @@ class StorageService {
         _secureStorage.delete(key: _offlineCacheKey('queue_tickets')),
         _secureStorage.delete(key: _offlineCacheKey('aid_requests')),
         _secureStorage.delete(key: _offlineCacheKey('issue_reports')),
+        _secureStorage.delete(key: _keyOfflineOutbox),
       ]);
     } finally {
       await _prefs.clear();
