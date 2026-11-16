@@ -370,9 +370,9 @@ export function PublicKiosk() {
                     )}
 
                     {result && (
-                        <div role="status" aria-live="polite" className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6 text-center print:border print:border-slate-800 print:bg-white print:p-8 print:shadow-none">
+                        <div role="status" aria-live="polite" className="kiosk-print-slip rounded-2xl border border-emerald-200 bg-emerald-50 p-6 text-center print:border print:border-slate-800 print:bg-white print:p-8 print:shadow-none">
                             <ShieldCheck className="mx-auto h-12 w-12 text-emerald-700 print:hidden" aria-hidden="true" />
-                            <div className="hidden print:block print:mb-4 print:border-b print:border-slate-300 print:pb-3">
+                            <div className="kiosk-print-header hidden print:block print:mb-4 print:border-b print:border-slate-300 print:pb-3">
                                 <p className="text-xs font-bold tracking-widest text-slate-500 uppercase">KapitBayan</p>
                                 <h2 className="text-xl font-black text-slate-900">{selectedBarangay?.name || t('Barangay Public Service Kiosk')}</h2>
                                 <p className="text-xs text-slate-600">{selectedBarangay ? `${selectedBarangay.municipality}, ${selectedBarangay.province}` : ''}</p>
@@ -398,7 +398,7 @@ export function PublicKiosk() {
                             <p className="mt-2 text-xs text-emerald-800 print:hidden">
                                 {t('Take a photo with your phone or click "Print Slip" to keep a paper ticket copy.')}
                             </p>
-                            <p className="hidden print:block print:mt-4 print:text-xs print:font-semibold print:text-slate-700">
+                            <p className="kiosk-print-footer hidden print:block print:mt-4 print:text-xs print:font-semibold print:text-slate-700">
                                 {t('Please present this slip at the Barangay service counter when your reference is called.')}
                             </p>
 
@@ -406,7 +406,8 @@ export function PublicKiosk() {
                                 <button
                                     type="button"
                                     onClick={() => window.print()}
-                                    className="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-slate-900 px-6 font-bold text-white shadow hover:bg-slate-800 transition-colors"
+                                    className="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-slate-900 px-6 font-bold text-white shadow hover:bg-slate-800 transition-colors cursor-pointer"
+                                    aria-label={t('Print Walk-in Ticket Slip')}
                                 >
                                     <Printer className="h-4 w-4" aria-hidden="true" />
                                     {t('Print Slip')}
