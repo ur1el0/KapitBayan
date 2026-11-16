@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:mobile/core/network/api_client.dart';
 import 'package:mobile/models/user_model.dart';
+import 'package:mobile/services/document_service.dart';
 import 'package:mobile/services/offline_outbox_service.dart';
 import 'package:mobile/services/storage_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -142,5 +143,95 @@ void main() {
     final pending = await outboxService.getQueuedDocumentSubmissions();
     expect(pending.length, 1);
     expect(pending.first.retryCount, 1);
+  });
+
+  test('DocumentService automatically enqueues to outbox when network drops during submission', () async {
+    final mockClient = MockClient((_) async {
+      throw const SocketException('Network is unreachable');
+    });
+    final apiClient = ApiClient(client: mockClient, baseUrl: 'https://test.api');
+    apiClient.setAuthCredentials(accessToken: 'resident-token');
+
+    final documentService = DocumentService(
+      apiClient: apiClient,
+      storageService: storageService,
+    );
+
+    expect(await documentService.outboxService.getPendingCount(), 0);
+
+    await expectLater(
+      documentService.createDocumentRequest(
+        documentType: 'Barangay Clearance',
+        urgencyTag: 'REGULAR',
+        purpose: 'Passport requirement',
+      ),
+      throwsA(isA<OfflineQueuedException>()),
+    );
+
+    expect(await documentService.outboxService.getPendingCount(), 1);
+    final queued = await documentService.outboxService.getQueuedDocumentSubmissions();
+    expect(queued.first.documentType, 'Barangay Clearance');
+    expect(queued.first.purpose, 'Passport requirement');
+  });
+
+  test('DocumentService flushes outbox on fetchDocumentRequests when network reconnects', () async {
+    var outboxSubmissionsReceived = 0;
+    String? receivedIdempotencyKey;
+
+    final mockClient = MockClient((request) async {
+      if (request.url.path.contains('/document-requests/')) {
+        if (request.method == 'POST') {
+          outboxSubmissionsReceived++;
+          receivedIdempotencyKey =
+              request.headers['Idempotency-Key'] ?? request.headers['idempotency-key'];
+          return http.Response(
+            jsonEncode({
+              'id': 202,
+              'document_type': 'Barangay Clearance',
+              'status': 'PENDING',
+            }),
+            201,
+          );
+        } else if (request.method == 'GET') {
+          return http.Response(
+            jsonEncode({
+              'results': [
+                {
+                  'id': 202,
+                  'document_type': 'Barangay Clearance',
+                  'status': 'PENDING',
+                  'created_at': DateTime.now().toIso8601String(),
+                }
+              ]
+            }),
+            200,
+          );
+        }
+      }
+      return http.Response('{}', 200);
+    });
+
+    final apiClient = ApiClient(client: mockClient, baseUrl: 'https://test.api');
+    apiClient.setAuthCredentials(accessToken: 'resident-token');
+
+    final documentService = DocumentService(
+      apiClient: apiClient,
+      storageService: storageService,
+    );
+
+    final key = await documentService.outboxService.enqueueDocumentRequest(
+      documentType: 'Barangay Clearance',
+      urgencyTag: 'REGULAR',
+      purpose: 'Passport requirement',
+    );
+    expect(await documentService.outboxService.getPendingCount(), 1);
+
+    final docs = await documentService.fetchDocumentRequests();
+
+    expect(outboxSubmissionsReceived, 1);
+    expect(receivedIdempotencyKey, key);
+    expect(await documentService.outboxService.getPendingCount(), 0);
+    expect(docs.length, 1);
+    expect(docs.first.id, 202);
   });
 }
