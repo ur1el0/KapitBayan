@@ -15,6 +15,14 @@ window.addEventListener('vite:preloadError', (event) => {
     if (canRetryChunkLoad(window.sessionStorage, Date.now())) window.location.reload()
 })
 
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(() => {
+            // Service worker registration error is non-fatal
+        })
+    })
+}
+
 createRoot(document.getElementById('root')!).render(
     <StrictMode>
         <App />

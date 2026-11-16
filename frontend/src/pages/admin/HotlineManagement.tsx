@@ -159,7 +159,16 @@ export const HotlineManagement: React.FC = () => {
                                             <span className="text-sm font-semibold text-slate-900">{h.name}</span>
                                         </div>
                                     </td>
-                                    <td className="px-6 py-4 text-sm text-slate-700 font-mono">{h.number}</td>
+                                    <td className="px-6 py-4 text-sm font-mono">
+                                        <a
+                                            href={`tel:${h.number}`}
+                                            className="inline-flex items-center gap-1.5 font-bold text-primary hover:underline"
+                                            title={`Call ${h.number}`}
+                                        >
+                                            <Phone size={14} className="text-primary" aria-hidden="true" />
+                                            <span>{h.number}</span>
+                                        </a>
+                                    </td>
                                     <td className="px-6 py-4">
                                         <span className={`text-xs font-bold px-2.5 py-1 rounded-full border ${getCategoryBadge(h.category)}`}>
                                             {h.category_display}
