@@ -28,6 +28,7 @@ Use this page to find current system guidance. Source code, migrations, generate
 - [Web frontend features](features/frontend_features.md) — includes the Admin Documents and Residents auto-refresh behavior.
 - [Walk-in clearances and treasury auditing](features/walkin_and_revenue_clearances.md)
 - [Post-defense service and account controls](features/post-defense-controls.md)
+- [Public Barangay kiosk operations](features/public-kiosk.md)
 - [Paper certificate QR verification](features/certificate-verification.md)
 - [Client refresh and queue polling behavior](features/client-refresh-behavior.md)
 - [Resident mobile offline behavior](features/mobile-offline-behavior.md)

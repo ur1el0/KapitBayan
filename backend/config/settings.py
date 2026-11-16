@@ -280,6 +280,7 @@ REST_FRAMEWORK = {
         'barangay_onboarding_application': '5/hour',
         'barangay_onboarding_verification': '10/hour',
         'certificate_verification': '60/minute',
+        'kiosk_intake': '20/hour',
     }
 }
 
