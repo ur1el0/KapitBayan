@@ -8,9 +8,29 @@ vi.mock('../../api/axios', () => ({
     axiosPublic: {
         get: vi.fn(),
     },
+    resolveApiBaseUrl: vi.fn(() => 'http://localhost:8000/api/v1'),
 }))
 
 const mockedGet = vi.mocked(axiosPublic.get)
+
+class MockWebSocket {
+    static instances: MockWebSocket[] = []
+    url: string
+    onopen: (() => void) | null = null
+    onmessage: ((event: { data: string }) => void) | null = null
+    onclose: (() => void) | null = null
+    onerror: (() => void) | null = null
+    close = vi.fn()
+
+    constructor(url: string) {
+        this.url = url
+        MockWebSocket.instances.push(this)
+    }
+
+    emitQueueUpdate() {
+        this.onmessage?.({ data: JSON.stringify({ type: 'queue_update' }) })
+    }
+}
 
 function renderPublicQueue(path: string) {
     return render(
@@ -27,6 +47,9 @@ function renderPublicQueue(path: string) {
 
 describe('PublicQueueDisplay', () => {
     beforeEach(() => {
+        MockWebSocket.instances = []
+        vi.stubGlobal('WebSocket', MockWebSocket)
+        window.WebSocket = MockWebSocket as unknown as typeof WebSocket
         mockedGet.mockReset()
     })
 
@@ -118,7 +141,9 @@ describe('PublicQueueDisplay', () => {
         )
 
         await act(async () => {
-            await vi.advanceTimersByTimeAsync(5000)
+            MockWebSocket.instances[0]?.emitQueueUpdate()
+            await Promise.resolve()
+            await Promise.resolve()
         })
 
         expect(screen.getByText('Ticket A-105')).toBeInTheDocument()

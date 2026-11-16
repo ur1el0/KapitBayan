@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import toast from 'react-hot-toast';
 import { axiosPrivate } from '../../api/axios';
 import { getSafeApiErrorMessage } from '../../api/error-message';
+import { resolveQueueWsUrl } from '../../api/websocket';
+import { AuthContext } from '../../context/auth-context';
 import { InlineErrorState } from '../../components/ui/InlineErrorState';
 import { DigitalQueueTicketModal } from '../../components/queue/DigitalQueueTicketModal';
 import {  
@@ -56,6 +58,9 @@ export const CitizenQueue: React.FC = () => {
     const [submitting, setSubmitting] = useState(false);
     const [cancelling, setCancelling] = useState(false);
 
+    const auth = useContext(AuthContext);
+    const barangayId = auth?.user?.barangay_id;
+
     // Form State
     const [serviceType, setServiceType] = useState(SERVICE_TYPES[0]);
     const [ticketNotes, setTicketNotes] = useState('');
@@ -84,11 +89,80 @@ export const CitizenQueue: React.FC = () => {
     };
 
     useEffect(() => {
-        fetchQueueData(true);
-        // Auto-poll live queue status every 5 seconds
-        const interval = setInterval(fetchQueueData, 5000);
-        return () => clearInterval(interval);
-    }, []);
+        let isMounted = true;
+        let socket: WebSocket | null = null;
+        let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
+
+        void fetchQueueData(true);
+
+        const connectWebSocket = () => {
+            if (!isMounted || typeof WebSocket === 'undefined') return;
+            try {
+                const wsUrl = resolveQueueWsUrl(barangayId);
+                socket = new WebSocket(wsUrl);
+
+                socket.onopen = () => {
+                    if (isMounted) {
+                        void fetchQueueData();
+                    }
+                };
+
+                socket.onmessage = (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+                        if (data.type === 'queue_update' && isMounted) {
+                            void fetchQueueData();
+                        }
+                    } catch {
+                        if (isMounted) {
+                            void fetchQueueData();
+                        }
+                    }
+                };
+
+                socket.onclose = () => {
+                    if (isMounted) {
+                        reconnectTimeout = setTimeout(() => {
+                            connectWebSocket();
+                            void fetchQueueData();
+                        }, 5000);
+                    }
+                };
+
+                socket.onerror = () => {
+                    if (socket) {
+                        socket.close();
+                    }
+                };
+            } catch {
+                if (isMounted) {
+                    reconnectTimeout = setTimeout(connectWebSocket, 5000);
+                }
+            }
+        };
+
+        connectWebSocket();
+
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible' && isMounted) {
+                void fetchQueueData();
+            }
+        };
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        window.addEventListener('focus', handleVisibilityChange);
+
+        return () => {
+            isMounted = false;
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            window.removeEventListener('focus', handleVisibilityChange);
+            if (reconnectTimeout) clearTimeout(reconnectTimeout);
+            if (socket) {
+                socket.onclose = null;
+                socket.onerror = null;
+                socket.close();
+            }
+        };
+    }, [barangayId]);
 
     const handleTakeTicket = async (e: React.FormEvent) => {
         e.preventDefault();

@@ -11,11 +11,31 @@ vi.mock('../../api/axios', () => ({
         post: vi.fn(),
         delete: vi.fn(),
     },
+    resolveApiBaseUrl: vi.fn(() => 'http://localhost:8000/api/v1'),
 }));
 
 vi.mock('../../context/auth-context', () => ({
     useAuth: vi.fn(),
 }));
+
+class MockWebSocket {
+    static instances: MockWebSocket[] = [];
+    url: string;
+    onopen: (() => void) | null = null;
+    onmessage: ((event: { data: string }) => void) | null = null;
+    onclose: (() => void) | null = null;
+    onerror: (() => void) | null = null;
+    close = vi.fn();
+
+    constructor(url: string) {
+        this.url = url;
+        MockWebSocket.instances.push(this);
+    }
+
+    emitQueueUpdate() {
+        this.onmessage?.({ data: JSON.stringify({ type: 'queue_update' }) });
+    }
+}
 
 const mockTickets = [
     {
@@ -111,6 +131,9 @@ const mockBrowserAudio = () => {
 
 describe('LiveQueue Component', () => {
     beforeEach(() => {
+        MockWebSocket.instances = [];
+        vi.stubGlobal('WebSocket', MockWebSocket);
+        window.WebSocket = MockWebSocket as unknown as typeof WebSocket;
         vi.mocked(axiosPrivate.get).mockReset();
         vi.mocked(axiosPrivate.post).mockReset();
         vi.mocked(axiosPrivate.delete).mockReset();
@@ -186,7 +209,9 @@ describe('LiveQueue Component', () => {
         vi.mocked(axiosPrivate.get).mockRejectedValueOnce(new Error('Network unavailable'));
 
         await act(async () => {
-            await vi.advanceTimersByTimeAsync(3000);
+            MockWebSocket.instances[0]?.emitQueueUpdate();
+            await Promise.resolve();
+            await Promise.resolve();
         });
 
         expect(screen.getByRole('alert')).toHaveTextContent('Failed to load queue tickets.');
@@ -195,7 +220,9 @@ describe('LiveQueue Component', () => {
         expect(screen.getByText('Total Waiting').parentElement?.parentElement).toHaveTextContent('1');
 
         await act(async () => {
-            await vi.advanceTimersByTimeAsync(3000);
+            MockWebSocket.instances[0]?.emitQueueUpdate();
+            await Promise.resolve();
+            await Promise.resolve();
         });
 
         expect(screen.queryByRole('alert')).not.toBeInTheDocument();
@@ -322,8 +349,7 @@ describe('LiveQueue Component', () => {
         expect(screen.queryByRole('dialog', { name: 'Queue Activity History' })).not.toBeInTheDocument();
     });
 
-    it('polls tickets every three seconds and clears the interval on unmount', async () => {
-        vi.useFakeTimers();
+    it('refreshes tickets on real-time websocket queue_update event and closes socket on unmount', async () => {
         renderQueue();
 
         await act(async () => {
@@ -333,15 +359,15 @@ describe('LiveQueue Component', () => {
         expect(axiosPrivate.get).toHaveBeenCalledTimes(1);
 
         await act(async () => {
-            await vi.advanceTimersByTimeAsync(3000);
+            MockWebSocket.instances[0]?.emitQueueUpdate();
+            await Promise.resolve();
+            await Promise.resolve();
         });
         expect(axiosPrivate.get).toHaveBeenCalledTimes(2);
 
+        const socket = MockWebSocket.instances[0];
         cleanup();
-        await act(async () => {
-            await vi.advanceTimersByTimeAsync(3000);
-        });
-        expect(axiosPrivate.get).toHaveBeenCalledTimes(2);
+        expect(socket?.close).toHaveBeenCalled();
     });
 
     it('unlocks speech and audio from the announcer control without announcing the initial ticket', async () => {
@@ -362,7 +388,6 @@ describe('LiveQueue Component', () => {
     });
 
     it('announces the first serving ticket after the queue transitions from idle', async () => {
-        vi.useFakeTimers();
         const audio = mockBrowserAudio();
         const waitingTickets = [mockTickets[0]];
         const servingTickets = [
@@ -383,7 +408,9 @@ describe('LiveQueue Component', () => {
         audio.speechSynthesis.speak.mockClear();
 
         await act(async () => {
-            await vi.advanceTimersByTimeAsync(3000);
+            MockWebSocket.instances[0]?.emitQueueUpdate();
+            await Promise.resolve();
+            await Promise.resolve();
         });
 
         expect(axiosPrivate.get).toHaveBeenCalledTimes(2);

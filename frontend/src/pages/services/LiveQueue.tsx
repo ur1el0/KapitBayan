@@ -129,20 +129,31 @@ export const LiveQueue: React.FC = () => {
                 const wsUrl = resolveQueueWsUrl(user?.barangay_id);
                 socket = new WebSocket(wsUrl);
 
+                socket.onopen = () => {
+                    if (isMounted) {
+                        void fetchTickets();
+                    }
+                };
+
                 socket.onmessage = (event) => {
                     try {
                         const data = JSON.parse(event.data);
-                        if (data.type === 'queue_update') {
+                        if (data.type === 'queue_update' && isMounted) {
                             void fetchTickets();
                         }
                     } catch {
-                        void fetchTickets();
+                        if (isMounted) {
+                            void fetchTickets();
+                        }
                     }
                 };
 
                 socket.onclose = () => {
                     if (isMounted) {
-                        reconnectTimeout = setTimeout(connectWebSocket, 5000);
+                        reconnectTimeout = setTimeout(() => {
+                            connectWebSocket();
+                            void fetchTickets();
+                        }, 5000);
                     }
                 };
 
@@ -160,15 +171,19 @@ export const LiveQueue: React.FC = () => {
 
         connectWebSocket();
 
-        // Fallback polling interval ensures consistency if WebSocket drops
-        const interval = setInterval(() => {
-            void fetchTickets();
-        }, 3000);
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible' && isMounted) {
+                void fetchTickets();
+            }
+        };
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        window.addEventListener('focus', handleVisibilityChange);
 
         return () => {
             isMounted = false;
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            window.removeEventListener('focus', handleVisibilityChange);
             if (reconnectTimeout) clearTimeout(reconnectTimeout);
-            clearInterval(interval);
             if (socket) {
                 socket.onclose = null;
                 socket.onerror = null;

@@ -8,10 +8,33 @@ vi.mock('../../api/axios', () => ({
         get: vi.fn(),
         post: vi.fn(),
     },
+    resolveApiBaseUrl: vi.fn(() => 'http://localhost:8000/api/v1'),
 }));
+
+class MockWebSocket {
+    static instances: MockWebSocket[] = [];
+    url: string;
+    onopen: (() => void) | null = null;
+    onmessage: ((event: { data: string }) => void) | null = null;
+    onclose: (() => void) | null = null;
+    onerror: (() => void) | null = null;
+    close = vi.fn();
+
+    constructor(url: string) {
+        this.url = url;
+        MockWebSocket.instances.push(this);
+    }
+
+    emitQueueUpdate() {
+        this.onmessage?.({ data: JSON.stringify({ type: 'queue_update' }) });
+    }
+}
 
 describe('CitizenQueue', () => {
     beforeEach(() => {
+        MockWebSocket.instances = [];
+        vi.stubGlobal('WebSocket', MockWebSocket);
+        window.WebSocket = MockWebSocket as unknown as typeof WebSocket;
         vi.mocked(axiosPrivate.get).mockReset();
         vi.mocked(axiosPrivate.post).mockReset();
         vi.mocked(axiosPrivate.get).mockImplementation(async (path) => {
@@ -27,7 +50,11 @@ describe('CitizenQueue', () => {
         } as never);
     });
 
-    afterEach(() => cleanup());
+    afterEach(() => {
+        cleanup();
+        vi.unstubAllGlobals();
+        vi.restoreAllMocks();
+    });
 
     it('asks residents to request staff review and never submits priority fields', async () => {
         render(<CitizenQueue />);
@@ -61,5 +88,28 @@ describe('CitizenQueue', () => {
         await waitFor(() => {
             expect(screen.getByText('You do not have an active queue ticket')).toBeInTheDocument();
         });
+    });
+
+    it('connects to websocket and refreshes queue details when a queue_update event is received', async () => {
+        render(<CitizenQueue />);
+
+        await waitFor(() => {
+            expect(MockWebSocket.instances.length).toBeGreaterThan(0);
+        });
+
+        // Initial fetch calls: /tickets/live-status/ and /tickets/
+        const initialCalls = vi.mocked(axiosPrivate.get).mock.calls.length;
+        expect(initialCalls).toBe(2);
+
+        // Emit real-time queue_update event from websocket
+        MockWebSocket.instances[0].emitQueueUpdate();
+
+        await waitFor(() => {
+            expect(vi.mocked(axiosPrivate.get).mock.calls.length).toBeGreaterThan(initialCalls);
+        });
+
+        const socket = MockWebSocket.instances[0];
+        cleanup();
+        expect(socket.close).toHaveBeenCalled();
     });
 });

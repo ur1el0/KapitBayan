@@ -674,6 +674,7 @@ const FILIPINO: Record<string, string> = {
     'No ticket is being called': 'Walang numerong tinatawag sa ngayon',
     'Residents waiting': 'Mga residenteng naghihintay',
     'Queue status refreshes automatically every five seconds.': 'Awtomatikong nag-a-update ang pila kada limang segundo.',
+    'Live queue updates in real time.': 'Real-time na nag-a-update ang pila.',
     'Now serving ticket': 'Tinatawag na ang numerong',
     'Please proceed to the service counter.': 'Pumunta na po sa service counter.',
     'Back to Login': 'Bumalik sa pag-login',
