@@ -69,6 +69,22 @@ export const CertificateVerificationControl = ({ requestId, documentType }: Cert
         }
     };
 
+    const handlePrint = () => {
+        document.body.classList.add('printing-certificate-label');
+        window.print();
+    };
+
+    useEffect(() => {
+        const handleAfterPrint = () => {
+            document.body.classList.remove('printing-certificate-label');
+        };
+        window.addEventListener('afterprint', handleAfterPrint);
+        return () => {
+            window.removeEventListener('afterprint', handleAfterPrint);
+            document.body.classList.remove('printing-certificate-label');
+        };
+    }, []);
+
     return (
         <section className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-4" aria-labelledby="certificate-verification-title">
             <div className="certificate-verification-screen-only">
@@ -97,7 +113,7 @@ export const CertificateVerificationControl = ({ requestId, documentType }: Cert
                         </p>
                     </div>
                     <div className="certificate-verification-screen-only mt-3 flex flex-wrap items-center gap-2">
-                        <button type="button" onClick={() => window.print()} className="rounded-lg bg-primary px-3 py-2 text-xs font-bold text-primary-foreground">Print QR label</button>
+                        <button type="button" onClick={handlePrint} className="rounded-lg bg-primary px-3 py-2 text-xs font-bold text-primary-foreground">Print QR label</button>
                         <button type="button" onClick={() => void revokeVerification()} disabled={working} className="rounded-lg border border-rose-300 bg-white px-3 py-2 text-xs font-semibold text-rose-700 disabled:opacity-50">
                             {working ? 'Please wait…' : 'Revoke QR'}
                         </button>

@@ -70,20 +70,29 @@
 }
 
 @media print {
-    body * {
-        visibility: hidden !important;
+    @page {
+        margin: 10mm;
+    }
+
+    body {
+        background: #ffffff !important;
+        color: #0f172a !important;
     }
 
     .certificate-verification-screen-only {
         display: none !important;
     }
 
-    .certificate-verification-print-area,
-    .certificate-verification-print-area * {
+    body.printing-certificate-label * {
+        visibility: hidden !important;
+    }
+
+    body.printing-certificate-label .certificate-verification-print-area,
+    body.printing-certificate-label .certificate-verification-print-area * {
         visibility: visible !important;
     }
 
-    .certificate-verification-print-area {
+    body.printing-certificate-label .certificate-verification-print-area {
         position: fixed !important;
         inset: 0 auto auto 0 !important;
         width: 76mm !important;
@@ -93,5 +102,27 @@
         box-shadow: none !important;
         background: #fff !important;
         color: #0f172a !important;
+    }
+
+    .kiosk-print-slip,
+    .kiosk-print-slip * {
+        visibility: visible !important;
+    }
+
+    .kiosk-print-slip {
+        display: block !important;
+        width: 100% !important;
+        max-width: 80mm !important;
+        margin: 0 auto !important;
+        padding: 16px !important;
+        border: 2px dashed #0f172a !important;
+        border-radius: 8px !important;
+        background: #ffffff !important;
+        color: #0f172a !important;
+    }
+
+    .kiosk-print-header,
+    .kiosk-print-footer {
+        display: block !important;
     }
 }
