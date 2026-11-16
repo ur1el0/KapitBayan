@@ -15,6 +15,7 @@ from gridy_communications.admin_notifications import notify_barangay_admins
 from gridy_communications.models import AdminNotification
 from gridy_reports.models import IssueReport
 from gridy_services.models import DocumentRequest, QueueTicket
+from gridy_services.websocket_events import broadcast_queue_update
 
 
 KIOSK_PRIVACY_NOTICE_VERSION = "kiosk-v1"
@@ -116,7 +117,7 @@ class KioskQueueTicketView(KioskSubmissionView):
     notification_type = AdminNotification.Type.QUEUE
 
     def create_record(self, data):
-        return QueueTicket.objects.create(
+        ticket = QueueTicket.objects.create(
             user=None,
             barangay=data["barangay"],
             walkin_name=data["walkin_name"],
@@ -127,6 +128,12 @@ class KioskQueueTicketView(KioskSubmissionView):
             privacy_notice_version=KIOSK_PRIVACY_NOTICE_VERSION,
             privacy_acknowledged_at=timezone.now(),
         )
+        broadcast_queue_update(
+            barangay_id=ticket.barangay_id,
+            ticket=ticket.ticket_number,
+            action="kiosk_create",
+        )
+        return ticket
 
     def response_data(self, record):
         return {

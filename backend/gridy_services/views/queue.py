@@ -24,6 +24,7 @@ from gridy_services.serializers import (
     QueueTicketPrioritySerializer,
     QueueTicketSerializer,
 )
+from gridy_services.websocket_events import broadcast_queue_update
 from .dashboard import DashboardSummaryView
 
 __all__ = ["QueueTicketViewSet", "DashboardSummaryView"]
@@ -191,8 +192,19 @@ class QueueTicketViewSet(viewsets.ModelViewSet):
                     request=self.request,
                 )
 
+        broadcast_queue_update(
+            barangay_id=ticket.barangay_id,
+            ticket=ticket.ticket_number,
+            action="create",
+        )
+
     def perform_update(self, serializer):
-        serializer.save()
+        ticket = serializer.save()
+        broadcast_queue_update(
+            barangay_id=ticket.barangay_id,
+            ticket=ticket.ticket_number,
+            action="update",
+        )
 
     @staticmethod
     def _has_notification_channel(user):
@@ -444,6 +456,12 @@ class QueueTicketViewSet(viewsets.ModelViewSet):
                 request=request,
             )
 
+        broadcast_queue_update(
+            barangay_id=ticket.barangay_id,
+            ticket=ticket.ticket_number,
+            action="cancel",
+        )
+
         return Response(
             {
                 "detail": "Queue ticket cancelled successfully.",
@@ -529,6 +547,12 @@ class QueueTicketViewSet(viewsets.ModelViewSet):
                 release_document=release_document,
             )
 
+        broadcast_queue_update(
+            barangay_id=ticket.barangay_id,
+            ticket=ticket.ticket_number,
+            action="complete",
+        )
+
         return Response(
             {
                 "detail": "Queue ticket completed successfully.",
@@ -601,6 +625,12 @@ class QueueTicketViewSet(viewsets.ModelViewSet):
                 ),
                 request=request,
             )
+
+        broadcast_queue_update(
+            barangay_id=ticket.barangay_id,
+            ticket=ticket.ticket_number,
+            action="priority_change",
+        )
 
         return Response(
             {
@@ -807,5 +837,11 @@ class QueueTicketViewSet(viewsets.ModelViewSet):
                     released_document.status if released_document else None
                 ),
             }
+
+        broadcast_queue_update(
+            barangay_id=user.barangay_id,
+            ticket=next_ticket.ticket_number,
+            action="call_next",
+        )
 
         return Response(response_data, status=status.HTTP_200_OK)

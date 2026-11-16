@@ -8,6 +8,7 @@ import {
 import { useParams } from 'react-router-dom'
 import { Volume2, VolumeX } from 'lucide-react'
 import { axiosPublic } from '../../api/axios'
+import { resolveQueueWsUrl } from '../../api/websocket'
 import { LanguageSwitcher } from '../../components/language/LanguageSwitcher'
 import { useLanguage } from '../../context/language-context'
 import './PublicQueueDisplay.css'
@@ -148,6 +149,8 @@ export function PublicQueueDisplay() {
 
         let active = true
         let nextPollTimer: number | undefined
+        let reconnectTimer: number | undefined
+        let socket: WebSocket | null = null
         const controller = new AbortController()
 
         const pollQueue = async () => {
@@ -194,14 +197,58 @@ export function PublicQueueDisplay() {
             }
         }
 
+        const connectWebSocket = () => {
+            if (!active || typeof WebSocket === 'undefined') return
+            try {
+                const wsUrl = resolveQueueWsUrl(routeBarangayId)
+                socket = new WebSocket(wsUrl)
+
+                socket.onmessage = (event) => {
+                    try {
+                        const data = JSON.parse(event.data)
+                        if (data.type === 'queue_update') {
+                            void pollQueue()
+                        }
+                    } catch {
+                        void pollQueue()
+                    }
+                }
+
+                socket.onclose = () => {
+                    if (active) {
+                        reconnectTimer = window.setTimeout(connectWebSocket, 5000)
+                    }
+                }
+
+                socket.onerror = () => {
+                    if (socket) {
+                        socket.close()
+                    }
+                }
+            } catch {
+                if (active) {
+                    reconnectTimer = window.setTimeout(connectWebSocket, 5000)
+                }
+            }
+        }
+
         void pollQueue()
+        connectWebSocket()
 
         return () => {
             active = false
             controller.abort()
 
+            if (reconnectTimer !== undefined) {
+                window.clearTimeout(reconnectTimer)
+            }
             if (nextPollTimer !== undefined) {
                 window.clearTimeout(nextPollTimer)
+            }
+            if (socket) {
+                socket.onclose = null
+                socket.onerror = null
+                socket.close()
             }
 
             audioEnabledRef.current = false
