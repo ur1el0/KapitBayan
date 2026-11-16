@@ -192,6 +192,63 @@ class DocumentRequestAPITests(ServiceAPIBaseTestCase):
         self.assertIn("OR-RESIDENT-2042", rendered_html)
         self.assertNotIn("Purok 3", rendered_html)
 
+    @patch("gridy_services.views.documents.pisa.CreatePDF")
+    def test_generate_pdf_embeds_certificate_verification_qr_and_url(self, create_pdf):
+        barangay = Barangay.objects.create(name="QR Verification Test Barangay")
+        self.official.barangay = barangay
+        self.official.save(update_fields=["barangay"])
+        self.client.force_login(self.official)
+
+        doc = DocumentRequest.objects.create(
+            barangay=barangay,
+            is_walkin=True,
+            walkin_name="Maria Clara",
+            document_type="Barangay Clearance",
+            status=DocumentRequest.Status.RELEASED,
+            or_number="OR-QR-9901",
+        )
+        create_pdf.return_value.err = False
+
+        response = self.client.get(
+            reverse("document-request-generate-pdf", args=[doc.pk])
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        rendered_html = create_pdf.call_args.args[0]
+        self.assertIn("OR-QR-9901", rendered_html)
+        self.assertIn("data:image/png;base64,", rendered_html)
+        self.assertIn("/verify-certificate/", rendered_html)
+
+        from gridy_services.models import DocumentCertificateVerification
+        verification = DocumentCertificateVerification.objects.filter(document_request=doc).first()
+        self.assertIsNotNone(verification)
+        self.assertIn(str(verification.token), rendered_html)
+
+    def test_field_official_cannot_review_payment(self):
+        barangay = Barangay.objects.create(name="Payment Separation Test Barangay")
+        field_official = User.objects.create_user(
+            username="field_official_payment_reviewer",
+            password="SecurePassword123!",
+            email="field-payment@example.com",
+            role=User.Role.FIELD_OFFICIAL,
+            barangay=barangay,
+        )
+        doc = DocumentRequest.objects.create(
+            user=self.resident,
+            barangay=barangay,
+            document_type="Barangay Clearance",
+            status=DocumentRequest.Status.PROCESSING,
+        )
+        self.client.force_login(field_official)
+
+        url = reverse("document-request-payment-review", args=[doc.pk])
+        response = self.client.patch(
+            url,
+            {"verified": True, "notes": "Field official attempting payment review"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
     def test_pdf_is_unavailable_until_released_and_assigned_an_or_number(self):
         document = DocumentRequest.objects.create(
             user=self.resident,

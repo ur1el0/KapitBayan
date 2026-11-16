@@ -2,19 +2,43 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>Official Receipt Number</title>
+    <title>Official Receipt &amp; Verification</title>
     <style>
         @page { size: a4 portrait; margin: 2cm; }
-        body { font-family: Helvetica, sans-serif; color: #111827; text-align: center; }
-        main { margin-top: 7cm; }
-        h1 { font-size: 20pt; margin-bottom: 1.5cm; }
-        p { font-family: monospace; font-size: 30pt; font-weight: bold; }
+        body { font-family: Helvetica, Arial, sans-serif; color: #111827; text-align: center; }
+        main { margin-top: 2.5cm; }
+        h1 { font-size: 20pt; margin-bottom: 0.3cm; color: #0f172a; }
+        .doc-type { font-size: 13pt; color: #475569; text-transform: uppercase; margin-bottom: 0.8cm; font-weight: bold; }
+        .or-card { border: 2px dashed #94a3b8; padding: 16px; margin: 0 auto 1cm auto; width: 80%; background-color: #f8fafc; }
+        .or-label { font-size: 10pt; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin: 0; }
+        .or-number { font-family: monospace; font-size: 26pt; font-weight: bold; margin: 6px 0 0 0; color: #0f172a; }
+        .qr-section { margin-top: 0.8cm; }
+        .qr-img { width: 130px; height: 130px; }
+        .verification-text { font-size: 9.5pt; color: #475569; margin: 10px 0 4px 0; }
+        .verification-url { font-family: monospace; font-size: 8.5pt; color: #0284c7; font-weight: bold; word-break: break-all; }
+        .footer-note { margin-top: 1.5cm; font-size: 8pt; color: #94a3b8; }
     </style>
 </head>
 <body>
     <main>
-        <h1>Official Receipt Number</h1>
-        <p>{{ or_number }}</p>
+        <h1>Official Receipt &amp; Verification</h1>
+        {% if document_type %}
+        <p class="doc-type">{{ document_type }}</p>
+        {% endif %}
+        <div class="or-card">
+            <p class="or-label">Official Receipt Number</p>
+            <p class="or-number">{{ or_number }}</p>
+        </div>
+
+        {% if qr_code_data_uri %}
+        <div class="qr-section">
+            <img src="{{ qr_code_data_uri }}" class="qr-img" alt="Certificate Verification QR Code" />
+            <p class="verification-text">Scan this QR code or visit the link below to verify document validity:</p>
+            <p class="verification-url">{{ verification_url }}</p>
+        </div>
+        {% endif %}
+
+        <p class="footer-note">KapitBayan Barangay Information and Service Management System</p>
     </main>
 </body>
 </html>
