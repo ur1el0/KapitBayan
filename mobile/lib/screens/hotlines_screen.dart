@@ -307,6 +307,7 @@ class _HotlinesScreenState extends State<HotlinesScreen> {
                           ],
                         ),
                         child: ListTile(
+                          onTap: () => _makePhoneCall(h.number),
                           contentPadding: const EdgeInsets.symmetric(
                             horizontal: 16,
                             vertical: 8,
