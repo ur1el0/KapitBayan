@@ -1,6 +1,7 @@
 from django.db import models
 from django.db.models import Q
 from django.db.models.functions import Lower
+from django.contrib.auth.hashers import check_password, make_password
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import RegexValidator
 from django.utils import timezone
@@ -36,6 +37,22 @@ class Barangay(models.Model):
     city_seal = models.ImageField(upload_to='barangay_logos/', blank=True, null=True)
     captain_name = models.CharField(max_length=255, blank=True, null=True, help_text="Full name of the incumbent Punong Barangay")
     office_contact = models.CharField(max_length=255, blank=True, null=True, help_text="Office Address or Phone Number")
+    kiosk_staff_pin_hash = models.CharField(
+        max_length=128,
+        blank=True,
+        default="",
+        db_default="",
+        help_text="Hashed staff passcode used to authorize supervised walk-in kiosk equipment borrowing.",
+    )
+
+    def set_kiosk_staff_pin(self, raw_pin: str) -> None:
+        cleaned = (raw_pin or "").strip()
+        self.kiosk_staff_pin_hash = make_password(cleaned) if cleaned else ""
+
+    def check_kiosk_staff_pin(self, raw_pin: str) -> bool:
+        if not self.kiosk_staff_pin_hash or not raw_pin:
+            return False
+        return check_password(raw_pin.strip(), self.kiosk_staff_pin_hash)
 
     class Meta:
         constraints = [

@@ -78,8 +78,13 @@ export interface AccomplishmentReport {
     captain_name: string;
     year: number;
     month: number;
+    period_mode?: 'month' | 'range';
+    start_date?: string;
+    end_date?: string;
     period_label: string;
     generated_at: string;
+    included_metrics?: string[];
+    filter_summary?: string;
     residents_rbi: {
         new_registered_residents: number;
         new_verified_residents: number;

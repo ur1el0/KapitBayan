@@ -7,20 +7,57 @@ import '../services/storage_service.dart';
 import '../widgets/offline_snapshot_banner.dart';
 
 class MyIssuesScreen extends StatefulWidget {
-  const MyIssuesScreen({super.key});
+  final IssueService? issueService;
+
+  const MyIssuesScreen({super.key, this.issueService});
 
   @override
   State<MyIssuesScreen> createState() => _MyIssuesScreenState();
 }
 
 class _MyIssuesScreenState extends State<MyIssuesScreen> {
+  static const int _pageSize = IssueService.defaultPageSize;
+
+  static const List<MapEntry<String, String>> _statusOptions = [
+    MapEntry('ALL', 'All'),
+    MapEntry('PENDING', 'Pending'),
+    MapEntry('IN_PROGRESS', 'In Progress'),
+    MapEntry('RESOLVED', 'Resolved'),
+    MapEntry('REJECTED', 'Rejected'),
+  ];
+
+  static const List<MapEntry<String, String>> _categoryOptions = [
+    MapEntry('ALL', 'All Categories'),
+    MapEntry('PEACE_AND_ORDER', 'Peace and Order'),
+    MapEntry('PUBLIC_HEALTH', 'Public Health'),
+    MapEntry('INFRASTRUCTURE', 'Infrastructure'),
+    MapEntry('ENVIRONMENT', 'Environment'),
+    MapEntry('OTHER', 'Other'),
+  ];
+
   IssueService? _issueService;
-  late Future<List<IssueReport>> _issuesFuture;
+  Future<PaginatedIssueResult>? _issuesFuture;
+  final TextEditingController _searchController = TextEditingController();
+  String _selectedStatus = 'ALL';
+  String _selectedCategory = 'ALL';
+  String _searchQuery = '';
+  int _currentPage = 1;
 
   @override
   void initState() {
     super.initState();
-    _initService();
+    if (widget.issueService != null) {
+      _issueService = widget.issueService;
+      _issuesFuture = _fetchPage();
+    } else {
+      _initService();
+    }
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _initService() async {
@@ -30,21 +67,55 @@ class _MyIssuesScreenState extends State<MyIssuesScreen> {
     if (token != null) {
       apiClient.setAuthCredentials(accessToken: token);
     }
+    if (!mounted) return;
     setState(() {
       _issueService = IssueService(
         apiClient: apiClient,
         storageService: storage,
       );
-      _issuesFuture = _issueService!.getMyIssues();
+      _issuesFuture = _fetchPage();
     });
+  }
+
+  Future<PaginatedIssueResult> _fetchPage() {
+    return _issueService!.getMyIssuesPage(
+      page: _currentPage,
+      pageSize: _pageSize,
+      statusFilter: _selectedStatus,
+      categoryFilter: _selectedCategory,
+      search: _searchQuery,
+    );
   }
 
   Future<void> _refresh() async {
     if (_issueService != null) {
       setState(() {
-        _issuesFuture = _issueService!.getMyIssues();
+        _issuesFuture = _fetchPage();
       });
     }
+  }
+
+  void _applyFilters({
+    String? status,
+    String? category,
+    String? search,
+  }) {
+    if (_issueService == null) return;
+    setState(() {
+      if (status != null) _selectedStatus = status;
+      if (category != null) _selectedCategory = category;
+      if (search != null) _searchQuery = search;
+      _currentPage = 1;
+      _issuesFuture = _fetchPage();
+    });
+  }
+
+  void _goToPage(int page) {
+    if (_issueService == null || page < 1) return;
+    setState(() {
+      _currentPage = page;
+      _issuesFuture = _fetchPage();
+    });
   }
 
   // Premium Tailwind UI Color Palette for Statuses
@@ -61,7 +132,7 @@ class _MyIssuesScreenState extends State<MyIssuesScreen> {
     }
   }
 
-  // Helper to format the ISO timestamp from Django
+  // Helper to format the ISO timestamp from Django with date and time
   String _formatDate(String isoString) {
     try {
       final date = DateTime.parse(isoString).toLocal();
@@ -79,10 +150,161 @@ class _MyIssuesScreenState extends State<MyIssuesScreen> {
         'Nov',
         'Dec',
       ];
-      return "${months[date.month - 1]} ${date.day}, ${date.year}";
+      final hour12 = date.hour % 12 == 0 ? 12 : date.hour % 12;
+      final minute = date.minute.toString().padLeft(2, '0');
+      final period = date.hour >= 12 ? 'PM' : 'AM';
+      return "${months[date.month - 1]} ${date.day}, ${date.year} · $hour12:$minute $period";
     } catch (e) {
       return isoString;
     }
+  }
+
+  Widget _buildFilterControls() {
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _searchController,
+                  textInputAction: TextInputAction.search,
+                  onSubmitted: (val) => _applyFilters(search: val),
+                  decoration: InputDecoration(
+                    hintText: context.tr('Search reports...'),
+                    prefixIcon: const Icon(Icons.search, size: 18),
+                    suffixIcon: _searchQuery.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear, size: 18),
+                            onPressed: () {
+                              _searchController.clear();
+                              _applyFilters(search: '');
+                            },
+                          )
+                        : null,
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              DropdownButtonHideUnderline(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: DropdownButton<String>(
+                    value: _selectedCategory,
+                    isDense: true,
+                    items: _categoryOptions
+                        .map(
+                          (entry) => DropdownMenuItem(
+                            value: entry.key,
+                            child: Text(
+                              context.tr(entry.value),
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (val) {
+                      if (val != null) _applyFilters(category: val);
+                    },
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: _statusOptions.map((entry) {
+                final isSelected = _selectedStatus == entry.key;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: ChoiceChip(
+                    label: Text(
+                      context.tr(entry.value),
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: isSelected
+                            ? Colors.white
+                            : const Color(0xFF475569),
+                      ),
+                    ),
+                    selected: isSelected,
+                    selectedColor: const Color(0xFF0047BA),
+                    backgroundColor: const Color(0xFFF1F5F9),
+                    onSelected: (_) => _applyFilters(status: entry.key),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPaginationBar(PaginatedIssueResult pageData) {
+    return Container(
+      margin: const EdgeInsets.only(top: 4, bottom: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            'Page ${pageData.page} of ${pageData.totalPages} (${pageData.totalCount} total)',
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF475569),
+            ),
+          ),
+          Row(
+            children: [
+              TextButton(
+                onPressed: pageData.hasPrevious
+                    ? () => _goToPage(pageData.page - 1)
+                    : null,
+                child: Text(context.tr('Previous')),
+              ),
+              const SizedBox(width: 4),
+              ElevatedButton(
+                onPressed: pageData.hasNext
+                    ? () => _goToPage(pageData.page + 1)
+                    : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0047BA),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                ),
+                child: Text(context.tr('Next')),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -109,85 +331,100 @@ class _MyIssuesScreenState extends State<MyIssuesScreen> {
           ), // subtle bottom border
         ),
       ),
-      body: _issueService == null
+      body: _issueService == null || _issuesFuture == null
           ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: _refresh,
-              color: const Color(0xFF2563EB),
-              child: FutureBuilder<List<IssueReport>>(
-                future: _issuesFuture,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(
-                      child: CircularProgressIndicator(
-                        color: Color(0xFF2563EB),
-                      ),
-                    );
-                  } else if (snapshot.hasError) {
-                    return ListView(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      padding: const EdgeInsets.all(16),
-                      children: [
-                        if (snapshot.error is NetworkException)
-                          OfflineSnapshotBanner(
-                            message:
-                                'Could not refresh report history. Reconnect and refresh before relying on saved statuses.',
-                          ),
-                        Text(
-                          context.tr('Could not load reports.'),
-                          style: const TextStyle(color: Colors.red),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                    );
-                  } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                    return ListView(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      padding: const EdgeInsets.all(16),
-                      children: [
-                        if (_issueService!.lastIssuesUsedOfflineSnapshot)
-                          OfflineSnapshotBanner(
-                            savedAt: _issueService!.lastSnapshotSavedAt,
-                          ),
-                        const SizedBox(height: 60),
-                        Icon(
-                          Icons.assignment_outlined,
-                          size: 64,
-                          color: Color(0xFFCBD5E1),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          context.tr('No reports submitted yet.'),
-                          style: TextStyle(
-                            color: Color(0xFF64748B),
-                            fontSize: 16,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                    );
-                  }
+          : Column(
+              children: [
+                _buildFilterControls(),
+                const Divider(height: 1, color: Color(0xFFE2E8F0)),
+                Expanded(
+                  child: RefreshIndicator(
+                    onRefresh: _refresh,
+                    color: const Color(0xFF2563EB),
+                    child: FutureBuilder<PaginatedIssueResult>(
+                      future: _issuesFuture,
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return const Center(
+                            child: CircularProgressIndicator(
+                              color: Color(0xFF2563EB),
+                            ),
+                          );
+                        } else if (snapshot.hasError) {
+                          return ListView(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            padding: const EdgeInsets.all(16),
+                            children: [
+                              if (snapshot.error is NetworkException)
+                                OfflineSnapshotBanner(
+                                  message:
+                                      'Could not refresh report history. Reconnect and refresh before relying on saved statuses.',
+                                ),
+                              Text(
+                                context.tr('Could not load reports.'),
+                                style: const TextStyle(color: Colors.red),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          );
+                        } else if (!snapshot.hasData ||
+                            snapshot.data!.items.isEmpty) {
+                          return ListView(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            padding: const EdgeInsets.all(16),
+                            children: [
+                              if (_issueService!.lastIssuesUsedOfflineSnapshot)
+                                OfflineSnapshotBanner(
+                                  savedAt: _issueService!.lastSnapshotSavedAt,
+                                ),
+                              const SizedBox(height: 60),
+                              const Icon(
+                                Icons.assignment_outlined,
+                                size: 64,
+                                color: Color(0xFFCBD5E1),
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                context.tr(
+                                  _selectedStatus != 'ALL' ||
+                                          _selectedCategory != 'ALL' ||
+                                          _searchQuery.isNotEmpty
+                                      ? 'No matching reports found.'
+                                      : 'No reports submitted yet.',
+                                ),
+                                style: const TextStyle(
+                                  color: Color(0xFF64748B),
+                                  fontSize: 16,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          );
+                        }
 
-                  final issues = snapshot.data!;
-                  return ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount:
-                        issues.length +
-                        (_issueService!.lastIssuesUsedOfflineSnapshot ? 1 : 0),
-                    itemBuilder: (context, index) {
-                      if (_issueService!.lastIssuesUsedOfflineSnapshot &&
-                          index == 0) {
-                        return OfflineSnapshotBanner(
-                          savedAt: _issueService!.lastSnapshotSavedAt,
-                        );
-                      }
-                      final issueIndex =
-                          index -
-                          (_issueService!.lastIssuesUsedOfflineSnapshot
-                              ? 1
-                              : 0);
-                      final issue = issues[issueIndex];
-                      final statusColor = _getStatusColor(issue.status);
+                        final pageData = snapshot.data!;
+                        final issues = pageData.items;
+                        final showOfflineBanner =
+                            _issueService!.lastIssuesUsedOfflineSnapshot ||
+                            pageData.usedOfflineSnapshot;
+                        final offset = showOfflineBanner ? 1 : 0;
+
+                        return ListView.builder(
+                          padding: const EdgeInsets.all(16),
+                          itemCount: issues.length + offset + 1,
+                          itemBuilder: (context, index) {
+                            if (showOfflineBanner && index == 0) {
+                              return OfflineSnapshotBanner(
+                                savedAt:
+                                    pageData.snapshotSavedAt ??
+                                    _issueService!.lastSnapshotSavedAt,
+                              );
+                            }
+                            if (index == issues.length + offset) {
+                              return _buildPaginationBar(pageData);
+                            }
+                            final issue = issues[index - offset];
+                            final statusColor = _getStatusColor(issue.status);
 
                       return Container(
                         margin: const EdgeInsets.only(bottom: 16),
@@ -357,6 +594,9 @@ class _MyIssuesScreenState extends State<MyIssuesScreen> {
                 },
               ),
             ),
+          ),
+        ],
+      ),
     );
   }
 }

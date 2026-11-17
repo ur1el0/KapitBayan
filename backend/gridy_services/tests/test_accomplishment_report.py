@@ -286,3 +286,62 @@ class AccomplishmentReportAPITests(APITestCase):
         )
         self.assertTrue(pdf_resp.content.startswith(b"%PDF"))
         self.assertGreater(len(pdf_resp.content), 500)
+
+    def test_custom_date_range_and_metric_filtering_synchronize_ui_csv_and_pdf(self):
+        self.client.force_login(self.admin)
+
+        # Custom date range spanning October 2026, filtered only to documents_issued and new_registered_residents
+        params = {
+            "start_date": "2026-10-01",
+            "end_date": "2026-10-31",
+            "metrics": "new_registered_residents,documents_issued",
+        }
+        report_resp = self.client.get(self.report_url, params)
+        self.assertEqual(report_resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(report_resp.data["period_mode"], "range")
+        self.assertEqual(
+            report_resp.data["included_metrics"],
+            ["new_registered_residents", "documents_issued"],
+        )
+
+        # CSV should only contain the selected categories and exclude Community Issues / Communications
+        csv_resp = self.client.get(
+            self.export_url,
+            {**params, "export_format": "csv"},
+        )
+        self.assertEqual(csv_resp.status_code, status.HTTP_200_OK)
+        self.assertIn(
+            'filename="Accomplishment_Report_Ibabang_Dupay_2026-10-01_to_2026-10-31.csv"',
+            csv_resp["Content-Disposition"],
+        )
+        csv_text = csv_resp.content.decode("utf-8-sig")
+        self.assertIn("New Registered Residents", csv_text)
+        self.assertIn("Total Certificates / Clearances Issued", csv_text)
+        self.assertNotIn("Community Issues Submitted", csv_text)
+        self.assertNotIn("Public Announcements Published", csv_text)
+
+        # PDF should render cleanly with filtered filename & content
+        pdf_resp = self.client.get(
+            self.export_url,
+            {**params, "export_format": "pdf"},
+        )
+        self.assertEqual(pdf_resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(pdf_resp["Content-Type"], "application/pdf")
+        self.assertIn(
+            'filename="Accomplishment_Report_Ibabang_Dupay_2026-10-01_to_2026-10-31.pdf"',
+            pdf_resp["Content-Disposition"],
+        )
+        self.assertTrue(pdf_resp.content.startswith(b"%PDF"))
+
+        # Reject reversed custom range or unsupported metric keys
+        bad_range = self.client.get(
+            self.report_url,
+            {"start_date": "2026-10-31", "end_date": "2026-10-01"},
+        )
+        self.assertEqual(bad_range.status_code, status.HTTP_400_BAD_REQUEST)
+
+        bad_metric = self.client.get(
+            self.report_url,
+            {"year": 2026, "month": 10, "metrics": "unknown_metric"},
+        )
+        self.assertEqual(bad_metric.status_code, status.HTTP_400_BAD_REQUEST)

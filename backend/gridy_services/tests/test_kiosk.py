@@ -1,7 +1,14 @@
+from datetime import timedelta
 from django.urls import reverse
+from django.utils import timezone
 from rest_framework import status
-from gridy_auth.models import Barangay, BarangayApplication
-from gridy_services.models import DocumentRequest, EquipmentBorrowRequest, QueueTicket
+from gridy_auth.models import Barangay, BarangayApplication, Resident, User
+from gridy_services.models import (
+    DocumentRequest,
+    EquipmentBorrowRequest,
+    MANILA_TIME_ZONE,
+    QueueTicket,
+)
 from gridy_reports.models import IssueReport
 from .base import ServiceAPIBaseTestCase
 
@@ -121,51 +128,185 @@ class KioskAPITests(ServiceAPIBaseTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("barangay_id", response.data)
 
-    def test_kiosk_equipment_borrow_request_success(self):
+    def _future_dates(self, start_offset=1, return_offset=2):
+        today = timezone.localtime(timezone.now(), MANILA_TIME_ZONE).date()
+        return str(today + timedelta(days=start_offset)), str(today + timedelta(days=return_offset))
+
+    def test_kiosk_equipment_borrow_requires_auth_mode_and_rejects_anonymous(self):
         url = reverse("kiosk-equipment-borrow-request")
+        borrow_date, return_date = self._future_dates()
         payload = {
             "barangay_id": self.kiosk_barangay.id,
-            "walkin_name": "Elena Ramos",
+            "walkin_name": "Anonymous Stranger",
             "walkin_contact": "09181234567",
+            "walkin_purok": "Purok 2",
+            "borrower_id_type": "Barangay ID",
+            "item_type": EquipmentBorrowRequest.ItemType.MONOBLOCK_CHAIRS,
+            "quantity": 10,
+            "borrow_date": borrow_date,
+            "return_date": return_date,
+            "purpose": "Barangay community outreach event.",
+            "privacy_acknowledged": True,
+        }
+        response = self.client.post(url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("auth_mode", response.data)
+        self.assertEqual(EquipmentBorrowRequest.objects.count(), 0)
+
+    def test_kiosk_equipment_borrow_with_verified_resident_credentials_success(self):
+        verified_user = User.objects.create_user(
+            username="kiosk_verified_res",
+            email="kiosk.verified@example.test",
+            password="ResidentSecretPassword123!",
+            role=User.Role.RESIDENT,
+            barangay=self.kiosk_barangay,
+        )
+        Resident.objects.create(
+            user=verified_user,
+            full_name="Maria Clara Santos",
+            birth_date="1992-08-12",
+            is_verified=True,
+        )
+        url = reverse("kiosk-equipment-borrow-request")
+        borrow_date, return_date = self._future_dates()
+        payload = {
+            "barangay_id": self.kiosk_barangay.id,
+            "auth_mode": "resident",
+            "resident_username": "kiosk_verified_res",
+            "resident_password": "ResidentSecretPassword123!",
+            "walkin_contact": "09181234567",
+            "walkin_purok": "Purok 3",
+            "borrower_id_type": "PhilSys National ID",
             "item_type": EquipmentBorrowRequest.ItemType.MONOBLOCK_CHAIRS,
             "quantity": 50,
-            "borrow_date": "2026-11-20",
-            "return_date": "2026-11-21",
+            "borrow_date": borrow_date,
+            "return_date": return_date,
             "time_slot": "Whole Day",
-            "purpose": "Barangay Youth Fellowship Assembly",
+            "purpose": "Barangay Youth Fellowship Assembly at covered court",
             "privacy_acknowledged": True,
         }
         response = self.client.post(url, payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertIn("reference", response.data)
         self.assertTrue(response.data["reference"].startswith("EQ-"))
-        self.assertEqual(response.data["status"], EquipmentBorrowRequest.Status.PENDING)
+        self.assertNotIn("refresh_token", response.cookies)
 
         borrow = EquipmentBorrowRequest.objects.filter(
             barangay=self.kiosk_barangay,
-            walkin_name="Elena Ramos",
+            resident=verified_user,
         ).first()
+        self.assertIsNotNone(borrow)
+        self.assertFalse(borrow.is_walkin)
+        self.assertEqual(borrow.walkin_name, "Maria Clara Santos")
+        self.assertEqual(borrow.walkin_purok, "Purok 3")
+        self.assertEqual(borrow.borrower_id_type, "PhilSys National ID")
+        self.assertEqual(borrow.kiosk_auth_method, "RESIDENT_VERIFIED")
+        self.assertEqual(borrow.quantity, 50)
+
+    def test_kiosk_equipment_borrow_rejects_unverified_or_wrong_barangay_resident(self):
+        unverified_user = User.objects.create_user(
+            username="kiosk_unverified_res",
+            password="ResidentSecretPassword123!",
+            role=User.Role.RESIDENT,
+            barangay=self.kiosk_barangay,
+        )
+        Resident.objects.create(
+            user=unverified_user,
+            full_name="Unverified Resident",
+            birth_date="1995-01-01",
+            is_verified=False,
+        )
+        url = reverse("kiosk-equipment-borrow-request")
+        borrow_date, return_date = self._future_dates()
+        base_payload = {
+            "barangay_id": self.kiosk_barangay.id,
+            "auth_mode": "resident",
+            "resident_username": "kiosk_unverified_res",
+            "resident_password": "ResidentSecretPassword123!",
+            "walkin_contact": "09181234567",
+            "walkin_purok": "Purok 1",
+            "borrower_id_type": "Barangay ID",
+            "item_type": EquipmentBorrowRequest.ItemType.TABLES,
+            "quantity": 2,
+            "borrow_date": borrow_date,
+            "return_date": return_date,
+            "purpose": "Neighborhood meeting at chapel grounds",
+            "privacy_acknowledged": True,
+        }
+        res_unverified = self.client.post(url, base_payload, format="json")
+        self.assertEqual(res_unverified.status_code, status.HTTP_400_BAD_REQUEST)
+
+        res_bad_pass = self.client.post(
+            url,
+            {**base_payload, "resident_password": "WrongPassword123!"},
+            format="json",
+        )
+        self.assertEqual(res_bad_pass.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(EquipmentBorrowRequest.objects.count(), 0)
+
+    def test_kiosk_equipment_borrow_with_staff_pin_and_validation(self):
+        url = reverse("kiosk-equipment-borrow-request")
+        borrow_date, return_date = self._future_dates()
+        payload = {
+            "barangay_id": self.kiosk_barangay.id,
+            "auth_mode": "staff_pin",
+            "staff_kiosk_pin": "4321",
+            "walkin_name": "Elena Ramos",
+            "walkin_contact": "09181234567",
+            "walkin_purok": "Purok 4",
+            "borrower_id_type": "Barangay ID",
+            "item_type": EquipmentBorrowRequest.ItemType.TENT_CANOPY,
+            "quantity": 2,
+            "borrow_date": borrow_date,
+            "return_date": return_date,
+            "purpose": "Family medical outreach gathering in Purok 4",
+            "privacy_acknowledged": True,
+        }
+        # Fails closed when Barangay has no Staff Kiosk PIN configured yet
+        no_pin_resp = self.client.post(url, payload, format="json")
+        self.assertEqual(no_pin_resp.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("staff_kiosk_pin", no_pin_resp.data)
+
+        # Configure hashed PIN on Barangay
+        self.kiosk_barangay.set_kiosk_staff_pin("4321")
+        self.kiosk_barangay.save(update_fields=["kiosk_staff_pin_hash"])
+
+        wrong_pin_resp = self.client.post(
+            url,
+            {**payload, "staff_kiosk_pin": "9999"},
+            format="json",
+        )
+        self.assertEqual(wrong_pin_resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+        # Rejects past borrow date
+        past_date = str(timezone.localtime(timezone.now(), MANILA_TIME_ZONE).date() - timedelta(days=1))
+        past_resp = self.client.post(
+            url,
+            {**payload, "borrow_date": past_date},
+            format="json",
+        )
+        self.assertEqual(past_resp.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("borrow_date", past_resp.data)
+
+        # Rejects return date earlier than borrow date
+        bad_return_resp = self.client.post(
+            url,
+            {**payload, "return_date": past_date},
+            format="json",
+        )
+        self.assertEqual(bad_return_resp.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("return_date", bad_return_resp.data)
+
+        # Valid PIN + valid borrower fields succeeds
+        ok_resp = self.client.post(url, payload, format="json")
+        self.assertEqual(ok_resp.status_code, status.HTTP_201_CREATED)
+        borrow = EquipmentBorrowRequest.objects.filter(walkin_name="Elena Ramos").first()
         self.assertIsNotNone(borrow)
         self.assertTrue(borrow.is_walkin)
         self.assertIsNone(borrow.resident)
-        self.assertEqual(borrow.quantity, 50)
-        self.assertEqual(borrow.status, EquipmentBorrowRequest.Status.PENDING)
-
-    def test_kiosk_equipment_borrow_date_validation(self):
-        url = reverse("kiosk-equipment-borrow-request")
-        payload = {
-            "barangay_id": self.kiosk_barangay.id,
-            "walkin_name": "Elena Ramos",
-            "item_type": EquipmentBorrowRequest.ItemType.TENT_CANOPY,
-            "quantity": 2,
-            "borrow_date": "2026-11-22",
-            "return_date": "2026-11-20",  # Invalid: earlier than borrow_date
-            "purpose": "Family gathering",
-            "privacy_acknowledged": True,
-        }
-        response = self.client.post(url, payload, format="json")
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("return_date", response.data)
+        self.assertEqual(borrow.kiosk_auth_method, "STAFF_PIN")
+        self.assertEqual(borrow.walkin_purok, "Purok 4")
+        self.assertEqual(borrow.borrower_id_type, "Barangay ID")
 
     def test_kiosk_queue_ticket_with_equipment_service_type(self):
         url = reverse("kiosk-queue-ticket")

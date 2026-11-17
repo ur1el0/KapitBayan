@@ -1,3 +1,4 @@
+from django.utils import timezone
 from rest_framework import serializers
 from gridy_auth.models import User
 from gridy_communications.models import (
@@ -44,6 +45,15 @@ class ActivityScheduleSerializer(serializers.ModelSerializer):
         model = ActivitySchedule
         fields = '__all__'
         read_only_fields = ['created_by']
+
+    def validate_event_datetime(self, value):
+        if self.instance is not None and value == self.instance.event_datetime:
+            return value
+        if value < timezone.now():
+            raise serializers.ValidationError(
+                'Activity date and time cannot be in the past.'
+            )
+        return value
 
 class EmergencyHotlineSerializer(serializers.ModelSerializer):
     category_display = serializers.CharField(

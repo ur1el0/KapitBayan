@@ -359,5 +359,40 @@ describe('Dashboard', () => {
                 }),
             ),
         );
+
+        // Toggle off a metric (e.g. Financial Aid) and switch to custom Date Range
+        fireEvent.click(screen.getByRole('button', { name: /Financial Aid/i }));
+        fireEvent.click(screen.getByRole('button', { name: 'Date Range' }));
+        fireEvent.change(screen.getByLabelText('Start Date'), { target: { value: '2026-10-01' } });
+        fireEvent.change(screen.getByLabelText('End Date'), { target: { value: '2026-10-15' } });
+
+        await waitFor(() =>
+            expect(axiosPrivate.get).toHaveBeenCalledWith(
+                '/dashboard/accomplishment-report/',
+                expect.objectContaining({
+                    params: expect.objectContaining({
+                        start_date: '2026-10-01',
+                        end_date: '2026-10-15',
+                        metrics: expect.not.stringContaining('aid_requests'),
+                    }),
+                }),
+            ),
+        );
+
+        fireEvent.click(screen.getByRole('button', { name: 'Export PDF' }));
+        await waitFor(() =>
+            expect(axiosPrivate.get).toHaveBeenCalledWith(
+                '/dashboard/accomplishment-report/export/',
+                expect.objectContaining({
+                    params: expect.objectContaining({
+                        start_date: '2026-10-01',
+                        end_date: '2026-10-15',
+                        export_format: 'pdf',
+                        metrics: expect.not.stringContaining('aid_requests'),
+                    }),
+                    responseType: 'blob',
+                }),
+            ),
+        );
     });
 });

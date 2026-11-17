@@ -16,16 +16,33 @@ type SubmissionResult = {
     timestamp?: string;
 };
 
+const getTodayLocalDate = () => {
+    const now = new Date();
+    const offsetMs = now.getTimezoneOffset() * 60000;
+    return new Date(now.getTime() - offsetMs).toISOString().split('T')[0];
+};
+
+const getTomorrowLocalDate = () => {
+    const now = new Date(Date.now() + 86400000);
+    const offsetMs = now.getTimezoneOffset() * 60000;
+    return new Date(now.getTime() - offsetMs).toISOString().split('T')[0];
+};
+
 const INITIAL_FORM = {
     walkin_name: '',
     walkin_purok: '',
     walkin_contact: '',
+    auth_mode: 'resident' as 'resident' | 'staff_pin',
+    resident_username: '',
+    resident_password: '',
+    staff_kiosk_pin: '',
+    borrower_id_type: 'Barangay ID',
     service_type: 'Document Processing & Clearances',
     document_type: 'Barangay Clearance',
     item_type: 'Monoblock Chairs',
     quantity: 1,
-    borrow_date: new Date().toISOString().split('T')[0],
-    return_date: new Date(Date.now() + 86400000).toISOString().split('T')[0],
+    borrow_date: getTodayLocalDate(),
+    return_date: getTomorrowLocalDate(),
     time_slot: '',
     purpose: '',
     category: 'OTHER',
@@ -34,6 +51,17 @@ const INITIAL_FORM = {
     location: '',
     privacy_acknowledged: false,
 };
+
+const BORROWER_ID_OPTIONS = [
+    'Barangay ID',
+    'PhilSys National ID',
+    "Voter's ID",
+    "Driver's License",
+    'Passport',
+    'Senior Citizen / PWD ID',
+    'Postal ID',
+    'Other Government-Issued ID',
+] as const;
 
 const CATEGORY_OPTIONS = [
     ['PEACE_AND_ORDER', 'Peace and order'],
@@ -163,8 +191,19 @@ export function PublicKiosk() {
         } else if (service === 'equipment') {
             payload = {
                 ...common,
-                walkin_name: form.walkin_name,
+                auth_mode: form.auth_mode,
+                ...(form.auth_mode === 'resident'
+                    ? {
+                        resident_username: form.resident_username,
+                        resident_password: form.resident_password,
+                    }
+                    : {
+                        walkin_name: form.walkin_name,
+                        staff_kiosk_pin: form.staff_kiosk_pin,
+                    }),
                 walkin_contact: form.walkin_contact,
+                walkin_purok: form.walkin_purok,
+                borrower_id_type: form.borrower_id_type,
                 item_type: form.item_type,
                 quantity: Number(form.quantity) || 1,
                 borrow_date: form.borrow_date,
@@ -192,7 +231,13 @@ export function PublicKiosk() {
             });
             const body = await response.json().catch(() => ({}));
             if (!response.ok || typeof body.reference !== 'string') {
-                throw new Error('submission failed');
+                const firstDetail =
+                    typeof body?.detail === 'string'
+                        ? body.detail
+                        : Object.values(body || {})
+                            .flat()
+                            .find((entry): entry is string => typeof entry === 'string');
+                throw new Error(firstDetail || 'submission failed');
             }
             const detailText =
                 service === 'queue'
@@ -211,13 +256,22 @@ export function PublicKiosk() {
                 reference: body.reference,
                 status: body.status,
                 service,
-                name: form.walkin_name.trim(),
+                name:
+                    service === 'equipment' && form.auth_mode === 'resident'
+                        ? form.resident_username.trim()
+                        : form.walkin_name.trim(),
                 detail: detailText,
                 timestamp: nowTime,
             });
             setForm(INITIAL_FORM);
-        } catch {
-            setError(t('We could not submit this request. Check the information and try again, or ask barangay staff for help.'));
+        } catch (err) {
+            const serverMessage = err instanceof Error && err.message && err.message !== 'submission failed'
+                ? err.message
+                : '';
+            setError(
+                serverMessage
+                || t('We could not submit this request. Check the information and try again, or ask barangay staff for help.'),
+            );
         } finally {
             setSubmitting(false);
         }
@@ -308,7 +362,7 @@ export function PublicKiosk() {
                             </div>
 
                             <form onSubmit={handleSubmit} className="space-y-4">
-                                {service !== 'reports' && (
+                                {service !== 'reports' && !(service === 'equipment' && form.auth_mode === 'resident') && (
                                     <TextField
                                         label={t('Full name')}
                                         value={form.walkin_name}
@@ -351,74 +405,155 @@ export function PublicKiosk() {
                                     </div>
                                 )}
                                 {service === 'equipment' && (
-                                    <div className="grid gap-4 sm:grid-cols-2">
-                                        <TextField
-                                            label={t('Contact number or Purok')}
-                                            value={form.walkin_contact}
-                                            onChange={(value) => setValue('walkin_contact', value)}
-                                            maxLength={100}
-                                        />
-                                        <SelectField
-                                            label={t('Equipment or Facility')}
-                                            value={form.item_type}
-                                            onChange={(value) => setValue('item_type', value)}
-                                            options={EQUIPMENT_OPTIONS.map((value) => [value, t(value)])}
-                                        />
-                                        <div>
-                                            <label className="block text-sm font-semibold text-slate-800">
-                                                {t('Quantity / Units')}
-                                                <input
-                                                    type="number"
-                                                    min={1}
-                                                    max={500}
-                                                    required
-                                                    value={form.quantity}
-                                                    onChange={(event) => setValue('quantity', event.target.value)}
-                                                    className="mt-2 min-h-12 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm font-normal"
-                                                />
-                                            </label>
+                                    <div className="space-y-4">
+                                        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3">
+                                            <p className="text-sm font-bold text-slate-900">
+                                                {t('Borrower Verification')}
+                                            </p>
+                                            <div className="grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label={t('Borrower Verification Method')}>
+                                                <button
+                                                    type="button"
+                                                    aria-pressed={form.auth_mode === 'resident'}
+                                                    onClick={() => setValue('auth_mode', 'resident')}
+                                                    className={`min-h-11 rounded-xl border px-3 text-xs font-bold transition ${form.auth_mode === 'resident' ? 'border-primary bg-primary text-white' : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-100'}`}
+                                                >
+                                                    {t('Verified Resident Sign-In')}
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    aria-pressed={form.auth_mode === 'staff_pin'}
+                                                    onClick={() => setValue('auth_mode', 'staff_pin')}
+                                                    className={`min-h-11 rounded-xl border px-3 text-xs font-bold transition ${form.auth_mode === 'staff_pin' ? 'border-primary bg-primary text-white' : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-100'}`}
+                                                >
+                                                    {t('Walk-In (Staff Desk PIN)')}
+                                                </button>
+                                            </div>
+                                            {form.auth_mode === 'resident' ? (
+                                                <div className="grid gap-3 sm:grid-cols-2">
+                                                    <TextField
+                                                        label={t('Resident username or email')}
+                                                        value={form.resident_username}
+                                                        onChange={(value) => setValue('resident_username', value)}
+                                                        required
+                                                        maxLength={150}
+                                                    />
+                                                    <TextField
+                                                        label={t('Account password')}
+                                                        type="password"
+                                                        value={form.resident_password}
+                                                        onChange={(value) => setValue('resident_password', value)}
+                                                        required
+                                                        maxLength={128}
+                                                    />
+                                                    <p className="sm:col-span-2 text-xs text-slate-600">
+                                                        {t('Verified only for this submission; your account will not stay signed in on this shared kiosk.')}
+                                                    </p>
+                                                </div>
+                                            ) : (
+                                                <div>
+                                                    <TextField
+                                                        label={t('Barangay Staff Kiosk PIN')}
+                                                        type="password"
+                                                        value={form.staff_kiosk_pin}
+                                                        onChange={(value) => setValue('staff_kiosk_pin', value)}
+                                                        required
+                                                        minLength={4}
+                                                        maxLength={12}
+                                                        placeholder={t('Ask desk staff to enter PIN')}
+                                                    />
+                                                </div>
+                                            )}
                                         </div>
-                                        <TextField
-                                            label={t('Time slot / Hours (optional)')}
-                                            value={form.time_slot}
-                                            onChange={(value) => setValue('time_slot', value)}
-                                            maxLength={100}
-                                            placeholder="e.g. 8:00 AM - 5:00 PM"
-                                        />
-                                        <div>
-                                            <label className="block text-sm font-semibold text-slate-800">
-                                                {t('Borrow date')}
-                                                <input
-                                                    type="date"
-                                                    required
-                                                    value={form.borrow_date}
-                                                    onChange={(event) => setValue('borrow_date', event.target.value)}
-                                                    className="mt-2 min-h-12 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm font-normal"
-                                                />
-                                            </label>
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold text-slate-800">
-                                                {t('Return date')}
-                                                <input
-                                                    type="date"
-                                                    required
-                                                    min={form.borrow_date}
-                                                    value={form.return_date}
-                                                    onChange={(event) => setValue('return_date', event.target.value)}
-                                                    className="mt-2 min-h-12 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm font-normal"
-                                                />
-                                            </label>
-                                        </div>
-                                        <div className="sm:col-span-2">
+
+                                        <div className="grid gap-4 sm:grid-cols-2">
                                             <TextField
-                                                label={t('Purpose of borrowing')}
-                                                value={form.purpose}
-                                                onChange={(value) => setValue('purpose', value)}
+                                                label={t('Contact number')}
+                                                value={form.walkin_contact}
+                                                onChange={(value) => setValue('walkin_contact', value)}
                                                 required
-                                                maxLength={500}
-                                                placeholder="e.g. Community meeting, sports event, family assembly"
+                                                minLength={7}
+                                                maxLength={50}
+                                                placeholder="09171234567"
                                             />
+                                            <TextField
+                                                label={t('Purok / Address in Barangay')}
+                                                value={form.walkin_purok}
+                                                onChange={(value) => setValue('walkin_purok', value)}
+                                                required
+                                                minLength={2}
+                                                maxLength={100}
+                                                placeholder="e.g. Purok 2"
+                                            />
+                                            <SelectField
+                                                label={t('Valid ID to Present on Pickup')}
+                                                value={form.borrower_id_type}
+                                                onChange={(value) => setValue('borrower_id_type', value)}
+                                                options={BORROWER_ID_OPTIONS.map((value) => [value, t(value)])}
+                                            />
+                                            <SelectField
+                                                label={t('Equipment or Facility')}
+                                                value={form.item_type}
+                                                onChange={(value) => setValue('item_type', value)}
+                                                options={EQUIPMENT_OPTIONS.map((value) => [value, t(value)])}
+                                            />
+                                            <div>
+                                                <label className="block text-sm font-semibold text-slate-800">
+                                                    {t('Quantity / Units')}
+                                                    <input
+                                                        type="number"
+                                                        min={1}
+                                                        max={500}
+                                                        required
+                                                        value={form.quantity}
+                                                        onChange={(event) => setValue('quantity', event.target.value)}
+                                                        className="mt-2 min-h-12 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm font-normal"
+                                                    />
+                                                </label>
+                                            </div>
+                                            <TextField
+                                                label={t('Time slot / Hours (optional)')}
+                                                value={form.time_slot}
+                                                onChange={(value) => setValue('time_slot', value)}
+                                                maxLength={100}
+                                                placeholder="e.g. 8:00 AM - 5:00 PM"
+                                            />
+                                            <div>
+                                                <label className="block text-sm font-semibold text-slate-800">
+                                                    {t('Borrow date')}
+                                                    <input
+                                                        type="date"
+                                                        required
+                                                        min={getTodayLocalDate()}
+                                                        value={form.borrow_date}
+                                                        onChange={(event) => setValue('borrow_date', event.target.value)}
+                                                        className="mt-2 min-h-12 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm font-normal"
+                                                    />
+                                                </label>
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-semibold text-slate-800">
+                                                    {t('Return date')}
+                                                    <input
+                                                        type="date"
+                                                        required
+                                                        min={form.borrow_date || getTodayLocalDate()}
+                                                        value={form.return_date}
+                                                        onChange={(event) => setValue('return_date', event.target.value)}
+                                                        className="mt-2 min-h-12 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm font-normal"
+                                                    />
+                                                </label>
+                                            </div>
+                                            <div className="sm:col-span-2">
+                                                <TextField
+                                                    label={t('Specific purpose & venue of borrowing')}
+                                                    value={form.purpose}
+                                                    onChange={(value) => setValue('purpose', value)}
+                                                    required
+                                                    minLength={10}
+                                                    maxLength={500}
+                                                    placeholder="e.g. Purok 2 community assembly at covered court"
+                                                />
+                                            </div>
                                         </div>
                                     </div>
                                 )}
@@ -554,14 +689,18 @@ function TextField({
     label,
     value,
     onChange,
+    type = 'text',
     required = false,
+    minLength,
     maxLength,
     placeholder,
 }: {
     label: string;
     value: string;
     onChange: (value: string) => void;
+    type?: string;
     required?: boolean;
+    minLength?: number;
     maxLength?: number;
     placeholder?: string;
 }) {
@@ -569,7 +708,9 @@ function TextField({
         <label className="block text-sm font-semibold text-slate-800">
             {label}
             <input
+                type={type}
                 required={required}
+                minLength={minLength}
                 maxLength={maxLength}
                 placeholder={placeholder}
                 value={value}

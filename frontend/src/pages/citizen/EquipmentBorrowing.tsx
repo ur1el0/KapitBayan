@@ -21,6 +21,11 @@ import { useModalFocus } from '../../hooks/useModalFocus';
 export interface EquipmentBorrowRequest {
     id: number;
     resident_name: string;
+    is_walkin?: boolean;
+    walkin_contact?: string;
+    walkin_purok?: string;
+    borrower_id_type?: string;
+    kiosk_auth_method?: string;
     item_type: string;
     quantity: number;
     borrow_date: string;
@@ -131,6 +136,11 @@ export const EquipmentBorrowing: React.FC = () => {
             setFormError(text('Please select both borrow and return dates.'));
             return;
         }
+        const todayLocal = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0];
+        if (borrowDate < todayLocal) {
+            setFormError(text('Borrow date cannot be in the past.'));
+            return;
+        }
         if (returnDate < borrowDate) {
             setFormError(text('Return date must be on or after the borrow date.'));
             return;
@@ -160,6 +170,7 @@ export const EquipmentBorrowing: React.FC = () => {
             await loadRequests();
         } catch (error: any) {
             const apiError =
+                error.response?.data?.borrow_date?.[0] ||
                 error.response?.data?.return_date?.[0] ||
                 error.response?.data?.detail ||
                 text('Could not submit your borrowing request.');
@@ -313,6 +324,7 @@ export const EquipmentBorrowing: React.FC = () => {
                                     <input
                                         type="date"
                                         required
+                                        min={new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0]}
                                         value={borrowDate}
                                         onChange={(e) => setBorrowDate(e.target.value)}
                                         className="mt-1 block w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm"
@@ -480,6 +492,29 @@ export const EquipmentBorrowing: React.FC = () => {
                                 <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-700">
                                     {request.purpose}
                                 </p>
+
+                                {isStaff && (request.walkin_contact || request.walkin_purok || request.borrower_id_type || request.kiosk_auth_method) && (
+                                    <div className="flex flex-wrap gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">
+                                        {request.kiosk_auth_method && (
+                                            <span className="rounded-md bg-sky-100 px-2 py-0.5 font-semibold text-sky-900">
+                                                {request.kiosk_auth_method === 'STAFF_PIN'
+                                                    ? text('Kiosk: Staff PIN Verified')
+                                                    : request.kiosk_auth_method === 'RESIDENT_VERIFIED'
+                                                      ? text('Kiosk: Resident Account Verified')
+                                                      : request.kiosk_auth_method}
+                                            </span>
+                                        )}
+                                        {request.walkin_contact && (
+                                            <span><strong>{text('Contact')}:</strong> {request.walkin_contact}</span>
+                                        )}
+                                        {request.walkin_purok && (
+                                            <span><strong>{text('Purok/Address')}:</strong> {request.walkin_purok}</span>
+                                        )}
+                                        {request.borrower_id_type && (
+                                            <span><strong>{text('ID Presented')}:</strong> {request.borrower_id_type}</span>
+                                        )}
+                                    </div>
+                                )}
 
                                 {request.admin_notes && (
                                     <p className="rounded-xl bg-slate-50 p-3 text-sm text-slate-700">

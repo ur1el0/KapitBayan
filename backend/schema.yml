@@ -105,15 +105,30 @@ paths:
   /api/services/dashboard/accomplishment-report/:
     get:
       operationId: api_services_dashboard_accomplishment_report_retrieve
-      description: Returns tenant-scoped monthly executive summary metrics for the
-        Barangay Admin's barangay.
+      description: Returns tenant-scoped monthly or custom-range executive summary
+        metrics for the Barangay Admin's barangay.
       summary: Get Monthly Barangay Accomplishment Report
       parameters:
+      - in: query
+        name: end_date
+        schema:
+          type: string
+        description: Custom range end (YYYY-MM-DD)
+      - in: query
+        name: metrics
+        schema:
+          type: string
+        description: Comma-separated report metric filters
       - in: query
         name: month
         schema:
           type: integer
         description: Report month (1-12)
+      - in: query
+        name: start_date
+        schema:
+          type: string
+        description: Custom range start (YYYY-MM-DD)
       - in: query
         name: year
         schema:
@@ -133,10 +148,15 @@ paths:
   /api/services/dashboard/accomplishment-report/export/:
     get:
       operationId: api_services_dashboard_accomplishment_report_export_retrieve
-      description: Exports the monthly accomplishment report for the Barangay Admin's
+      description: Exports the filtered accomplishment report for the Barangay Admin's
         barangay as CSV or PDF.
       summary: Export Monthly Barangay Accomplishment Report (CSV or PDF)
       parameters:
+      - in: query
+        name: end_date
+        schema:
+          type: string
+        description: Custom range end (YYYY-MM-DD)
       - in: query
         name: export_format
         schema:
@@ -145,10 +165,20 @@ paths:
           - csv
           - pdf
       - in: query
+        name: metrics
+        schema:
+          type: string
+        description: Comma-separated report metric filters
+      - in: query
         name: month
         schema:
           type: integer
         description: Report month (1-12)
+      - in: query
+        name: start_date
+        schema:
+          type: string
+        description: Custom range start (YYYY-MM-DD)
       - in: query
         name: year
         schema:
@@ -925,6 +955,94 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/EquipmentBorrowRequestReview'
+          description: ''
+  /api/services/kiosk/documents/:
+    post:
+      operationId: api_services_kiosk_documents_create
+      description: Common anonymous write-only endpoint policy; subclasses create
+        one record.
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KioskDocumentRequest'
+        required: true
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KioskDocumentRequest'
+          description: ''
+  /api/services/kiosk/equipment/:
+    post:
+      operationId: api_services_kiosk_equipment_create
+      description: Common anonymous write-only endpoint policy; subclasses create
+        one record.
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KioskEquipmentBorrow'
+        required: true
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KioskEquipmentBorrow'
+          description: ''
+  /api/services/kiosk/queue/:
+    post:
+      operationId: api_services_kiosk_queue_create
+      description: Common anonymous write-only endpoint policy; subclasses create
+        one record.
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KioskQueueTicket'
+        required: true
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KioskQueueTicket'
+          description: ''
+  /api/services/kiosk/reports/:
+    post:
+      operationId: api_services_kiosk_reports_create
+      description: Common anonymous write-only endpoint policy; subclasses create
+        one record.
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KioskIssueReport'
+        required: true
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KioskIssueReport'
           description: ''
   /api/services/official-receipt-series/:
     get:
@@ -3365,15 +3483,30 @@ paths:
   /api/v1/dashboard/accomplishment-report/:
     get:
       operationId: api_v1_dashboard_accomplishment_report_retrieve
-      description: Returns tenant-scoped monthly executive summary metrics for the
-        Barangay Admin's barangay.
+      description: Returns tenant-scoped monthly or custom-range executive summary
+        metrics for the Barangay Admin's barangay.
       summary: Get Monthly Barangay Accomplishment Report
       parameters:
+      - in: query
+        name: end_date
+        schema:
+          type: string
+        description: Custom range end (YYYY-MM-DD)
+      - in: query
+        name: metrics
+        schema:
+          type: string
+        description: Comma-separated report metric filters
       - in: query
         name: month
         schema:
           type: integer
         description: Report month (1-12)
+      - in: query
+        name: start_date
+        schema:
+          type: string
+        description: Custom range start (YYYY-MM-DD)
       - in: query
         name: year
         schema:
@@ -3393,10 +3526,15 @@ paths:
   /api/v1/dashboard/accomplishment-report/export/:
     get:
       operationId: api_v1_dashboard_accomplishment_report_export_retrieve
-      description: Exports the monthly accomplishment report for the Barangay Admin's
+      description: Exports the filtered accomplishment report for the Barangay Admin's
         barangay as CSV or PDF.
       summary: Export Monthly Barangay Accomplishment Report (CSV or PDF)
       parameters:
+      - in: query
+        name: end_date
+        schema:
+          type: string
+        description: Custom range end (YYYY-MM-DD)
       - in: query
         name: export_format
         schema:
@@ -3405,10 +3543,20 @@ paths:
           - csv
           - pdf
       - in: query
+        name: metrics
+        schema:
+          type: string
+        description: Comma-separated report metric filters
+      - in: query
         name: month
         schema:
           type: integer
         description: Report month (1-12)
+      - in: query
+        name: start_date
+        schema:
+          type: string
+        description: Custom range start (YYYY-MM-DD)
       - in: query
         name: year
         schema:
@@ -4694,6 +4842,94 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/v1/kiosk/documents/:
+    post:
+      operationId: api_v1_kiosk_documents_create
+      description: Common anonymous write-only endpoint policy; subclasses create
+        one record.
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KioskDocumentRequest'
+        required: true
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KioskDocumentRequest'
+          description: ''
+  /api/v1/kiosk/equipment/:
+    post:
+      operationId: api_v1_kiosk_equipment_create
+      description: Common anonymous write-only endpoint policy; subclasses create
+        one record.
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KioskEquipmentBorrow'
+        required: true
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KioskEquipmentBorrow'
+          description: ''
+  /api/v1/kiosk/queue/:
+    post:
+      operationId: api_v1_kiosk_queue_create
+      description: Common anonymous write-only endpoint policy; subclasses create
+        one record.
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KioskQueueTicket'
+        required: true
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KioskQueueTicket'
+          description: ''
+  /api/v1/kiosk/reports/:
+    post:
+      operationId: api_v1_kiosk_reports_create
+      description: Common anonymous write-only endpoint policy; subclasses create
+        one record.
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KioskIssueReport'
+        required: true
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KioskIssueReport'
+          description: ''
   /api/v1/official-receipt-series/:
     get:
       operationId: api_v1_official_receipt_series_retrieve
@@ -4906,6 +5142,12 @@ paths:
         required: false
         in: query
         description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
         schema:
           type: integer
       tags:
@@ -5657,6 +5899,14 @@ components:
       description: |-
         * `RESIDENT` - Residents
         * `STAFF` - Staff
+    AuthModeEnum:
+      enum:
+      - resident
+      - staff_pin
+      type: string
+      description: |-
+        * `resident` - resident
+        * `staff_pin` - staff_pin
     Barangay:
       type: object
       properties:
@@ -5694,7 +5944,19 @@ components:
           type: string
           pattern: ^#[0-9A-Fa-f]{6}$
           maxLength: 7
+        has_kiosk_staff_pin:
+          type: boolean
+          readOnly: true
+        kiosk_staff_pin:
+          type: string
+          writeOnly: true
+          maxLength: 12
+        clear_kiosk_staff_pin:
+          type: boolean
+          writeOnly: true
+          default: false
       required:
+      - has_kiosk_staff_pin
       - id
       - municipality
       - name
@@ -5956,6 +6218,40 @@ components:
       required:
       - applicant_email
       - application_id
+    BorrowerIdTypeEnum:
+      enum:
+      - Barangay ID
+      - PhilSys National ID
+      - Voter's ID
+      - Driver's License
+      - Passport
+      - Senior Citizen / PWD ID
+      - Postal ID
+      - Other Government-Issued ID
+      type: string
+      description: |-
+        * `Barangay ID` - Barangay ID
+        * `PhilSys National ID` - PhilSys National ID
+        * `Voter's ID` - Voter's ID
+        * `Driver's License` - Driver's License
+        * `Passport` - Passport
+        * `Senior Citizen / PWD ID` - Senior Citizen / PWD ID
+        * `Postal ID` - Postal ID
+        * `Other Government-Issued ID` - Other Government-Issued ID
+    CategoryC8bEnum:
+      enum:
+      - PEACE_AND_ORDER
+      - PUBLIC_HEALTH
+      - INFRASTRUCTURE
+      - ENVIRONMENT
+      - OTHER
+      type: string
+      description: |-
+        * `PEACE_AND_ORDER` - Peace & Order (Riots, Noise, Curfew)
+        * `PUBLIC_HEALTH` - Public Health (Vaccinations, Medical)
+        * `INFRASTRUCTURE` - Infrastructure (Potholes, Outages)
+        * `ENVIRONMENT` - Environment (Floods, Waste)
+        * `OTHER` - Other
     CustomTokenObtainPair:
       type: object
       properties:
@@ -6256,6 +6552,18 @@ components:
       - rejected
       - released
       - total
+    DocumentTypeEnum:
+      enum:
+      - Barangay Clearance
+      - Certificate of Indigency
+      - Certificate of Residency
+      - Barangay Business Clearance
+      type: string
+      description: |-
+        * `Barangay Clearance` - Barangay Clearance
+        * `Certificate of Indigency` - Certificate of Indigency
+        * `Certificate of Residency` - Certificate of Residency
+        * `Barangay Business Clearance` - Barangay Business Clearance
     EmergencyHotline:
       type: object
       properties:
@@ -6309,6 +6617,24 @@ components:
           readOnly: true
           nullable: true
         resident_name:
+          type: string
+          readOnly: true
+        is_walkin:
+          type: boolean
+          readOnly: true
+        walkin_name:
+          type: string
+          maxLength: 255
+        walkin_contact:
+          type: string
+          maxLength: 50
+        walkin_purok:
+          type: string
+          readOnly: true
+        borrower_id_type:
+          type: string
+          readOnly: true
+        kiosk_auth_method:
           type: string
           readOnly: true
         item_type:
@@ -6365,8 +6691,11 @@ components:
       required:
       - admin_notes
       - borrow_date
+      - borrower_id_type
       - created_at
       - id
+      - is_walkin
+      - kiosk_auth_method
       - purpose
       - resident
       - resident_name
@@ -6377,6 +6706,7 @@ components:
       - reviewed_by_name
       - status
       - updated_at
+      - walkin_purok
     EquipmentBorrowRequestReview:
       type: object
       properties:
@@ -6388,6 +6718,24 @@ components:
           readOnly: true
           nullable: true
         resident_name:
+          type: string
+          readOnly: true
+        is_walkin:
+          type: boolean
+          readOnly: true
+        walkin_name:
+          type: string
+          readOnly: true
+        walkin_contact:
+          type: string
+          readOnly: true
+        walkin_purok:
+          type: string
+          readOnly: true
+        borrower_id_type:
+          type: string
+          readOnly: true
+        kiosk_auth_method:
           type: string
           readOnly: true
         item_type:
@@ -6443,9 +6791,12 @@ components:
           readOnly: true
       required:
       - borrow_date
+      - borrower_id_type
       - created_at
       - id
+      - is_walkin
       - item_type
+      - kiosk_auth_method
       - purpose
       - quantity
       - resident
@@ -6457,6 +6808,9 @@ components:
       - reviewed_by_name
       - time_slot
       - updated_at
+      - walkin_contact
+      - walkin_name
+      - walkin_purok
     FAQ:
       type: object
       properties:
@@ -6583,6 +6937,19 @@ components:
         id:
           type: integer
           readOnly: true
+        walkin_name:
+          type: string
+          readOnly: true
+          nullable: true
+        privacy_notice_version:
+          type: string
+          readOnly: true
+          nullable: true
+        privacy_acknowledged_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
         title:
           type: string
           maxLength: 255
@@ -6601,7 +6968,7 @@ components:
         urgency:
           $ref: '#/components/schemas/UrgencyEnum'
         category:
-          $ref: '#/components/schemas/IssueReportCategoryEnum'
+          $ref: '#/components/schemas/CategoryC8bEnum'
         incident_datetime:
           type: string
           format: date-time
@@ -6618,28 +6985,23 @@ components:
         reporter:
           type: integer
           readOnly: true
+          nullable: true
+        barangay:
+          type: integer
+          readOnly: true
+          nullable: true
       required:
+      - barangay
       - created_at
       - description
       - id
       - location
+      - privacy_acknowledged_at
+      - privacy_notice_version
       - reporter
       - title
       - updated_at
-    IssueReportCategoryEnum:
-      enum:
-      - PEACE_AND_ORDER
-      - PUBLIC_HEALTH
-      - INFRASTRUCTURE
-      - ENVIRONMENT
-      - OTHER
-      type: string
-      description: |-
-        * `PEACE_AND_ORDER` - Peace & Order (Riots, Noise, Curfew)
-        * `PUBLIC_HEALTH` - Public Health (Vaccinations, Medical)
-        * `INFRASTRUCTURE` - Infrastructure (Potholes, Outages)
-        * `ENVIRONMENT` - Environment (Floods, Waste)
-        * `OTHER` - Other
+      - walkin_name
     IssueReportStatusEnum:
       enum:
       - PENDING
@@ -6685,6 +7047,157 @@ components:
         * `Tables` - Tables
         * `Covered Court / Multi-Purpose Hall` - Covered Court / Multi-Purpose Hall
         * `Other` - Other
+    KioskDocumentRequest:
+      type: object
+      properties:
+        barangay_id:
+          type: integer
+          minimum: 1
+        privacy_acknowledged:
+          type: boolean
+          writeOnly: true
+        walkin_name:
+          type: string
+          maxLength: 255
+          minLength: 2
+        walkin_purok:
+          type: string
+          maxLength: 100
+        document_type:
+          $ref: '#/components/schemas/DocumentTypeEnum'
+        purpose:
+          type: string
+          maxLength: 500
+          minLength: 2
+      required:
+      - barangay_id
+      - document_type
+      - privacy_acknowledged
+      - purpose
+      - walkin_name
+    KioskEquipmentBorrow:
+      type: object
+      properties:
+        barangay_id:
+          type: integer
+          minimum: 1
+        privacy_acknowledged:
+          type: boolean
+          writeOnly: true
+        auth_mode:
+          allOf:
+          - $ref: '#/components/schemas/AuthModeEnum'
+          writeOnly: true
+        resident_username:
+          type: string
+          writeOnly: true
+          maxLength: 150
+        resident_password:
+          type: string
+          writeOnly: true
+          maxLength: 128
+        staff_kiosk_pin:
+          type: string
+          writeOnly: true
+          maxLength: 12
+        walkin_name:
+          type: string
+          maxLength: 255
+          minLength: 2
+        walkin_contact:
+          type: string
+          maxLength: 50
+          minLength: 7
+        walkin_purok:
+          type: string
+          maxLength: 100
+          minLength: 2
+        borrower_id_type:
+          $ref: '#/components/schemas/BorrowerIdTypeEnum'
+        item_type:
+          $ref: '#/components/schemas/ItemTypeEnum'
+        quantity:
+          type: integer
+          maximum: 500
+          minimum: 1
+          default: 1
+        borrow_date:
+          type: string
+          format: date
+        return_date:
+          type: string
+          format: date
+        time_slot:
+          type: string
+          maxLength: 100
+        purpose:
+          type: string
+          maxLength: 2000
+          minLength: 10
+      required:
+      - auth_mode
+      - barangay_id
+      - borrow_date
+      - borrower_id_type
+      - item_type
+      - privacy_acknowledged
+      - purpose
+      - return_date
+      - walkin_contact
+      - walkin_purok
+    KioskIssueReport:
+      type: object
+      properties:
+        barangay_id:
+          type: integer
+          minimum: 1
+        privacy_acknowledged:
+          type: boolean
+          writeOnly: true
+        walkin_name:
+          type: string
+          maxLength: 255
+        category:
+          $ref: '#/components/schemas/CategoryC8bEnum'
+        title:
+          type: string
+          maxLength: 255
+          minLength: 3
+        description:
+          type: string
+          maxLength: 5000
+          minLength: 10
+        location:
+          type: string
+          maxLength: 255
+          minLength: 2
+      required:
+      - barangay_id
+      - category
+      - description
+      - location
+      - privacy_acknowledged
+      - title
+    KioskQueueTicket:
+      type: object
+      properties:
+        barangay_id:
+          type: integer
+          minimum: 1
+        privacy_acknowledged:
+          type: boolean
+          writeOnly: true
+        walkin_name:
+          type: string
+          maxLength: 255
+          minLength: 2
+        service_type:
+          $ref: '#/components/schemas/ServiceTypeEnum'
+      required:
+      - barangay_id
+      - privacy_acknowledged
+      - service_type
+      - walkin_name
     LoginEvent:
       type: object
       properties:
@@ -7332,6 +7845,17 @@ components:
           type: string
           pattern: ^#[0-9A-Fa-f]{6}$
           maxLength: 7
+        has_kiosk_staff_pin:
+          type: boolean
+          readOnly: true
+        kiosk_staff_pin:
+          type: string
+          writeOnly: true
+          maxLength: 12
+        clear_kiosk_staff_pin:
+          type: boolean
+          writeOnly: true
+          default: false
     PatchedDocumentRequest:
       type: object
       properties:
@@ -7550,6 +8074,24 @@ components:
         resident_name:
           type: string
           readOnly: true
+        is_walkin:
+          type: boolean
+          readOnly: true
+        walkin_name:
+          type: string
+          readOnly: true
+        walkin_contact:
+          type: string
+          readOnly: true
+        walkin_purok:
+          type: string
+          readOnly: true
+        borrower_id_type:
+          type: string
+          readOnly: true
+        kiosk_auth_method:
+          type: string
+          readOnly: true
         item_type:
           allOf:
           - $ref: '#/components/schemas/ItemTypeEnum'
@@ -7659,6 +8201,19 @@ components:
         id:
           type: integer
           readOnly: true
+        walkin_name:
+          type: string
+          readOnly: true
+          nullable: true
+        privacy_notice_version:
+          type: string
+          readOnly: true
+          nullable: true
+        privacy_acknowledged_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
         title:
           type: string
           maxLength: 255
@@ -7677,7 +8232,7 @@ components:
         urgency:
           $ref: '#/components/schemas/UrgencyEnum'
         category:
-          $ref: '#/components/schemas/IssueReportCategoryEnum'
+          $ref: '#/components/schemas/CategoryC8bEnum'
         incident_datetime:
           type: string
           format: date-time
@@ -7694,6 +8249,11 @@ components:
         reporter:
           type: integer
           readOnly: true
+          nullable: true
+        barangay:
+          type: integer
+          readOnly: true
+          nullable: true
     PatchedPaymentRecipient:
       type: object
       properties:
@@ -9005,6 +9565,20 @@ components:
         * `RESIDENT` - Resident
         * `FIELD_OFFICIAL` - Field Official
         * `BARANGAY_OPERATOR` - Barangay Operator
+    ServiceTypeEnum:
+      enum:
+      - Document Processing & Clearances
+      - Barangay ID Application
+      - Certificate of Indigency
+      - Equipment & Facility Borrowing
+      - General Inquiries & Complaints
+      type: string
+      description: |-
+        * `Document Processing & Clearances` - Document Processing & Clearances
+        * `Barangay ID Application` - Barangay ID Application
+        * `Certificate of Indigency` - Certificate of Indigency
+        * `Equipment & Facility Borrowing` - Equipment & Facility Borrowing
+        * `General Inquiries & Complaints` - General Inquiries & Complaints
     StaffUserCreate:
       type: object
       description: |-

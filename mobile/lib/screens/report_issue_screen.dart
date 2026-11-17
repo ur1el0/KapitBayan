@@ -8,7 +8,10 @@ import '../services/issue_service.dart';
 import '../services/storage_service.dart';
 
 class ReportIssueScreen extends StatefulWidget {
-  const ReportIssueScreen({super.key});
+  final IssueService? issueService;
+  final Future<XFile?> Function(ImageSource source)? onPickImage;
+
+  const ReportIssueScreen({super.key, this.issueService, this.onPickImage});
 
   @override
   State<ReportIssueScreen> createState() => _ReportIssueScreenState();
@@ -40,7 +43,11 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
   @override
   void initState() {
     super.initState();
-    _initService();
+    if (widget.issueService != null) {
+      _issueService = widget.issueService;
+    } else {
+      _initService();
+    }
   }
 
   Future<void> _initService() async {
@@ -63,12 +70,33 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
     super.dispose();
   }
 
-  Future<void> _pickImage() async {
-    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
-    if (image != null) {
-      setState(() {
-        _selectedImage = image;
-      });
+  Future<void> _pickImage(ImageSource source) async {
+    try {
+      final XFile? image = widget.onPickImage != null
+          ? await widget.onPickImage!(source)
+          : await _picker.pickImage(
+              source: source,
+              maxWidth: 2048,
+              maxHeight: 2048,
+              imageQuality: 85,
+            );
+      if (image != null && mounted) {
+        setState(() {
+          _selectedImage = image;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              context.tr(
+                'Unable to open camera or photo library. You can still submit the report without a photo.',
+              ),
+            ),
+          ),
+        );
+      }
     }
   }
 
@@ -250,20 +278,47 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
                           const SizedBox(height: 8),
                           Text(
                             _selectedImage == null
-                                ? context.tr('No photo attached')
+                                ? context.tr('Photo optional (helpful when safe)')
                                 : '${context.tr('Photo selected:')} ${_selectedImage!.name}',
                             textAlign: TextAlign.center,
                             style: TextStyle(color: Colors.grey.shade700),
                           ),
                           const SizedBox(height: 12),
-                          OutlinedButton.icon(
-                            onPressed: _pickImage,
-                            icon: const Icon(Icons.image),
-                            label: Text(
-                              _selectedImage == null
-                                  ? context.tr('Attach Photo')
-                                  : context.tr('Change Photo'),
-                            ),
+                          Wrap(
+                            alignment: WrapAlignment.center,
+                            spacing: 10,
+                            runSpacing: 8,
+                            children: [
+                              ElevatedButton.icon(
+                                onPressed: _isLoading
+                                    ? null
+                                    : () => _pickImage(ImageSource.camera),
+                                icon: const Icon(Icons.camera_alt_outlined, size: 18),
+                                label: Text(context.tr('Take Photo')),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF0047BA),
+                                  foregroundColor: Colors.white,
+                                ),
+                              ),
+                              OutlinedButton.icon(
+                                onPressed: _isLoading
+                                    ? null
+                                    : () => _pickImage(ImageSource.gallery),
+                                icon: const Icon(Icons.photo_library_outlined, size: 18),
+                                label: Text(context.tr('Choose Gallery')),
+                              ),
+                              if (_selectedImage != null)
+                                TextButton.icon(
+                                  onPressed: _isLoading
+                                      ? null
+                                      : () => setState(() => _selectedImage = null),
+                                  icon: const Icon(Icons.close, size: 18),
+                                  label: Text(context.tr('Remove Photo')),
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: Colors.red.shade700,
+                                  ),
+                                ),
+                            ],
                           ),
                         ],
                       ),
