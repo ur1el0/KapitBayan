@@ -169,6 +169,9 @@ def _get_scoped_accomplishment_report_for_request(request):
             barangay=user.barangay,
             year=request.query_params.get("year"),
             month=request.query_params.get("month"),
+            start_date=request.query_params.get("start_date"),
+            end_date=request.query_params.get("end_date"),
+            metrics=request.query_params.get("metrics"),
         )
     except (TypeError, ValueError) as exc:
         raise ValidationError({"detail": str(exc)})
@@ -176,10 +179,13 @@ def _get_scoped_accomplishment_report_for_request(request):
 
 @extend_schema(
     summary="Get Monthly Barangay Accomplishment Report",
-    description="Returns tenant-scoped monthly executive summary metrics for the Barangay Admin's barangay.",
+    description="Returns tenant-scoped monthly or custom-range executive summary metrics for the Barangay Admin's barangay.",
     parameters=[
         OpenApiParameter(name="year", type=int, required=False, description="Report year (YYYY)"),
         OpenApiParameter(name="month", type=int, required=False, description="Report month (1-12)"),
+        OpenApiParameter(name="start_date", type=str, required=False, description="Custom range start (YYYY-MM-DD)"),
+        OpenApiParameter(name="end_date", type=str, required=False, description="Custom range end (YYYY-MM-DD)"),
+        OpenApiParameter(name="metrics", type=str, required=False, description="Comma-separated report metric filters"),
     ],
     responses={200: AccomplishmentReportSerializer},
 )
@@ -193,10 +199,13 @@ class AccomplishmentReportView(APIView):
 
 @extend_schema(
     summary="Export Monthly Barangay Accomplishment Report (CSV or PDF)",
-    description="Exports the monthly accomplishment report for the Barangay Admin's barangay as CSV or PDF.",
+    description="Exports the filtered accomplishment report for the Barangay Admin's barangay as CSV or PDF.",
     parameters=[
         OpenApiParameter(name="year", type=int, required=False, description="Report year (YYYY)"),
         OpenApiParameter(name="month", type=int, required=False, description="Report month (1-12)"),
+        OpenApiParameter(name="start_date", type=str, required=False, description="Custom range start (YYYY-MM-DD)"),
+        OpenApiParameter(name="end_date", type=str, required=False, description="Custom range end (YYYY-MM-DD)"),
+        OpenApiParameter(name="metrics", type=str, required=False, description="Comma-separated report metric filters"),
         OpenApiParameter(name="export_format", type=str, required=False, enum=["csv", "pdf"]),
     ],
     responses={200: bytes},
@@ -219,6 +228,9 @@ class AccomplishmentReportExportView(APIView):
                 report["year"],
                 report["month"],
                 "csv",
+                start_date=report.get("start_date"),
+                end_date=report.get("end_date"),
+                period_mode=report.get("period_mode", "month"),
             )
             response = HttpResponse(payload, content_type="text/csv; charset=utf-8")
         elif export_format == "pdf":
@@ -228,6 +240,9 @@ class AccomplishmentReportExportView(APIView):
                 report["year"],
                 report["month"],
                 "pdf",
+                start_date=report.get("start_date"),
+                end_date=report.get("end_date"),
+                period_mode=report.get("period_mode", "month"),
             )
             response = HttpResponse(payload, content_type="application/pdf")
         else:

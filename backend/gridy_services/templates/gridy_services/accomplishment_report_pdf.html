@@ -110,8 +110,12 @@
         <h1>BARANGAY {{ report.barangay_name|upper }}</h1>
         <h2>MONTHLY BARANGAY ACCOMPLISHMENT REPORT</h2>
         <p><strong>Period Covered:</strong> {{ report.period_label }}</p>
+        {% if report.filter_summary %}
+        <p><strong>Report Scope:</strong> {{ report.filter_summary }}</p>
+        {% endif %}
     </div>
 
+    {% if not report.included_metrics or 'new_registered_residents' in report.included_metrics or 'rbi_transfers' in report.included_metrics %}
     <div class="section-title">1. Residents &amp; Registry of Barangay Inhabitants (RBI) Updates</div>
     <table class="report-table">
         <thead>
@@ -121,14 +125,17 @@
             </tr>
         </thead>
         <tbody>
+            {% if not report.included_metrics or 'new_registered_residents' in report.included_metrics %}
             <tr>
-                <td>New Registered Residents (Selected Month)</td>
+                <td>New Registered Residents (Selected Period)</td>
                 <td class="count-col">{{ report.residents_rbi.new_registered_residents }}</td>
             </tr>
             <tr>
-                <td>New Verified Residents (Selected Month)</td>
+                <td>New Verified Residents (Selected Period)</td>
                 <td class="count-col">{{ report.residents_rbi.new_verified_residents }}</td>
             </tr>
+            {% endif %}
+            {% if not report.included_metrics or 'rbi_transfers' in report.included_metrics %}
             <tr>
                 <td>Approved Resident Transfers / RBI Updates</td>
                 <td class="count-col">{{ report.residents_rbi.approved_rbi_transfers }}</td>
@@ -137,9 +144,12 @@
                 <td>Total Active Verified Residents (Cumulative Baseline)</td>
                 <td class="count-col">{{ report.residents_rbi.total_active_verified_residents }}</td>
             </tr>
+            {% endif %}
         </tbody>
     </table>
+    {% endif %}
 
+    {% if not report.included_metrics or 'documents_issued' in report.included_metrics %}
     <div class="section-title">2. Certificates &amp; Document Issuance</div>
     <table class="report-table">
         <thead>
@@ -169,7 +179,9 @@
             {% endfor %}
         </tbody>
     </table>
+    {% endif %}
 
+    {% if not report.included_metrics or 'incidents' in report.included_metrics or 'aid_requests' in report.included_metrics or 'equipment_borrowing' in report.included_metrics %}
     <div class="section-title">3. Community Issues, Social Aid &amp; Equipment Services</div>
     <table class="report-table">
         <thead>
@@ -179,6 +191,7 @@
             </tr>
         </thead>
         <tbody>
+            {% if not report.included_metrics or 'incidents' in report.included_metrics %}
             <tr>
                 <td>Community Issue Reports Submitted</td>
                 <td class="count-col">{{ report.community_services.issues_submitted }}</td>
@@ -187,17 +200,32 @@
                 <td>Community Issue Reports Resolved</td>
                 <td class="count-col">{{ report.community_services.issues_resolved }}</td>
             </tr>
+            {% endif %}
+            {% if not report.included_metrics or 'aid_requests' in report.included_metrics %}
+            <tr>
+                <td>Barangay Assistance (Aid) Requests Submitted</td>
+                <td class="count-col">{{ report.community_services.aid_requests_submitted }}</td>
+            </tr>
             <tr>
                 <td>Barangay Assistance (Aid) Requests Fulfilled / Approved</td>
                 <td class="count-col">{{ report.community_services.aid_requests_approved }}</td>
             </tr>
+            {% endif %}
+            {% if not report.included_metrics or 'equipment_borrowing' in report.included_metrics %}
             <tr>
                 <td>Equipment &amp; Facility Borrowing Requests Approved / Returned</td>
                 <td class="count-col">{{ report.community_services.equipment_requests_fulfilled }}</td>
             </tr>
+            <tr>
+                <td>Equipment &amp; Facility Borrowing Requests Returned</td>
+                <td class="count-col">{{ report.community_services.equipment_requests_returned }}</td>
+            </tr>
+            {% endif %}
         </tbody>
     </table>
+    {% endif %}
 
+    {% if not report.included_metrics or 'communications' in report.included_metrics %}
     <div class="section-title">4. Public Communications &amp; Community Activities</div>
     <table class="report-table">
         <thead>
@@ -217,6 +245,7 @@
             </tr>
         </tbody>
     </table>
+    {% endif %}
 
     <table class="signatories">
         <tr>
