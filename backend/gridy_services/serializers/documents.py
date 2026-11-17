@@ -237,7 +237,15 @@ class DocumentRequestSerializer(FeePolicyValidationMixin, serializers.ModelSeria
             return None
         profile = getattr(obj.fee_assessed_by, 'profile', None)
         full_name = getattr(profile, 'full_name', None)
-        return full_name if full_name else obj.fee_assessed_by.username
+        if full_name and full_name.strip():
+            return full_name.strip()
+        name = obj.fee_assessed_by.get_full_name().strip()
+        if name:
+            return name
+        username = obj.fee_assessed_by.username
+        if username.startswith("pending-admin-"):
+            return "Barangay Administrator"
+        return username
 
     def _can_view_payment_recipient_snapshot(self, obj):
         request = self.context.get("request")

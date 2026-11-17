@@ -48,8 +48,11 @@ export const CertificateVerificationControl = ({ requestId, documentType }: Cert
             setRecord(response.data as CertificateVerificationRecord);
             setConfirmed(false);
             toast.success('Certificate verification QR is ready to print.');
-        } catch {
-            toast.error('Could not create the certificate verification QR. Check the request status and try again.');
+        } catch (error: any) {
+            const message = error.response?.data?.detail 
+                || error.response?.data?.confirm_paper_certificate_issued?.[0]
+                || 'Could not create the certificate verification QR. Check the request status and try again.';
+            toast.error(message);
         } finally {
             setWorking(false);
         }
