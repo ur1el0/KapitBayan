@@ -446,6 +446,9 @@ class EquipmentBorrowRequest(models.Model):
     is_walkin = models.BooleanField(default=False)
     walkin_name = models.CharField(max_length=255, blank=True, default="")
     walkin_contact = models.CharField(max_length=50, blank=True, default="")
+    walkin_purok = models.CharField(max_length=100, blank=True, default="", db_default="")
+    borrower_id_type = models.CharField(max_length=80, blank=True, default="", db_default="")
+    kiosk_auth_method = models.CharField(max_length=32, blank=True, default="", db_default="")
     item_type = models.CharField(
         max_length=100,
         choices=ItemType.choices,
