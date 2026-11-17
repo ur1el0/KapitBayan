@@ -243,3 +243,62 @@ class IssueReportAPITests(APITestCase):
         response = self.client.delete(detail_url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertTrue(IssueReport.objects.filter(id=report.id).exists())
+
+    def test_resident_reports_paginate_first_5_recent_and_support_filters(self):
+        from datetime import timedelta
+        from django.utils import timezone
+
+        base_time = timezone.now() - timedelta(hours=10)
+        reports = []
+        for idx in range(7):
+            r = IssueReport.objects.create(
+                reporter=self.user,
+                title=f"Report #{idx + 1}",
+                description=f"Details for report {idx + 1}",
+                location=f"Purok {idx + 1}",
+                category=(
+                    IssueReport.Category.INFRASTRUCTURE
+                    if idx % 2 == 0
+                    else IssueReport.Category.ENVIRONMENT
+                ),
+                status=(
+                    IssueReport.Status.RESOLVED
+                    if idx >= 5
+                    else IssueReport.Status.PENDING
+                ),
+            )
+            IssueReport.objects.filter(pk=r.pk).update(created_at=base_time + timedelta(minutes=idx * 10))
+            reports.append(r)
+
+        page1 = self.client.get(self.url, {"page": 1, "page_size": 5})
+        self.assertEqual(page1.status_code, status.HTTP_200_OK)
+        self.assertEqual(page1.data["count"], 7)
+        self.assertIsNotNone(page1.data["next"])
+        self.assertEqual(
+            [item["title"] for item in page1.data["results"]],
+            ["Report #7", "Report #6", "Report #5", "Report #4", "Report #3"],
+        )
+
+        page2 = self.client.get(self.url, {"page": 2, "page_size": 5})
+        self.assertEqual(page2.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            [item["title"] for item in page2.data["results"]],
+            ["Report #2", "Report #1"],
+        )
+
+        filtered = self.client.get(
+            self.url,
+            {
+                "status": IssueReport.Status.RESOLVED,
+                "category": IssueReport.Category.INFRASTRUCTURE,
+                "page_size": 5,
+            },
+        )
+        self.assertEqual(filtered.status_code, status.HTTP_200_OK)
+        self.assertEqual(filtered.data["count"], 1)
+        self.assertEqual(filtered.data["results"][0]["title"], "Report #7")
+
+        searched = self.client.get(self.url, {"search": "Report #2", "page_size": 5})
+        self.assertEqual(searched.status_code, status.HTTP_200_OK)
+        self.assertEqual(searched.data["count"], 1)
+        self.assertEqual(searched.data["results"][0]["title"], "Report #2")

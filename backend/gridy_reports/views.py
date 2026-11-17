@@ -1,5 +1,6 @@
 from django.db import transaction
 from rest_framework import viewsets, permissions
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django.db.models import Q
 from .models import IssueReport
@@ -10,9 +11,17 @@ from gridy_audit.services import log_action
 from gridy_audit.models import AuditLog
 from gridy_communications.admin_notifications import notify_barangay_admins
 
+
+class IssueReportPagination(PageNumberPagination):
+    page_size = 50
+    page_size_query_param = 'page_size'
+    max_page_size = 50
+
+
 class IssueReportViewSet(viewsets.ModelViewSet):
     serializer_class = IssueReportSerializer
     parser_classes = [MultiPartParser, FormParser, JSONParser]
+    pagination_class = IssueReportPagination
     
     def get_permissions(self):
         # Only authenticated users can list/retrieve
@@ -33,13 +42,35 @@ class IssueReportViewSet(viewsets.ModelViewSet):
         if user.role in ["ADMIN", "FIELD_OFFICIAL"]:
             if user.barangay_id is None:
                 return IssueReport.objects.none()
-            return IssueReport.objects.filter(
+            queryset = IssueReport.objects.filter(
                 Q(barangay_id=user.barangay_id)
                 | Q(barangay__isnull=True, reporter__barangay_id=user.barangay_id)
-            ).order_by('-created_at')
-        
-        # Standard Residents only see their own reports (and we fixed the created_by typo)
-        return IssueReport.objects.filter(reporter=user).order_by('-created_at')
+            )
+        else:
+            # Standard Residents only see their own reports
+            queryset = IssueReport.objects.filter(reporter=user)
+
+        status_param = (self.request.query_params.get('status') or '').strip().upper()
+        if status_param in IssueReport.Status.values:
+            queryset = queryset.filter(status=status_param)
+
+        category_param = (self.request.query_params.get('category') or '').strip().upper()
+        if category_param in IssueReport.Category.values:
+            queryset = queryset.filter(category=category_param)
+
+        urgency_param = (self.request.query_params.get('urgency') or '').strip().upper()
+        if urgency_param in IssueReport.Urgency.values:
+            queryset = queryset.filter(urgency=urgency_param)
+
+        search_param = (self.request.query_params.get('search') or '').strip()
+        if search_param:
+            queryset = queryset.filter(
+                Q(title__icontains=search_param)
+                | Q(location__icontains=search_param)
+                | Q(description__icontains=search_param)
+            )
+
+        return queryset.order_by('-created_at', '-id')
 
     @transaction.atomic
     def perform_create(self, serializer):
