@@ -28,6 +28,8 @@ const CardSkeleton = () => (
     </div>
 );
 
+import { getSynchronizedServerDate } from '../../utils/serverTime';
+
 export const Activities: React.FC = () => {
     const [activities, setActivities] = useState<Activity[]>([]);
     const [loading, setLoading] = useState(true);
@@ -288,7 +290,7 @@ export const Activities: React.FC = () => {
                     description={description}
                     setDescription={setDescription}
                     isSubmitting={isSubmitting}
-                    minDateTime={toDateTimeLocalValue(new Date().toISOString())}
+                    minDateTime={toDateTimeLocalValue(getSynchronizedServerDate().toISOString())}
                     formError={formError}
                 />
             )}

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { updateServerClockSkew } from '../utils/serverTime';
 import {
     clearAccessToken,
     getAccessToken,
@@ -37,6 +38,19 @@ export const axiosPublic = axios.create({
     headers: { 'Content-Type': 'application/json' },
     withCredentials: true,
 });
+
+axiosPublic.interceptors.response.use(
+    (response) => {
+        updateServerClockSkew(response);
+        return response;
+    },
+    (error) => {
+        if (error?.response) {
+            updateServerClockSkew(error.response);
+        }
+        return Promise.reject(error);
+    }
+);
 
 let refreshRequest: Promise<string> | null = null;
 
@@ -82,8 +96,14 @@ axiosPrivate.interceptors.request.use(
 
 // Response interceptor to handle 401s and refresh the token
 axiosPrivate.interceptors.response.use(
-    (response) => response,
+    (response) => {
+        updateServerClockSkew(response);
+        return response;
+    },
     async (error) => {
+        if (error.response) {
+            updateServerClockSkew(error.response);
+        }
         const originalRequest = error.config as (typeof error.config & {
             _retry?: boolean;
             _authVersion?: number;

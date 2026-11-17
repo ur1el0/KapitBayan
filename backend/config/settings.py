@@ -135,6 +135,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'gridy_auth.middleware.ServerTimeMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -259,6 +260,7 @@ CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = get_cors_allowed_origins(DEBUG)
 CORS_ALLOWED_ORIGIN_REGEXES = get_cors_allowed_origin_regexes(DEBUG)
 CORS_ALLOW_HEADERS = (*default_headers, "idempotency-key")
+CORS_EXPOSE_HEADERS = ["Date", "Content-Disposition", "X-Server-Time"]
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
