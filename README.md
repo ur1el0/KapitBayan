@@ -6,7 +6,7 @@ The platform supports resident document requests, manual fee assessment and trea
 
 ## Download the Android app
 
-[**Download the latest Android APK directly**](https://github.com/ur1el0/KapitBayan/releases/latest/download/KapitBayan-Android-v1.0.8.apk) (v1.0.8). This link downloads the APK file directly instead of opening the GitHub Releases page. Android may ask you to confirm installation from your browser or file manager. Install only APKs published by this repository.
+[**Download the latest Android APK directly**](https://github.com/ur1el0/KapitBayan/releases/download/v1.0.9/app-release.apk) (v1.0.9). This link downloads the APK file directly instead of opening the GitHub Releases page. Android may ask you to confirm installation from your browser or file manager. Install only APKs published by this repository.
 
 ## Architecture and API
 
@@ -22,6 +22,8 @@ The platform supports resident document requests, manual fee assessment and trea
 - Production hosting: Vercel hosts the web app and rewrites `/api/v1` to the Django API on Render. The API connects to Neon through `DATABASE_URL`.
 - Local services: Docker Compose runs the development database and application services; Nginx serves the local web build and proxies API requests.
 - Background delivery: email and push dispatch currently uses in-process daemon threads. There is no Celery or Redis task queue, so delivery is best effort.
+- Authoritative clock synchronization: `ServerTimeMiddleware` injects `X-Server-Time` and CORS headers on all API responses; web and mobile clients calculate dynamic clock skew to prevent client-side device clock manipulation.
+- Emergency hotlines: mobile application integrates native Android `ACTION_CALL` telephony intents with runtime permission handling for one-touch direct dialing, alongside long-press clipboard copying.
 - Exact endpoint contracts: generated OpenAPI at `/api/schema/` and Swagger UI at `/api/schema/swagger-ui/` when the API is running.
 - Database schema and migrations: Django models and migration files. Do not infer schema from historical documentation.
 
