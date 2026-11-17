@@ -432,15 +432,6 @@ class PlatformBarangayApplicationViewSet(
                     )
 
                 barangay = locality_matches[0] if locality_matches else None
-                if barangay and User.objects.filter(
-                    barangay=barangay,
-                    role=User.Role.ADMIN,
-                    is_superuser=False,
-                ).exists():
-                    return Response(
-                        {"detail": "This Barangay already has an Admin account. Use the existing Barangay's staff-management flow instead."},
-                        status=status.HTTP_409_CONFLICT,
-                    )
 
                 if barangay is None:
                     barangay = Barangay.objects.create(
