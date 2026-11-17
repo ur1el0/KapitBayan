@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 
 import '../config/app_config.dart';
 import 'api_exception.dart';
+import 'server_time_service.dart';
 
 /// Centralized HTTP client managing requests, headers, cookies, timeouts,
 /// and error mapping for KapitBayan REST APIs.
@@ -376,6 +377,9 @@ class ApiClient {
       final sessionRevisionAtRequest = _authSessionRevision;
       final credentialsRevisionAtRequest = _credentialsRevision;
       var response = await requestFn().timeout(AppConfig.requestTimeout);
+
+      // Record server clock skew if timestamp header is provided
+      ServerTimeService.updateClockSkewFromHeaders(response.headers);
 
       // Check if response indicates success (2xx)
       if (response.statusCode >= 200 && response.statusCode < 300) {
