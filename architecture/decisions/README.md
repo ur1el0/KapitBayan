@@ -32,6 +32,7 @@ This index lists the decision records present in this repository snapshot. Read 
 | [026](026-resident-selected-document-payment-method.md) | Resident-selected document payment method from Barangay-configured options |
 | [027](027-paper-certificate-qr-verification.md) | QR verification for Barangay-issued paper certificates |
 | [028](028-transactional-official-receipt-series.md) | Transactional O.R. numbering from a Barangay-approved series |
+| [029](029-post-defense-chairman-revisions-and-service-hardening.md) | Post-defense chairman revisions and service hardening |
 
 ## Implementation notes
 
