@@ -5,11 +5,12 @@ The public kiosk provides a shared, account-free path for residents who need to 
 ## Resident flow
 
 1. Select the approved Barangay serving the resident.
-2. Choose **Queue**, **Documents**, or **Report an Issue**.
+2. Choose **Queue**, **Documents**, **Report an Issue**, or **Borrow Equipment**.
 3. Enter only the fields needed for that service:
    - Queue: name and service type.
    - Document: name, optional purok/zone, document type, and purpose.
    - Issue report: category, title, description, location, and optional name.
+   - Equipment borrowing: requires either verified resident credentials (ephemeral per-request verification without leaving a session on the shared kiosk) or supervised walk-in authorization via Barangay Staff Desk PIN, plus borrower contact number (7-15 digits), purok, valid ID type, minimum 10-character purpose, and non-past borrow date.
 4. Read and acknowledge the privacy notice, then submit. The kiosk shows a reference number and clears personal form entries.
 5. A resident who needs an account can scan the QR code and continue registration on their own phone. The kiosk does not handle passwords or identity-document uploads.
 

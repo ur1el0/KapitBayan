@@ -28,8 +28,13 @@ Residents and walk-in visitors can receive tickets under the applicable service 
 
 ## Communications and announcements
 
-Authorized staff publish barangay announcements and activities. Residents can read public content, and staff can share an announcement link externally using the share kit. KapitBayan does not automatically publish Facebook posts or control comments on Facebook.
+Authorized staff publish barangay announcements and activities. Staff cannot schedule community events or activities in elapsed past dates or times (enforced both in serializer validation and UI scheduler controls). Residents can read public content, and staff can share an announcement link externally using the share kit. KapitBayan does not automatically publish Facebook posts or control comments on Facebook.
 
-## Assistance and reports
+## Assistance, reports, and equipment borrowing
 
-Residents submit assistance applications and issue reports. Authorized staff review and update records within the applicable barangay scope. The platform records staff decisions; it does not autonomously determine aid eligibility or replace emergency response. For immediate danger, use official emergency channels.
+1. **Assistance Applications:** Residents submit assistance applications. Authorized staff review and update records within the applicable barangay scope. The platform records staff decisions; it does not autonomously determine aid eligibility or replace emergency response. For immediate danger, use official emergency channels.
+2. **Issue Reporting:** Residents report community issues and hazards on web and mobile. On mobile, residents can directly capture photos using the device camera (`Take Photo`) or attach from gallery, while keeping photo evidence optional for emergency situations. Resident report history is paginated newest-first (5 per page) with status, category, urgency, and search filters.
+3. **Equipment Borrowing:** Residents submit borrowing requests for barangay-owned equipment. On public kiosks, equipment borrowing strictly enforces either verified resident credentials (ephemeral per-request verification without persistent session) or supervised walk-in authorization via the Barangay Staff PIN, requiring verified borrower contact digits, purok, valid ID type, minimum 10-character purpose, and non-past borrow date.
+4. **Administrative Accomplishment Reporting:** Administrators can generate synchronized accomplishment reports with customizable date ranges (`start_date`, `end_date`) and selective metric toggles (`new_registered_residents`, `rbi_transfers`, `documents_issued`, `incidents`, `aid_requests`, `equipment_borrowing`, `communications`) identically represented in dashboard preview, WeasyPrint PDF export, and CSV download.
+
+See [ADR 029](decisions/029-post-defense-chairman-revisions-and-service-hardening.md).
