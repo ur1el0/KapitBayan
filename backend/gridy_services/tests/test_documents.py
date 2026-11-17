@@ -224,6 +224,55 @@ class DocumentRequestAPITests(ServiceAPIBaseTestCase):
         self.assertIsNotNone(verification)
         self.assertIn(str(verification.token), rendered_html)
 
+    def test_certificate_verification_creates_qr_for_released_request_and_handles_legacy_null_barangay(self):
+        barangay = Barangay.objects.create(name="QR Action Test Barangay")
+        self.official.barangay = barangay
+        self.official.save(update_fields=["barangay"])
+        self.resident.barangay = barangay
+        self.resident.save(update_fields=["barangay"])
+        self.client.force_login(self.official)
+
+        # Legacy digital request where barangay was null on document but present on user
+        doc = DocumentRequest.objects.create(
+            user=self.resident,
+            barangay=None,
+            document_type="Barangay Clearance",
+            status=DocumentRequest.Status.RELEASED,
+            or_number="OR-QR-1001",
+        )
+
+        url = reverse("document-request-certificate-verification", args=[doc.pk])
+        # Calling without confirmation flag returns 400
+        res_bad = self.client.post(url, {"confirm_paper_certificate_issued": False}, format="json")
+        self.assertEqual(res_bad.status_code, status.HTTP_400_BAD_REQUEST)
+
+        # Calling with confirmation flag succeeds, locks row safely, and updates barangay
+        res = self.client.post(url, {"confirm_paper_certificate_issued": True}, format="json")
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertTrue(res.data.get("active"))
+        self.assertIn("token", res.data)
+        self.assertIn("verify-certificate", res.data.get("verification_url", ""))
+
+        doc.refresh_from_db()
+        self.assertEqual(doc.barangay_id, barangay.id)
+
+    def test_fee_assessed_by_name_masks_pending_admin_username(self):
+        from gridy_services.serializers.documents import DocumentRequestSerializer
+        pending_admin = User.objects.create_user(
+            username="pending-admin-1234567890abcdef",
+            password="SecurePassword123!",
+            email="pending-admin@example.com",
+            role=User.Role.ADMIN,
+        )
+        doc = DocumentRequest.objects.create(
+            user=self.resident,
+            document_type="Barangay Clearance",
+            status=DocumentRequest.Status.RELEASED,
+            fee_assessed_by=pending_admin,
+        )
+        serializer = DocumentRequestSerializer(doc)
+        self.assertEqual(serializer.data.get("fee_assessed_by_name"), "Barangay Administrator")
+
     def test_field_official_cannot_review_payment(self):
         barangay = Barangay.objects.create(name="Payment Separation Test Barangay")
         field_official = User.objects.create_user(

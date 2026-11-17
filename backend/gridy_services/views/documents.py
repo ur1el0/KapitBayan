@@ -1595,17 +1595,22 @@ class DocumentRequestViewSet(viewsets.ModelViewSet):
             })
 
         with transaction.atomic():
-            locked_request = DocumentRequest.objects.select_for_update().select_related("user").get(
+            locked_request = DocumentRequest.objects.select_for_update().get(
                 pk=document_request.pk
             )
-            document_barangay_id = locked_request.barangay_id
-            if document_barangay_id != request.user.barangay_id:
+            document_barangay_id = locked_request.barangay_id or (
+                locked_request.user.barangay_id if locked_request.user_id else None
+            )
+            if not request.user.barangay_id or document_barangay_id != request.user.barangay_id:
                 raise Http404("Document request not found.")
             if locked_request.status != DocumentRequest.Status.RELEASED:
                 return Response(
                     {"detail": "A verification QR is available only after the request is released."},
                     status=status.HTTP_409_CONFLICT,
                 )
+            if locked_request.barangay_id is None:
+                locked_request.barangay_id = document_barangay_id
+                locked_request.save(update_fields=["barangay_id"])
 
             active_record = DocumentCertificateVerification.objects.filter(
                 document_request=locked_request,
