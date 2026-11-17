@@ -41,6 +41,7 @@ export const Activities: React.FC = () => {
     const [description, setDescription] = useState('');
     const [location, setLocation] = useState('');
     const [eventDate, setEventDate] = useState('');
+    const [formError, setFormError] = useState<string | null>(null);
 
     const closeModal = () => {
         setIsModalOpen(false);
@@ -49,6 +50,7 @@ export const Activities: React.FC = () => {
         setDescription('');
         setLocation('');
         setEventDate('');
+        setFormError(null);
     };
 
     const openCreateModal = () => {
@@ -69,6 +71,7 @@ export const Activities: React.FC = () => {
         setDescription(activity.description);
         setLocation(activity.location);
         setEventDate(toDateTimeLocalValue(activity.event_datetime));
+        setFormError(null);
         setIsModalOpen(true);
     };
     const fetchActivities = async (isRetry = false) => {
@@ -97,13 +100,36 @@ export const Activities: React.FC = () => {
 
     const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
+        setFormError(null);
+
+        if (!title.trim() || !location.trim() || !eventDate || !description.trim()) {
+            setFormError('Please fill out all required activity fields.');
+            return;
+        }
+
+        const parsedDate = new Date(eventDate);
+        if (Number.isNaN(parsedDate.getTime())) {
+            setFormError('Please choose a valid date and time.');
+            return;
+        }
+
+        const originalLocalDate = editingActivity
+            ? toDateTimeLocalValue(editingActivity.event_datetime)
+            : '';
+        if ((!editingActivity || eventDate !== originalLocalDate) && parsedDate.getTime() < Date.now()) {
+            const pastMessage = 'Activity date and time cannot be in the past.';
+            setFormError(pastMessage);
+            toast.error(pastMessage);
+            return;
+        }
+
         setIsSubmitting(true);
         try {
-            const isoDate = new Date(eventDate).toISOString();
+            const isoDate = parsedDate.toISOString();
             const payload = {
-                title,
-                description,
-                location,
+                title: title.trim(),
+                description: description.trim(),
+                location: location.trim(),
                 event_datetime: isoDate,
             };
             if (editingActivity) {
@@ -114,9 +140,14 @@ export const Activities: React.FC = () => {
             await fetchActivities();
             closeModal();
             toast.success(editingActivity ? 'Activity updated successfully.' : 'Activity scheduled successfully!');
-        } catch (err) {
+        } catch (err: any) {
             console.error("Failed to save activity", err);
-            toast.error(editingActivity ? 'Failed to update activity.' : 'Failed to schedule activity.');
+            const apiError =
+                err?.response?.data?.event_datetime?.[0]
+                || err?.response?.data?.detail
+                || (editingActivity ? 'Failed to update activity.' : 'Failed to schedule activity.');
+            setFormError(apiError);
+            toast.error(apiError);
         } finally {
             setIsSubmitting(false);
         }
@@ -257,6 +288,8 @@ export const Activities: React.FC = () => {
                     description={description}
                     setDescription={setDescription}
                     isSubmitting={isSubmitting}
+                    minDateTime={toDateTimeLocalValue(new Date().toISOString())}
+                    formError={formError}
                 />
             )}
         </div>

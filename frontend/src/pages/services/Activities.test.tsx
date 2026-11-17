@@ -83,7 +83,7 @@ describe('Activities', () => {
         fireEvent.click(screen.getByRole('button', { name: 'Schedule Activity' }));
         fireEvent.change(screen.getByLabelText('Event Title'), { target: { value: 'Health Screening' } });
         fireEvent.change(screen.getByLabelText('Location'), { target: { value: 'Barangay Hall' } });
-        fireEvent.change(screen.getByLabelText('Date & Time'), { target: { value: '2026-10-20T09:00' } });
+        fireEvent.change(screen.getByLabelText('Date & Time'), { target: { value: '2030-10-20T09:00' } });
         fireEvent.change(screen.getByLabelText('Description'), { target: { value: 'Community health screening.' } });
         fireEvent.click(screen.getByRole('button', { name: 'Schedule Event' }));
 
@@ -121,6 +121,33 @@ describe('Activities', () => {
         expect(axiosPrivate.get).toHaveBeenCalledTimes(2);
         expect(axiosPrivate.post).not.toHaveBeenCalled();
         expect(axiosPrivate.delete).not.toHaveBeenCalled();
+    });
+
+    it('blocks scheduling an activity with a past date or past same-day time', async () => {
+        vi.mocked(axiosPrivate.get).mockResolvedValueOnce({ data: [] } as never);
+
+        render(<Activities />);
+        await screen.findByText('No upcoming activities scheduled.');
+
+        fireEvent.click(screen.getByRole('button', { name: 'Schedule Activity' }));
+
+        const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+        oneHourAgo.setMinutes(oneHourAgo.getMinutes() - oneHourAgo.getTimezoneOffset());
+        const pastLocalValue = oneHourAgo.toISOString().slice(0, 16);
+
+        const dateInput = screen.getByLabelText('Date & Time');
+        expect(dateInput).toHaveAttribute('min');
+
+        fireEvent.change(screen.getByLabelText('Event Title'), { target: { value: 'Past Assembly' } });
+        fireEvent.change(screen.getByLabelText('Location'), { target: { value: 'Barangay Hall' } });
+        fireEvent.change(dateInput, { target: { value: pastLocalValue } });
+        fireEvent.change(screen.getByLabelText('Description'), { target: { value: 'Should be blocked.' } });
+        fireEvent.click(screen.getByRole('button', { name: 'Schedule Event' }));
+
+        expect(await screen.findByRole('alert')).toHaveTextContent(
+            'Activity date and time cannot be in the past.',
+        );
+        expect(axiosPrivate.post).not.toHaveBeenCalled();
     });
 
 });

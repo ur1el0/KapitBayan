@@ -15,6 +15,8 @@ export interface ScheduleActivityModalProps {
     description: string;
     setDescription: (val: string) => void;
     isSubmitting: boolean;
+    minDateTime?: string;
+    formError?: string | null;
 }
 
 export const ScheduleActivityModal: React.FC<ScheduleActivityModalProps> = ({
@@ -30,6 +32,8 @@ export const ScheduleActivityModal: React.FC<ScheduleActivityModalProps> = ({
     description,
     setDescription,
     isSubmitting,
+    minDateTime,
+    formError,
 }) => {
     const activityDialogTitleId = useId();
     const activityDialogRef = useModalFocus<HTMLDivElement>(true, onClose);
@@ -62,7 +66,15 @@ export const ScheduleActivityModal: React.FC<ScheduleActivityModalProps> = ({
                     </button>
                 </div>
 
-                <form onSubmit={onSubmit} className="p-6 space-y-5 bg-white">
+                <form noValidate onSubmit={onSubmit} className="p-6 space-y-5 bg-white">
+                    {formError && (
+                        <div
+                            role="alert"
+                            className="rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-2.5 text-sm font-medium text-rose-800"
+                        >
+                            {formError}
+                        </div>
+                    )}
                     <div>
                         <label htmlFor="activity-title" className="block text-sm font-semibold text-slate-700 mb-1.5">Event Title</label>
                         <input
@@ -100,6 +112,7 @@ export const ScheduleActivityModal: React.FC<ScheduleActivityModalProps> = ({
                                 id="activity-datetime"
                                 type="datetime-local"
                                 required
+                                min={minDateTime}
                                 value={eventDate}
                                 onChange={e => setEventDate(e.target.value)}
                                 className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl text-sm outline-none transition-all cursor-pointer"
