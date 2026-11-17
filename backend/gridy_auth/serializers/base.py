@@ -40,6 +40,20 @@ class ResidentPrivateImageField(ResidentEvidenceImageField):
 
 
 class BarangaySerializer(serializers.ModelSerializer):
+    has_kiosk_staff_pin = serializers.SerializerMethodField()
+    kiosk_staff_pin = serializers.CharField(
+        write_only=True,
+        required=False,
+        allow_blank=True,
+        max_length=12,
+        trim_whitespace=True,
+    )
+    clear_kiosk_staff_pin = serializers.BooleanField(
+        write_only=True,
+        required=False,
+        default=False,
+    )
+
     class Meta:
         model = Barangay
         fields = [
@@ -52,8 +66,40 @@ class BarangaySerializer(serializers.ModelSerializer):
             'captain_name', 
             'office_contact',
             'primary_color',
+            'has_kiosk_staff_pin',
+            'kiosk_staff_pin',
+            'clear_kiosk_staff_pin',
         ]
-        read_only_fields = ['id', 'name', 'municipality', 'province']
+        read_only_fields = ['id', 'name', 'municipality', 'province', 'has_kiosk_staff_pin']
+
+    def get_has_kiosk_staff_pin(self, obj) -> bool:
+        return bool(obj.kiosk_staff_pin_hash)
+
+    def validate_kiosk_staff_pin(self, value):
+        cleaned = (value or '').strip()
+        if not cleaned:
+            return ''
+        if len(cleaned) < 4 or len(cleaned) > 12:
+            raise serializers.ValidationError(
+                'Kiosk staff PIN must be between 4 and 12 characters.'
+            )
+        if not cleaned.isalnum():
+            raise serializers.ValidationError(
+                'Kiosk staff PIN must contain only letters and numbers.'
+            )
+        return cleaned
+
+    def update(self, instance, validated_data):
+        raw_pin = validated_data.pop('kiosk_staff_pin', None)
+        clear_pin = validated_data.pop('clear_kiosk_staff_pin', False)
+        instance = super().update(instance, validated_data)
+        if clear_pin:
+            instance.set_kiosk_staff_pin('')
+            instance.save(update_fields=['kiosk_staff_pin_hash'])
+        elif raw_pin:
+            instance.set_kiosk_staff_pin(raw_pin)
+            instance.save(update_fields=['kiosk_staff_pin_hash'])
+        return instance
 
 class ResidentSerializer(serializers.ModelSerializer):
     username = serializers.CharField(source='user.username', read_only=True, default='')

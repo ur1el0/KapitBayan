@@ -1,5 +1,6 @@
+from django.utils import timezone
 from rest_framework import serializers
-from ..models import EquipmentBorrowRequest
+from ..models import EquipmentBorrowRequest, MANILA_TIME_ZONE
 
 
 class EquipmentBorrowRequestSerializer(serializers.ModelSerializer):
@@ -15,6 +16,9 @@ class EquipmentBorrowRequestSerializer(serializers.ModelSerializer):
             "is_walkin",
             "walkin_name",
             "walkin_contact",
+            "walkin_purok",
+            "borrower_id_type",
+            "kiosk_auth_method",
             "item_type",
             "quantity",
             "borrow_date",
@@ -35,6 +39,9 @@ class EquipmentBorrowRequestSerializer(serializers.ModelSerializer):
             "resident",
             "resident_name",
             "is_walkin",
+            "walkin_purok",
+            "borrower_id_type",
+            "kiosk_auth_method",
             "status",
             "admin_notes",
             "reviewed_by",
@@ -88,6 +95,12 @@ class EquipmentBorrowRequestSerializer(serializers.ModelSerializer):
             "return_date",
             getattr(self.instance, "return_date", None),
         )
+        if self.instance is None and borrow_date:
+            today_manila = timezone.localtime(timezone.now(), MANILA_TIME_ZONE).date()
+            if borrow_date < today_manila:
+                raise serializers.ValidationError({
+                    "borrow_date": "Borrow date cannot be in the past."
+                })
         if borrow_date and return_date and return_date < borrow_date:
             raise serializers.ValidationError({
                 "return_date": "Return date must be on or after the borrow date."
@@ -101,6 +114,12 @@ class EquipmentBorrowRequestReviewSerializer(EquipmentBorrowRequestSerializer):
             "id",
             "resident",
             "resident_name",
+            "is_walkin",
+            "walkin_name",
+            "walkin_contact",
+            "walkin_purok",
+            "borrower_id_type",
+            "kiosk_auth_method",
             "item_type",
             "quantity",
             "borrow_date",

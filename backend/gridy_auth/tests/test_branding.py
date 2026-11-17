@@ -66,3 +66,36 @@ class BarangayBrandingAPITests(IsolatedAuthAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         other_barangay.refresh_from_db()
         self.assertEqual(other_barangay.primary_color, "#082B66")
+
+    def test_official_can_configure_and_clear_kiosk_staff_pin(self):
+        set_resp = self.client.patch(
+            self.detail_url,
+            {"kiosk_staff_pin": "2468"},
+            format="multipart",
+        )
+        self.assertEqual(set_resp.status_code, status.HTTP_200_OK)
+        self.assertTrue(set_resp.data["has_kiosk_staff_pin"])
+        self.assertNotIn("kiosk_staff_pin", set_resp.data)
+        self.assertNotIn("kiosk_staff_pin_hash", set_resp.data)
+
+        self.barangay.refresh_from_db()
+        self.assertTrue(self.barangay.check_kiosk_staff_pin("2468"))
+        self.assertNotEqual(self.barangay.kiosk_staff_pin_hash, "2468")
+
+        short_resp = self.client.patch(
+            self.detail_url,
+            {"kiosk_staff_pin": "12"},
+            format="multipart",
+        )
+        self.assertEqual(short_resp.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("kiosk_staff_pin", short_resp.data)
+
+        clear_resp = self.client.patch(
+            self.detail_url,
+            {"clear_kiosk_staff_pin": "true"},
+            format="multipart",
+        )
+        self.assertEqual(clear_resp.status_code, status.HTTP_200_OK)
+        self.assertFalse(clear_resp.data["has_kiosk_staff_pin"])
+        self.barangay.refresh_from_db()
+        self.assertFalse(self.barangay.check_kiosk_staff_pin("2468"))
