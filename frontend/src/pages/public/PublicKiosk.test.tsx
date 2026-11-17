@@ -103,10 +103,16 @@ describe('PublicKiosk Component', () => {
         expect(equipTab).toBeInTheDocument();
         fireEvent.click(equipTab);
 
-        // Fill out fields
+        // Switch to Walk-In (Staff Desk PIN) and fill out borrower & verification fields
+        fireEvent.click(screen.getByRole('button', { name: /Walk-In \(Staff Desk PIN\)/i }));
         fireEvent.change(screen.getByLabelText(/Full name/i), { target: { value: 'Elena Ramos' } });
+        fireEvent.change(screen.getByLabelText(/Barangay Staff Kiosk PIN/i), { target: { value: '4321' } });
+        fireEvent.change(screen.getByLabelText(/Contact number/i), { target: { value: '09181234567' } });
+        fireEvent.change(screen.getByLabelText(/Purok \/ Address in Barangay/i), { target: { value: 'Purok 2' } });
         fireEvent.change(screen.getByLabelText(/Equipment or Facility/i), { target: { value: 'Monoblock Chairs' } });
-        fireEvent.change(screen.getByLabelText(/Purpose of borrowing/i), { target: { value: 'Community Gathering' } });
+        fireEvent.change(screen.getByLabelText(/Specific purpose & venue of borrowing/i), {
+            target: { value: 'Community Gathering at Covered Court' },
+        });
 
         fireEvent.click(screen.getByLabelText(/I have read the privacy notice and agree/i));
 
@@ -131,5 +137,73 @@ describe('PublicKiosk Component', () => {
             expect(screen.getByText('EQ-000042')).toBeInTheDocument();
         });
         expect(screen.getByText(/Monoblock Chairs/i)).toBeInTheDocument();
+
+        const equipmentPostCall = vi.mocked(globalThis.fetch).mock.calls.find(([url]) =>
+            String(url).includes('/kiosk/equipment/'),
+        );
+        expect(equipmentPostCall).toBeDefined();
+        const sentBody = JSON.parse(String(equipmentPostCall?.[1]?.body));
+        expect(sentBody).toMatchObject({
+            auth_mode: 'staff_pin',
+            staff_kiosk_pin: '4321',
+            walkin_name: 'Elena Ramos',
+            walkin_contact: '09181234567',
+            walkin_purok: 'Purok 2',
+            borrower_id_type: 'Barangay ID',
+        });
+    });
+
+    it('supports verified resident sign-in on Borrow Equipment tab without saving session', async () => {
+        render(
+            <MemoryRouter>
+                <LanguageProvider>
+                    <PublicKiosk />
+                </LanguageProvider>
+            </MemoryRouter>
+        );
+
+        await waitFor(() => {
+            expect(screen.getByText('Ibabang Dupay (Lucena, Quezon)')).toBeInTheDocument();
+        });
+
+        fireEvent.change(screen.getByLabelText(/Barangay/i), { target: { value: '1' } });
+        fireEvent.click(screen.getByRole('tab', { name: /Borrow Equipment/i }));
+
+        fireEvent.change(screen.getByLabelText(/Resident username or email/i), { target: { value: 'maria_res' } });
+        fireEvent.change(screen.getByLabelText(/Account password/i), { target: { value: 'ResidentPass123!' } });
+        fireEvent.change(screen.getByLabelText(/Contact number/i), { target: { value: '09171234567' } });
+        fireEvent.change(screen.getByLabelText(/Purok \/ Address in Barangay/i), { target: { value: 'Purok 3' } });
+        fireEvent.change(screen.getByLabelText(/Specific purpose & venue of borrowing/i), {
+            target: { value: 'Neighborhood assembly at Purok 3 hall' },
+        });
+        fireEvent.click(screen.getByLabelText(/I have read the privacy notice and agree/i));
+
+        vi.mocked(globalThis.fetch).mockImplementation((url: string | URL | Request) => {
+            if (String(url).includes('/kiosk/equipment/')) {
+                return Promise.resolve({
+                    ok: true,
+                    json: () => Promise.resolve({ reference: 'EQ-000077', status: 'PENDING' }),
+                } as Response);
+            }
+            return Promise.resolve({ ok: true, json: () => Promise.resolve({}) } as Response);
+        });
+
+        fireEvent.click(screen.getByRole('button', { name: /Submit request/i }));
+
+        await waitFor(() => {
+            expect(screen.getByText('EQ-000077')).toBeInTheDocument();
+        });
+
+        const equipmentPostCall = vi.mocked(globalThis.fetch).mock.calls.find(([url]) =>
+            String(url).includes('/kiosk/equipment/'),
+        );
+        const sentBody = JSON.parse(String(equipmentPostCall?.[1]?.body));
+        expect(sentBody).toMatchObject({
+            auth_mode: 'resident',
+            resident_username: 'maria_res',
+            resident_password: 'ResidentPass123!',
+            walkin_contact: '09171234567',
+            walkin_purok: 'Purok 3',
+        });
     });
 });
