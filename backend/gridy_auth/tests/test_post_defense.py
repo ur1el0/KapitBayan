@@ -342,3 +342,22 @@ class ResidentTransferAPITests(IsolatedAuthAPITestCase):
                 data__status="REJECTED",
             ).exists()
         )
+
+    def test_non_integer_transfer_pk_returns_not_found_instead_of_server_error(self):
+        self.client.force_authenticate(user=self.resident)
+        proof_response = self.client.get("/api/v1/auth/resident-transfers/id/proof/")
+        self.assertEqual(proof_response.status_code, status.HTTP_404_NOT_FOUND)
+
+        self.client.force_authenticate(user=self.destination_admin)
+        approve_response = self.client.post(
+            "/api/v1/auth/resident-transfers/id/approve/",
+            {"residency_confirmed": True},
+            format="json",
+        )
+        self.assertEqual(approve_response.status_code, status.HTTP_404_NOT_FOUND)
+        reject_response = self.client.post(
+            "/api/v1/auth/resident-transfers/id/reject/",
+            {"review_note": "Test note"},
+            format="json",
+        )
+        self.assertEqual(reject_response.status_code, status.HTTP_404_NOT_FOUND)

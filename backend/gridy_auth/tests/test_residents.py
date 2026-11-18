@@ -175,3 +175,17 @@ class ResidentEmailUpdateAPITests(IsolatedAuthAPITestCase):
             status.HTTP_405_METHOD_NOT_ALLOWED,
         )
         self.assertEqual(Resident.objects.count(), initial_resident_count)
+
+    def test_non_integer_resident_pk_returns_not_found_instead_of_server_error(self):
+        self.assertEqual(
+            self.client.get("/api/v1/auth/resident/id/").status_code,
+            status.HTTP_404_NOT_FOUND,
+        )
+        self.assertEqual(
+            self.client.patch(
+                "/api/v1/auth/resident/id/",
+                {"email": "invalid@example.com"},
+                format="json",
+            ).status_code,
+            status.HTTP_404_NOT_FOUND,
+        )

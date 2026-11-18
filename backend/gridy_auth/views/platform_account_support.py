@@ -4,13 +4,13 @@ from django.conf import settings
 from django.contrib.auth.tokens import default_token_generator
 from django.db import transaction
 from django.db.models import Q
-from django.shortcuts import get_object_or_404
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import mixins, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
+from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 
 from gridy_audit.models import AuditLog
@@ -63,6 +63,7 @@ class PlatformAccountSupportViewSet(
 ):
     """Limited operator/superuser recovery and active-state support for barangay accounts."""
 
+    lookup_value_regex = r"\d+"
     permission_classes = [permissions.IsAuthenticated, IsBarangayOnboardingReviewer]
     throttle_classes = [SharedDatabaseScopedRateThrottle]
     throttle_scope = "platform_account_support"

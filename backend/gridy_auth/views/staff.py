@@ -45,6 +45,7 @@ class StaffManagementViewSet(
     Management of Field Officials by their assigned Barangay Admin.
     Admin account creation and listing are reserved for platform operators.
     """
+    lookup_value_regex = r"\d+"
     permission_classes = [permissions.IsAuthenticated, IsAssignedBarangayAdmin]
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "staff_management"
