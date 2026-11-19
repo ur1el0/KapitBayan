@@ -1,6 +1,6 @@
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from rest_framework import permissions, viewsets
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import PermissionDenied, ValidationError
 
 from gridy_audit.models import AuditLog
 from gridy_audit.services import log_action
@@ -11,6 +11,7 @@ from gridy_services.payment_serializers import PaymentRecipientSerializer
 
 
 class PaymentRecipientViewSet(viewsets.ModelViewSet):
+    lookup_value_regex = r"\d+"
     serializer_class = PaymentRecipientSerializer
     http_method_names = ["get", "post", "patch", "head", "options"]
 
@@ -34,7 +35,13 @@ class PaymentRecipientViewSet(viewsets.ModelViewSet):
         user = self.request.user
         if not user.barangay_id:
             raise PermissionDenied("Your account must belong to a barangay to manage payment recipients.")
-        recipient = serializer.save(barangay=user.barangay)
+        try:
+            with transaction.atomic():
+                recipient = serializer.save(barangay=user.barangay)
+        except IntegrityError as exc:
+            raise ValidationError({
+                "display_name": "A payment recipient with this provider and display name already exists for your barangay."
+            }) from exc
         log_action(
             user=user,
             action_type=AuditLog.ActionType.USER_ACTION,
@@ -48,7 +55,13 @@ class PaymentRecipientViewSet(viewsets.ModelViewSet):
     @transaction.atomic
     def perform_update(self, serializer):
         user = self.request.user
-        recipient = serializer.save()
+        try:
+            with transaction.atomic():
+                recipient = serializer.save()
+        except IntegrityError as exc:
+            raise ValidationError({
+                "display_name": "A payment recipient with this provider and display name already exists for your barangay."
+            }) from exc
         log_action(
             user=user,
             action_type=AuditLog.ActionType.USER_ACTION,

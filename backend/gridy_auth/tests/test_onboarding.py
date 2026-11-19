@@ -594,6 +594,29 @@ class BarangayOnboardingTests(TestCase):
         self.assertFalse(User.objects.filter(pk=first_admin.pk).exists())
         self.assertTrue(Barangay.objects.filter(pk=barangay.pk).exists())
 
+    def test_non_integer_application_pk_returns_not_found_instead_of_server_error(self):
+        reviewer = User.objects.create_user(
+            username="non_int_pk_operator", role=User.Role.BARANGAY_OPERATOR,
+            password="test-password", is_active=True,
+        )
+        self.client.force_authenticate(user=reviewer)
+        self.assertEqual(
+            self.client.get("/api/v1/auth/platform/barangay-applications/id/").status_code,
+            status.HTTP_404_NOT_FOUND,
+        )
+        self.assertEqual(
+            self.client.post("/api/v1/auth/platform/barangay-applications/id/approve/", {}, format="json").status_code,
+            status.HTTP_404_NOT_FOUND,
+        )
+        self.assertEqual(
+            self.client.post(
+                "/api/v1/auth/platform/barangay-applications/id/erase/",
+                {"reason": "Applicant requested removal.", "confirm_reference": "KB-id"},
+                format="json",
+            ).status_code,
+            status.HTTP_404_NOT_FOUND,
+        )
+
     def test_legacy_application_rows_are_preserved_and_read_only_to_superusers(self):
         application = BarangayApplication.objects.create(
             name=self.barangay.name,

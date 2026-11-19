@@ -5,11 +5,10 @@ import uuid
 from datetime import datetime
 from django.db import transaction
 from django.db.transaction import atomic as import_atomic
-from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import status, permissions, viewsets
 from rest_framework.views import APIView
-from rest_framework.generics import ListAPIView
+from rest_framework.generics import ListAPIView, get_object_or_404
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 from drf_spectacular.utils import extend_schema, OpenApiTypes
@@ -382,6 +381,7 @@ class RejectResidentView(APIView):
 
 class ResidentViewSet(viewsets.ModelViewSet):
     """Directory endpoint for verified residents. Supports list, retrieve, update, and delete."""
+    lookup_value_regex = r"\d+"
     http_method_names = ["get", "put", "patch", "delete", "head", "options"]
     permission_classes = [permissions.IsAuthenticated, IsBarangayOfficial]
     serializer_class = ResidentAdminReviewSerializer

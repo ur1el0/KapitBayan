@@ -119,6 +119,7 @@ class BarangayViewSet(viewsets.ModelViewSet):
     Settings endpoint for Barangay Identity.
     Only allows GET and PATCH
     """
+    lookup_value_regex = r"\d+"
     permission_classes = [permissions.IsAuthenticated, IsBarangayOfficial]
     serializer_class = BarangaySerializer
     parser_classes = [MultiPartParser, FormParser]

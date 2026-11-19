@@ -38,6 +38,7 @@ Use this page to find current system guidance. Source code, migrations, generate
 - [Adviser and panel revision action plan](revisions/adviser-panel-comments-action-plan.md) — response status for each item in the revision matrix.
 - [Flutter mobile implementation note](revisions/flutter-implementation-note.md) — implementation details and current offline/device limitations for manuscript revision.
 - [Revision verification log](revisions/revision-verification-log.md) — checks run in this working branch and their environment limits.
+- [Vulnerability scan and security remediation log](revisions/vulnerability-scan-findings.md) — automated dependency, SAST, deploy-check, and OWASP ZAP findings and fixes.
 - [Resident web browser compatibility checklist](revisions/browser-compatibility-checklist.md) — required browser evidence for revision-matrix item 26.
 - [KapitBayan user manual draft](manuals/KapitBayan_User_Manual.md) — role-based usage guide for adviser review.
 

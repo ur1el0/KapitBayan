@@ -3,7 +3,7 @@ from django.contrib.auth.tokens import default_token_generator
 from django.db import IntegrityError, transaction
 from django.db.models import Q
 from django.http import FileResponse, Http404
-from django.shortcuts import get_object_or_404
+from rest_framework.generics import get_object_or_404
 from django.utils import timezone
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
@@ -297,6 +297,7 @@ class PlatformBarangayApplicationViewSet(
 ):
     """Let Barangay Operators or controlled superusers review new Barangays."""
 
+    lookup_value_regex = r"\d+"
     permission_classes = [permissions.IsAuthenticated, IsBarangayOnboardingReviewer]
     throttle_classes = [SharedDatabaseScopedRateThrottle]
     throttle_scope = "platform_account_support"

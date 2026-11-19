@@ -245,6 +245,40 @@ class DocumentPaymentWorkflowTests(APITestCase):
         operator_response = self.client.get(reverse("payment-recipient-list"))
         self.assertEqual(operator_response.status_code, status.HTTP_403_FORBIDDEN)
 
+    def test_duplicate_payment_recipient_create_and_patch_return_400_validation_error(self):
+        self.client.force_authenticate(self.official)
+
+        create_dup = self.client.post(
+            reverse("payment-recipient-list"),
+            {
+                "provider": self.gcash_recipient.provider,
+                "display_name": f"  {self.gcash_recipient.display_name}  ",
+                "recipient_name": "Barangay Treasurer",
+                "recipient_identifier": "09170000099",
+            },
+            format="json",
+        )
+        self.assertEqual(create_dup.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("display_name", create_dup.data)
+
+        secondary = PaymentRecipient.objects.create(
+            barangay=self.barangay,
+            provider=self.gcash_recipient.provider,
+            display_name="GCash Secondary Desk",
+            recipient_name="Barangay Treasurer",
+            recipient_identifier="09170000088",
+        )
+        patch_dup = self.client.patch(
+            reverse("payment-recipient-detail", args=[secondary.pk]),
+            {"display_name": self.gcash_recipient.display_name},
+            format="json",
+        )
+        self.assertEqual(patch_dup.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("display_name", patch_dup.data)
+
+        non_int_resp = self.client.get("/api/v1/payment-recipients/id/")
+        self.assertEqual(non_int_resp.status_code, status.HTTP_404_NOT_FOUND)
+
     def test_legacy_role_cannot_view_another_tenant_document(self):
         document = self.make_request(
             payment_method=DocumentRequest.PaymentMethod.GCASH,

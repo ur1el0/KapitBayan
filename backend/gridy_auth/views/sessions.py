@@ -8,6 +8,7 @@ class SessionViewSet(viewsets.ReadOnlyModelViewSet):
     """
     Exposes the user's active and revoked sessions for security management.
     """
+    lookup_value_regex = r"\d+"
     serializer_class = RefreshSessionSerializer
     permission_classes = [permissions.IsAuthenticated]
 

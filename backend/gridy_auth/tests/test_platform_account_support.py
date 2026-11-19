@@ -177,3 +177,15 @@ class PlatformAccountSupportTests(IsolatedAuthAPITestCase):
         }, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertTrue(User.objects.filter(pk=self.admin.pk).exists())
+
+    def test_non_integer_account_pk_returns_not_found_instead_of_server_error(self):
+        self.client.force_authenticate(self.operator)
+        retrieve_response = self.client.get("/api/v1/auth/platform/accounts/id/")
+        self.assertEqual(retrieve_response.status_code, status.HTTP_404_NOT_FOUND)
+
+        erase_response = self.client.post(
+            "/api/v1/auth/platform/accounts/id/erase/",
+            {"reason": "DUPLICATE_ACCOUNT", "confirm_username": "id"},
+            format="json",
+        )
+        self.assertEqual(erase_response.status_code, status.HTTP_404_NOT_FOUND)

@@ -5,7 +5,7 @@ from django.conf import settings
 from django.db import IntegrityError, transaction
 from django.db.models import Q
 from django.http import FileResponse, Http404
-from django.shortcuts import get_object_or_404
+from rest_framework.generics import get_object_or_404
 from django.utils import timezone
 from PIL import Image
 from rest_framework import mixins, permissions, status, viewsets
@@ -79,6 +79,7 @@ class ResidentTransferViewSet(
 ):
     """A receiving Barangay Admin reviews resident-initiated account transfers."""
 
+    lookup_value_regex = r"\d+"
     permission_classes = [permissions.IsAuthenticated]
     http_method_names = ["get", "post", "head", "options"]
 

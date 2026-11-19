@@ -30,6 +30,27 @@ class PaymentRecipientSerializer(serializers.ModelSerializer):
         ):
             if field in attrs and isinstance(attrs[field], str):
                 attrs[field] = attrs[field].strip()
+
+        request = self.context.get("request")
+        barangay_id = (
+            self.instance.barangay_id
+            if self.instance is not None
+            else getattr(getattr(request, "user", None), "barangay_id", None)
+        )
+        provider = attrs.get("provider", getattr(self.instance, "provider", None))
+        display_name = attrs.get("display_name", getattr(self.instance, "display_name", None))
+        if barangay_id is not None and provider and display_name:
+            duplicates = PaymentRecipient.objects.filter(
+                barangay_id=barangay_id,
+                provider=provider,
+                display_name=display_name,
+            )
+            if self.instance is not None:
+                duplicates = duplicates.exclude(pk=self.instance.pk)
+            if duplicates.exists():
+                raise serializers.ValidationError({
+                    "display_name": "A payment recipient with this provider and display name already exists for your barangay."
+                })
         return attrs
 
 
