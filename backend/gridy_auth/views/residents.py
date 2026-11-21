@@ -245,6 +245,8 @@ class PendingResidentsView(ListAPIView):
 
     def get_queryset(self):
         user = self.request.user
+        if not user or not user.is_authenticated or user.barangay_id is None:
+            return Resident.objects.none()
         return (
             Resident.objects.filter(
                 is_verified=False,
@@ -425,6 +427,8 @@ class ResidentViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
+        if not user or not user.is_authenticated or user.barangay_id is None:
+            return Resident.objects.none()
         return Resident.objects.filter(
             is_verified=True,
             user__barangay=user.barangay,

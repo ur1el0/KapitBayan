@@ -169,7 +169,8 @@ def build_accomplishment_report(
 
     # 2. Certificates & Document Issuance
     barangay_docs_in_period = DocumentRequest.objects.filter(
-        Q(barangay=barangay) | Q(barangay__isnull=True, user__barangay=barangay),
+        Q(barangay=barangay)
+        | Q(barangay__isnull=True, is_walkin=False, user__barangay=barangay),
         created_at__gte=period_start,
         created_at__lt=period_end,
     )
@@ -201,7 +202,8 @@ def build_accomplishment_report(
 
     # 3. Community Issues, Aid & Equipment Services
     issue_aggregates = IssueReport.objects.filter(
-        reporter__barangay=barangay,
+        Q(barangay=barangay)
+        | Q(barangay__isnull=True, reporter__barangay=barangay),
         created_at__gte=period_start,
         created_at__lt=period_end,
     ).aggregate(
