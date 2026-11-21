@@ -28,6 +28,12 @@ class AuthAPITests(IsolatedAuthAPITestCase):
             email="resident@example.com",
             role=User.Role.RESIDENT,
         )
+        self.resident_profile = Resident.objects.create(
+            user=self.user,
+            full_name="Resident Test",
+            birth_date="1995-05-15",
+            is_verified=True,
+        )
 
     def test_user_login_success(self):
         url = reverse('auth_login')
@@ -296,12 +302,7 @@ class AuthAPITests(IsolatedAuthAPITestCase):
         )
 
     def test_token_refresh_denied_after_resident_verification_revoked(self):
-        resident_profile = Resident.objects.create(
-            user=self.user,
-            full_name="Verification Test Resident",
-            birth_date="1995-05-15",
-            is_verified=True,
-        )
+        resident_profile = self.resident_profile
 
         login_response = self.client.post(
             reverse("auth_login"),
@@ -330,13 +331,6 @@ class AuthAPITests(IsolatedAuthAPITestCase):
             "username": self.username,
             "password": self.password
         }
-
-        Resident.objects.create(
-            user=self.user,
-            full_name="Verified Test Resident",
-            birth_date="1995-05-15",
-            is_verified=True,
-        )
 
         login_response = self.client.post(login_url, login_payload, format='json')
         self.assertEqual(login_response.status_code, status.HTTP_200_OK)
@@ -646,6 +640,26 @@ class AuthAPITests(IsolatedAuthAPITestCase):
         self.assertTrue(
             BlacklistedToken.objects.filter(token__jti=refresh_mp['jti']).exists()
         )
+
+    def test_profileless_resident_cannot_login(self):
+        profileless_user = User.objects.create_user(
+            username="profileless_resident",
+            password=self.password,
+            email="profileless@example.com",
+            role=User.Role.RESIDENT,
+            barangay=self.barangay,
+        )
+
+        response = self.client.post(
+            reverse("auth_login"),
+            {"username": profileless_user.username, "password": self.password},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertNotIn("access", response.data)
+        self.assertNotIn("refresh_token", response.cookies)
+        self.assertFalse(RefreshSession.objects.filter(user=profileless_user).exists())
 
 
 class ProfileIdentityCollisionSecurityTests(IsolatedAuthAPITestCase):

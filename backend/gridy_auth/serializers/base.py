@@ -1,11 +1,26 @@
 from rest_framework import serializers
+from django.db import transaction
 from django.db.models import Q
 from django.urls import reverse
 from gridy_auth.models import User, Resident, Barangay, RefreshSession
 from gridy_auth.guardianship import guardian_account_is_eligible
+from gridy_auth.lifecycle import (
+    RESIDENT_PRIVATE_MEDIA_FIELDS,
+    attempt_private_media_cleanup_safely,
+    queue_private_media_cleanup,
+)
 
 
-MAX_RESIDENT_EVIDENCE_IMAGE_SIZE_BYTES = 5 * 1024 * 1024
+MAX_IMAGE_UPLOAD_SIZE_BYTES = 5 * 1024 * 1024
+MAX_RESIDENT_EVIDENCE_IMAGE_SIZE_BYTES = MAX_IMAGE_UPLOAD_SIZE_BYTES
+
+
+def _validate_image_max_size(value, message):
+    if value is not None and value.size > MAX_IMAGE_UPLOAD_SIZE_BYTES:
+        raise serializers.ValidationError(message)
+    return value
+
+
 SIGN_IN_EMAIL_ROLES = (
     User.Role.ADMIN,
     User.Role.FIELD_OFFICIAL,
@@ -29,11 +44,10 @@ class ResidentEvidenceImageField(serializers.ImageField):
 
     def to_internal_value(self, data):
         uploaded_file = super().to_internal_value(data)
-        if uploaded_file and uploaded_file.size > MAX_RESIDENT_EVIDENCE_IMAGE_SIZE_BYTES:
-            raise serializers.ValidationError(
-                "Resident ID and residency proof images must be 5 MiB or smaller."
-            )
-        return uploaded_file
+        return _validate_image_max_size(
+            uploaded_file,
+            "Resident ID and residency proof images must be 5 MiB or smaller.",
+        )
 
 
 class ResidentPrivateImageField(ResidentEvidenceImageField):
@@ -104,6 +118,12 @@ class BarangaySerializer(serializers.ModelSerializer):
                 'Kiosk staff PIN must contain only letters and numbers.'
             )
         return cleaned
+
+    def validate_logo(self, value):
+        return _validate_image_max_size(value, "Barangay logo images must be 5 MiB or smaller.")
+
+    def validate_city_seal(self, value):
+        return _validate_image_max_size(value, "City seal images must be 5 MiB or smaller.")
 
     def update(self, instance, validated_data):
         raw_pin = validated_data.pop('kiosk_staff_pin', None)
@@ -202,6 +222,11 @@ class ResidentSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         # Never permit updating is_verified through resident profile updates
         validated_data.pop('is_verified', None)
+        previous_private_files = {
+            field_name: getattr(instance, field_name).name
+            for field_name in RESIDENT_PRIVATE_MEDIA_FIELDS
+            if getattr(instance, field_name, None) and getattr(instance, field_name).name
+        }
 
         remove_philsys = validated_data.pop('remove_philsys_id_photo', False)
         remove_secondary = validated_data.pop('remove_secondary_id_photo', False)
@@ -244,7 +269,22 @@ class ResidentSerializer(serializers.ModelSerializer):
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
 
-        instance.save()
+        with transaction.atomic():
+            instance.save()
+            for field_name, old_file_name in previous_private_files.items():
+                current_field = getattr(instance, field_name, None)
+                new_file_name = current_field.name if current_field else None
+                if old_file_name and old_file_name != new_file_name:
+                    cleanup = queue_private_media_cleanup(
+                        "gridy_auth.Resident",
+                        field_name,
+                        old_file_name,
+                    )
+                    transaction.on_commit(
+                        lambda cleanup_id=cleanup.pk: attempt_private_media_cleanup_safely(
+                            cleanup_id
+                        )
+                    )
         return instance
 
 class ResidentAdminUpdateSerializer(ResidentSerializer):
@@ -383,9 +423,7 @@ class UserSerializer(serializers.ModelSerializer):
         return normalized_email
 
     def validate_profile_picture(self, value):
-        if value is not None and value.size > 5 * 1024 * 1024:
-            raise serializers.ValidationError("Profile pictures must be 5 MB or smaller.")
-        return value
+        return _validate_image_max_size(value, "Profile pictures must be 5 MB or smaller.")
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)

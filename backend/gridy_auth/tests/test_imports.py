@@ -365,3 +365,51 @@ class ResidentImportAPITests(IsolatedAuthAPITestCase):
         self.assertEqual(User.objects.count(), initial_user_count)
         self.assertEqual(Resident.objects.count(), initial_resident_count)
         self.assertEqual(AuditLog.objects.count(), initial_audit_count)
+
+    def test_import_residents_validates_case_collisions_email_format_future_dates_and_lengths(self):
+        barangay = Barangay.objects.create(name="Import Validation Hardening Barangay")
+        admin = User.objects.create_user(
+            username="import_validation_admin",
+            email="import-admin@barangay.gov.ph",
+            password="ImportAdminPassword123!",
+            role=User.Role.ADMIN,
+            barangay=barangay,
+        )
+        User.objects.create_user(
+            username="existing_resident_user",
+            email="existing-res@example.com",
+            password="StrongTestPassword123!",
+            role=User.Role.RESIDENT,
+            barangay=barangay,
+        )
+        self.client.force_authenticate(user=admin)
+
+        overlong_name = "N" * 260
+        csv_data = (
+            "username,email,full_name,birth_date,contact_number,voter_status\n"
+            "EXISTING_RESIDENT_USER,new1@example.com,Duplicate Casing,1995-01-01,,False\n"
+            "import-admin@barangay.gov.ph,new2@example.com,Admin Collision,1995-01-01,,False\n"
+            "bad_email_row,not-an-email,Bad Email,1995-01-01,,False\n"
+            "future_bday_row,future@example.com,Future Born,2099-01-01,,False\n"
+            f"long_name_row,long@example.com,{overlong_name},1995-01-01,,False\n"
+            "clean_imported_row,clean@example.com,Clean Import,1995-01-01,09171234567,True\n"
+        )
+        uploaded_file = SimpleUploadedFile(
+            "validated_residents.csv",
+            csv_data.encode("utf-8"),
+            content_type="text/csv",
+        )
+
+        response = self.client.post(
+            reverse("import_residents"),
+            {"file": uploaded_file},
+            format="multipart",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_207_MULTI_STATUS)
+        self.assertEqual(response.data["imported"], 1)
+        self.assertEqual(response.data["skipped_due_to_duplicate"], 1)
+        self.assertEqual(len(response.data["errors"]), 4)
+        self.assertTrue(User.objects.filter(username="clean_imported_row").exists())
+        self.assertFalse(User.objects.filter(username="future_bday_row").exists())
+        self.assertFalse(User.objects.filter(username="long_name_row").exists())

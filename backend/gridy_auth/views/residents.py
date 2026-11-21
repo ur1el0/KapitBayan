@@ -3,7 +3,10 @@ import io
 import logging
 import uuid
 from datetime import datetime
+from django.core.exceptions import ValidationError as DjangoValidationError
+from django.core.validators import EmailValidator
 from django.db import transaction
+from django.db.models import Q
 from django.db.transaction import atomic as import_atomic
 from django.utils import timezone
 from rest_framework import status, permissions, viewsets
@@ -20,6 +23,7 @@ from gridy_auth.serializers import (
     ResidentAdminReviewSerializer,
     ResidentSerializer,
 )
+from gridy_auth.serializers.base import has_sign_in_identity_conflict
 from gridy_auth.permissions import IsBarangayOfficial
 from gridy_auth.lifecycle import erase_user_account
 from gridy_audit.services import log_action
@@ -122,20 +126,38 @@ class ResidentImportView(APIView):
         batch_id = str(uuid.uuid4())
 
         try:
+            email_validator = EmailValidator()
+            today = timezone.localdate()
             with import_atomic():
                 for row_idx, row in enumerate(rows, start=1):
-                    # Sanitize inputs by stripping whitespace
-                    username = (row.get('username') or '').strip()
+                    # Normalize and validate CSV fields before writing any account rows.
+                    username = (row.get('username') or '').strip().lower()
                     email = (row.get('email') or '').strip().lower()
                     full_name = (row.get('full_name') or '').strip()
                     birth_date_str = (row.get('birth_date') or '').strip()
                     contact_number = (row.get('contact_number') or '').strip()
                     purok = (row.get('purok') or '').strip()
                     voter_status_str = (row.get('voter_status') or 'False').strip().lower()
-                    
+
                     if not username or not full_name or not birth_date_str:
                         errors.append(f"Row {row_idx}: Missing required fields ('username', 'full_name', 'birth_date').")
                         continue
+
+                    if (
+                        len(username) > 150
+                        or len(full_name) > 255
+                        or len(contact_number) > 20
+                        or len(purok) > 100
+                    ):
+                        errors.append(f"Row {row_idx}: One or more text fields exceed maximum allowed lengths.")
+                        continue
+
+                    if email:
+                        try:
+                            email_validator(email)
+                        except DjangoValidationError:
+                            errors.append(f"Row {row_idx}: Invalid email address format.")
+                            continue
 
                     # Fallback date parsing for robust sanitization
                     birth_date = None
@@ -150,11 +172,25 @@ class ResidentImportView(APIView):
                         errors.append(f"Row {row_idx}: Invalid date format for '{birth_date_str}'. Expected YYYY-MM-DD or MM/DD/YYYY.")
                         continue
 
-                    if User.objects.filter(username=username).exists():
+                    if birth_date > today:
+                        errors.append(f"Row {row_idx}: Birth date '{birth_date_str}' cannot be in the future.")
+                        continue
+
+                    if User.objects.filter(username__iexact=username).exists():
                         skipped_count += 1
                         continue
 
-                    if email and User.objects.filter(email__iexact=email).exists():
+                    if has_sign_in_identity_conflict(username):
+                        errors.append(
+                            f"Row {row_idx}: Username '{username}' conflicts with an existing official sign-in identity."
+                        )
+                        continue
+
+                    if email and (
+                        User.objects.filter(
+                            Q(email__iexact=email) | Q(username__iexact=email)
+                        ).exists()
+                    ):
                         errors.append(f"Row {row_idx}: Email '{email}' is already in use by another resident.")
                         continue
 

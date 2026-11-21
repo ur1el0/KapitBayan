@@ -2,7 +2,10 @@ from datetime import date
 from io import BytesIO
 from unittest.mock import patch
 
+from django.core.files.base import ContentFile
+from django.core.files.storage import default_storage
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.db import connections
 from django.urls import reverse
 from PIL import Image
 from rest_framework import status
@@ -361,3 +364,45 @@ class ResidentTransferAPITests(IsolatedAuthAPITestCase):
             format="json",
         )
         self.assertEqual(reject_response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_transfer_approval_cleans_old_billing_photo_and_sends_notifications_after_transaction(
+        self,
+    ):
+        old_billing_content = ContentFile(
+            create_test_image_upload("old_billing.png").read(),
+            name="old_billing.png",
+        )
+        self.profile.utility_billing_photo.save(
+            "old_billing.png",
+            old_billing_content,
+            save=True,
+        )
+        old_billing_name = self.profile.utility_billing_photo.name
+        self.assertTrue(default_storage.exists(old_billing_name))
+
+        create_response = self._create_transfer()
+        self.assertEqual(create_response.status_code, status.HTTP_201_CREATED)
+        transfer_id = create_response.data["id"]
+
+        seen_atomic_depths = []
+
+        def record_atomic_depth(*_args, **_kwargs):
+            seen_atomic_depths.append(len(connections["default"].atomic_blocks))
+            return 1
+
+        self.client.force_authenticate(user=self.destination_admin)
+        baseline_atomic_depth = len(connections["default"].atomic_blocks)
+        with patch(
+            "gridy_auth.views.post_defense.send_email_notification_to_user",
+            side_effect=record_atomic_depth,
+        ), patch("gridy_auth.views.post_defense.send_notification_to_user"):
+            with self.captureOnCommitCallbacks(execute=True):
+                response = self.client.post(
+                    reverse("resident-transfer-approve", args=[transfer_id]),
+                    {"residency_confirmed": True},
+                    format="json",
+                )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(seen_atomic_depths, [baseline_atomic_depth])
+        self.assertFalse(default_storage.exists(old_billing_name))
