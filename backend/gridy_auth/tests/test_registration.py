@@ -614,3 +614,34 @@ class AuthRegistrationAPITests(IsolatedAuthAPITestCase):
         self.assertEqual(res4.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("barangay_id", res4.data)
         self.assertFalse(User.objects.filter(username="res_inactive").exists())
+
+    def test_registration_rejects_username_matching_official_email(self):
+        official_email = "captain.login@barangay.gov.ph"
+        User.objects.create_user(
+            username="internal_captain_uuid",
+            email=official_email,
+            password="SecurePassword123!",
+            role=User.Role.ADMIN,
+            barangay=self.barangay,
+        )
+
+        response = self.client.post(
+            reverse("auth_register"),
+            {
+                "username": official_email.upper(),
+                "email": "fresh.resident@example.com",
+                "password": "ValidPassword123!",
+                "full_name": "Attempted Collision Resident",
+                "birth_date": "2000-01-01",
+                "barangay_id": self.barangay.id,
+                "privacy_consent": True,
+                "purok": "Purok 1",
+                "privacy_consent_version": settings.PRIVACY_CONSENT_VERSION,
+                "philsys_id_photo": create_test_image_upload(),
+            },
+            format="multipart",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("username", response.data)
+        self.assertFalse(User.objects.filter(email="fresh.resident@example.com").exists())
