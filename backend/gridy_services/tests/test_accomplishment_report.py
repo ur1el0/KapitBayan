@@ -345,3 +345,41 @@ class AccomplishmentReportAPITests(APITestCase):
             {"year": 2026, "month": 10, "metrics": "unknown_metric"},
         )
         self.assertEqual(bad_metric.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_accomplishment_report_includes_walkin_issues_and_excludes_transferred_foreign_issues(self):
+        walkin_resolved = IssueReport.objects.create(
+            reporter=None,
+            barangay=self.barangay,
+            walkin_name="Kiosk Citizen 1",
+            title="Flooded Alley",
+            description="Blocked canal",
+            location="Purok 4",
+            status=IssueReport.Status.RESOLVED,
+        )
+        walkin_pending = IssueReport.objects.create(
+            reporter=None,
+            barangay=self.barangay,
+            walkin_name="Kiosk Citizen 2",
+            title="Loose Drainage Cover",
+            description="Reported at barangay hall",
+            location="Purok 5",
+            status=IssueReport.Status.PENDING,
+        )
+        foreign_history_issue = IssueReport.objects.create(
+            reporter=self.resident,
+            barangay=self.other_barangay,
+            title="Old Barangay Foreign Issue",
+            description="Filed in prior barangay before transfer",
+            location="Old Purok",
+            status=IssueReport.Status.PENDING,
+        )
+        IssueReport.objects.filter(
+            pk__in=[walkin_resolved.pk, walkin_pending.pk, foreign_history_issue.pk]
+        ).update(created_at=self.oct_dt)
+
+        self.client.force_login(self.admin)
+        response = self.client.get(self.report_url, {"year": 2026, "month": 10})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["community_services"]["issues_submitted"], 3)
+        self.assertEqual(response.data["community_services"]["issues_resolved"], 2)

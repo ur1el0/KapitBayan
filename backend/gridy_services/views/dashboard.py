@@ -38,9 +38,10 @@ class DashboardSummaryView(APIView):
         # 1. Total Residents for this Barangay (1 query)
         total_res = User.objects.filter(role=User.Role.RESIDENT, barangay=user.barangay).count()
 
-        # 2. Document Request Statistics (Include digital resident and walk-in records)
+        # 2. Document Request Statistics (Preserve historical origin after resident transfers)
         doc_stats = DocumentRequest.objects.filter(
-            Q(user__barangay=user.barangay) | Q(barangay=user.barangay)
+            Q(barangay=user.barangay)
+            | Q(barangay__isnull=True, is_walkin=False, user__barangay=user.barangay)
         ).aggregate(
             total=Count('id'),
             pending=Count('id', filter=Q(status=DocumentRequest.Status.PENDING)),
@@ -51,7 +52,10 @@ class DashboardSummaryView(APIView):
         )
 
         # 3. Issue Reports Statistics, Urgency & Category Breakdown (1 SINGLE AGGREGATE QUERY instead of 15)
-        issue_stats = IssueReport.objects.filter(reporter__barangay=user.barangay).aggregate(
+        issue_stats = IssueReport.objects.filter(
+            Q(barangay=user.barangay)
+            | Q(barangay__isnull=True, reporter__barangay=user.barangay)
+        ).aggregate(
             total=Count('id'),
             pending=Count('id', filter=Q(status=IssueReport.Status.PENDING)),
             in_progress=Count('id', filter=Q(status=IssueReport.Status.IN_PROGRESS)),
