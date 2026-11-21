@@ -16,6 +16,10 @@ from rest_framework.response import Response
 
 from gridy_audit.models import AuditLog
 from gridy_audit.services import log_action
+from gridy_auth.lifecycle import (
+    attempt_private_media_cleanup_safely,
+    queue_private_media_cleanup,
+)
 from gridy_auth.models import Barangay, LoginEvent, Resident, ResidentTransferRequest, User
 from gridy_auth.serializers.post_defense import (
     LoginEventSerializer,
@@ -293,6 +297,11 @@ class ResidentTransferViewSet(
             resident_user.save(update_fields=["barangay"])
 
             # Update resident profile address details to match destination
+            old_billing_name = (
+                profile.utility_billing_photo.name
+                if profile.utility_billing_photo
+                else None
+            )
             profile_update_fields = []
             if transfer.purok:
                 profile.purok = transfer.purok
@@ -305,6 +314,22 @@ class ResidentTransferViewSet(
                 profile_update_fields.append("utility_billing_photo")
             if profile_update_fields:
                 profile.save(update_fields=profile_update_fields)
+                new_billing_name = (
+                    profile.utility_billing_photo.name
+                    if profile.utility_billing_photo
+                    else None
+                )
+                if old_billing_name and old_billing_name != new_billing_name:
+                    cleanup = queue_private_media_cleanup(
+                        "gridy_auth.Resident",
+                        "utility_billing_photo",
+                        old_billing_name,
+                    )
+                    transaction.on_commit(
+                        lambda cleanup_id=cleanup.pk: attempt_private_media_cleanup_safely(
+                            cleanup_id
+                        )
+                    )
 
             transfer.status = ResidentTransferRequest.Status.APPROVED
             transfer.reviewed_by = request.user
@@ -333,10 +358,6 @@ class ResidentTransferViewSet(
                 f"Your request to transfer your KapitBayan account to Barangay {transfer.destination_barangay.name} "
                 "has been approved. Future service requests and queue tickets will now be with your new Barangay."
             )
-            send_email_notification_to_user(resident_user, title, body)
-            send_notification_to_user(
-                resident_user, title, body, data={"type": "transfer", "status": "APPROVED"}
-            )
             try:
                 from gridy_communications.models import ResidentNotification
                 ResidentNotification.objects.create(
@@ -348,6 +369,12 @@ class ResidentTransferViewSet(
                 )
             except Exception as exc:
                 logger.warning("Could not persist in-app resident transfer notification: %s", exc)
+
+        # Dispatch external SMTP/FCM outside the transaction lock window.
+        send_email_notification_to_user(resident_user, title, body)
+        send_notification_to_user(
+            resident_user, title, body, data={"type": "transfer", "status": "APPROVED"}
+        )
 
         return Response(ResidentTransferRequestSerializer(transfer).data)
 
@@ -383,10 +410,6 @@ class ResidentTransferViewSet(
                 f"Your request to transfer to Barangay {transfer.destination_barangay.name} was rejected. "
                 f"Reason: {note}"
             )
-            send_email_notification_to_user(transfer.resident, title, body)
-            send_notification_to_user(
-                transfer.resident, title, body, data={"type": "transfer", "status": "REJECTED"}
-            )
             try:
                 from gridy_communications.models import ResidentNotification
                 ResidentNotification.objects.create(
@@ -398,5 +421,11 @@ class ResidentTransferViewSet(
                 )
             except Exception as exc:
                 logger.warning("Could not persist in-app resident transfer rejection notification: %s", exc)
+
+        # Dispatch external SMTP/FCM outside the transaction lock window.
+        send_email_notification_to_user(transfer.resident, title, body)
+        send_notification_to_user(
+            transfer.resident, title, body, data={"type": "transfer", "status": "REJECTED"}
+        )
 
         return Response(ResidentTransferRequestSerializer(transfer).data)
