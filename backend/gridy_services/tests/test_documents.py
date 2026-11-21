@@ -916,3 +916,32 @@ class DocumentRequestAPITests(ServiceAPIBaseTestCase):
                 status.HTTP_404_NOT_FOUND,
                 f"Expected 404 for non-integer path {path}",
             )
+
+    def test_generic_update_methods_cannot_bypass_document_review_audit_trail(self):
+        barangay = self._assign_shared_barangay()
+        doc = DocumentRequest.objects.create(
+            user=self.resident,
+            barangay=barangay,
+            document_type="Barangay Clearance",
+            purpose="Original Purpose",
+            status=DocumentRequest.Status.RELEASED,
+            or_number="OR-AUDIT-100",
+        )
+        self.client.force_login(self.official)
+        detail_url = reverse("document-request-detail", args=[doc.pk])
+
+        patch_resp = self.client.patch(
+            detail_url,
+            {"purpose": "Tampered Purpose"},
+            format="json",
+        )
+        put_resp = self.client.put(
+            detail_url,
+            {"document_type": "Tampered", "purpose": "Tampered"},
+            format="json",
+        )
+
+        self.assertEqual(patch_resp.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+        self.assertEqual(put_resp.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+        doc.refresh_from_db()
+        self.assertEqual(doc.purpose, "Original Purpose")

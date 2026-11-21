@@ -49,7 +49,12 @@ from gridy_communications.models import ResidentNotification
 from decimal import Decimal
 from gridy_audit.services import log_action
 from gridy_audit.models import AuditLog
-from rest_framework.exceptions import APIException, PermissionDenied, ValidationError
+from rest_framework.exceptions import (
+    APIException,
+    MethodNotAllowed,
+    PermissionDenied,
+    ValidationError,
+)
 from drf_spectacular.utils import extend_schema
 from ..fee_policy import FEE_EXEMPT_DOCUMENT_TYPES, check_ra11261_eligibility
 from ..release_rules import validate_document_release_requirements
@@ -306,6 +311,12 @@ class DocumentRequestViewSet(viewsets.ModelViewSet):
             return [permissions.IsAuthenticated(), IsBarangayOfficialOrField()]
 
         return [IsBarangayOfficial()]
+
+    def update(self, request, *args, **kwargs):
+        raise MethodNotAllowed(request.method)
+
+    def partial_update(self, request, *args, **kwargs):
+        raise MethodNotAllowed(request.method)
 
     def get_queryset(self):
         user = self.request.user
