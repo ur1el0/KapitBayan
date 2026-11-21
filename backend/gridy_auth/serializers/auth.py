@@ -12,6 +12,7 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_decode
 from django.utils.encoding import force_str
+from gridy_auth.authentication import is_production_test_account
 from gridy_auth.models import User, RefreshSession
 
 EMAIL_SIGN_IN_ROLES = {
@@ -114,7 +115,10 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
             user = User.objects.get(pk=uid)
         except (TypeError, ValueError, OverflowError, User.DoesNotExist):
             raise serializers.ValidationError({"uidb64": "Invalid user ID"})
-        
+
+        if not user.is_active or user.is_superuser or is_production_test_account(user):
+            raise serializers.ValidationError({"token": "Invalid or expired token"})
+
         if not default_token_generator.check_token(user, data['token']):
             raise serializers.ValidationError({"token": "Invalid or expired token"})
 

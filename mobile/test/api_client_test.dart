@@ -255,4 +255,52 @@ void main() {
       ),
     );
   });
+
+  test(
+    'does not attach stored refresh cookie header to routine API requests',
+    () async {
+      final recordedRequests = <http.BaseRequest>[];
+      final mockClient = MockClient.streaming((request, bodyStream) async {
+        recordedRequests.add(request);
+        await bodyStream.toBytes();
+        if (request.url.path.contains('token/refresh')) {
+          return http.StreamedResponse(
+            Stream.value(utf8.encode('{"access":"fresh-token"}')),
+            200,
+          );
+        }
+        return http.StreamedResponse(
+          Stream.value(utf8.encode('{"ok":true}')),
+          200,
+        );
+      });
+      addTearDown(mockClient.close);
+
+      final apiClient =
+          ApiClient(client: mockClient, baseUrl: 'https://example.test/api/v1')
+            ..setAuthCredentials(
+              accessToken: 'access-123',
+              cookieHeader: 'refresh_token=secret-refresh-token',
+            );
+
+      await apiClient.get('/documents/');
+      await apiClient.post(
+        '/auth/logout/',
+        headers: {'Cookie': apiClient.cookieHeader!},
+        requiresAuth: false,
+      );
+      await apiClient.refreshAccessToken();
+
+      expect(recordedRequests, hasLength(3));
+      expect(recordedRequests[0].headers.containsKey('Cookie'), isFalse);
+      expect(
+        recordedRequests[1].headers['Cookie'],
+        'refresh_token=secret-refresh-token',
+      );
+      expect(
+        recordedRequests[2].headers['Cookie'],
+        'refresh_token=secret-refresh-token',
+      );
+    },
+  );
 }

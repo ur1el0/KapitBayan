@@ -8,11 +8,11 @@ from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import mixins, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.throttling import ScopedRateThrottle
 
 from gridy_audit.models import AuditLog
 from gridy_audit.services import log_action
 from gridy_auth.models import RefreshSession, User
+from gridy_auth.throttling import SharedDatabaseScopedRateThrottle
 from gridy_auth.serializers.staff import (
     StaffUserCreateSerializer,
     StaffUserListSerializer,
@@ -47,7 +47,7 @@ class StaffManagementViewSet(
     """
     lookup_value_regex = r"\d+"
     permission_classes = [permissions.IsAuthenticated, IsAssignedBarangayAdmin]
-    throttle_classes = [ScopedRateThrottle]
+    throttle_classes = [SharedDatabaseScopedRateThrottle]
     throttle_scope = "staff_management"
 
     def get_queryset(self):

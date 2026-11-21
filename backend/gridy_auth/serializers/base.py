@@ -1,11 +1,42 @@
 from rest_framework import serializers
+from django.db import transaction
 from django.db.models import Q
 from django.urls import reverse
 from gridy_auth.models import User, Resident, Barangay, RefreshSession
 from gridy_auth.guardianship import guardian_account_is_eligible
+from gridy_auth.lifecycle import (
+    RESIDENT_PRIVATE_MEDIA_FIELDS,
+    attempt_private_media_cleanup_safely,
+    queue_private_media_cleanup,
+)
 
 
-MAX_RESIDENT_EVIDENCE_IMAGE_SIZE_BYTES = 5 * 1024 * 1024
+MAX_IMAGE_UPLOAD_SIZE_BYTES = 5 * 1024 * 1024
+MAX_RESIDENT_EVIDENCE_IMAGE_SIZE_BYTES = MAX_IMAGE_UPLOAD_SIZE_BYTES
+
+
+def _validate_image_max_size(value, message):
+    if value is not None and value.size > MAX_IMAGE_UPLOAD_SIZE_BYTES:
+        raise serializers.ValidationError(message)
+    return value
+
+
+SIGN_IN_EMAIL_ROLES = (
+    User.Role.ADMIN,
+    User.Role.FIELD_OFFICIAL,
+    User.Role.BARANGAY_OPERATOR,
+)
+
+
+def has_sign_in_identity_conflict(identifier, *, exclude_user_id=None):
+    """Return True when identifier matches any existing username or official sign-in email."""
+    conflicts = User.objects.filter(
+        Q(username__iexact=identifier)
+        | Q(email__iexact=identifier, role__in=SIGN_IN_EMAIL_ROLES)
+    )
+    if exclude_user_id is not None:
+        conflicts = conflicts.exclude(pk=exclude_user_id)
+    return conflicts.exists()
 
 
 class ResidentEvidenceImageField(serializers.ImageField):
@@ -13,11 +44,10 @@ class ResidentEvidenceImageField(serializers.ImageField):
 
     def to_internal_value(self, data):
         uploaded_file = super().to_internal_value(data)
-        if uploaded_file and uploaded_file.size > MAX_RESIDENT_EVIDENCE_IMAGE_SIZE_BYTES:
-            raise serializers.ValidationError(
-                "Resident ID and residency proof images must be 5 MiB or smaller."
-            )
-        return uploaded_file
+        return _validate_image_max_size(
+            uploaded_file,
+            "Resident ID and residency proof images must be 5 MiB or smaller.",
+        )
 
 
 class ResidentPrivateImageField(ResidentEvidenceImageField):
@@ -88,6 +118,12 @@ class BarangaySerializer(serializers.ModelSerializer):
                 'Kiosk staff PIN must contain only letters and numbers.'
             )
         return cleaned
+
+    def validate_logo(self, value):
+        return _validate_image_max_size(value, "Barangay logo images must be 5 MiB or smaller.")
+
+    def validate_city_seal(self, value):
+        return _validate_image_max_size(value, "City seal images must be 5 MiB or smaller.")
 
     def update(self, instance, validated_data):
         raw_pin = validated_data.pop('kiosk_staff_pin', None)
@@ -186,6 +222,11 @@ class ResidentSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         # Never permit updating is_verified through resident profile updates
         validated_data.pop('is_verified', None)
+        previous_private_files = {
+            field_name: getattr(instance, field_name).name
+            for field_name in RESIDENT_PRIVATE_MEDIA_FIELDS
+            if getattr(instance, field_name, None) and getattr(instance, field_name).name
+        }
 
         remove_philsys = validated_data.pop('remove_philsys_id_photo', False)
         remove_secondary = validated_data.pop('remove_secondary_id_photo', False)
@@ -228,7 +269,22 @@ class ResidentSerializer(serializers.ModelSerializer):
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
 
-        instance.save()
+        with transaction.atomic():
+            instance.save()
+            for field_name, old_file_name in previous_private_files.items():
+                current_field = getattr(instance, field_name, None)
+                new_file_name = current_field.name if current_field else None
+                if old_file_name and old_file_name != new_file_name:
+                    cleanup = queue_private_media_cleanup(
+                        "gridy_auth.Resident",
+                        field_name,
+                        old_file_name,
+                    )
+                    transaction.on_commit(
+                        lambda cleanup_id=cleanup.pk: attempt_private_media_cleanup_safely(
+                            cleanup_id
+                        )
+                    )
         return instance
 
 class ResidentAdminUpdateSerializer(ResidentSerializer):
@@ -240,7 +296,9 @@ class ResidentAdminUpdateSerializer(ResidentSerializer):
 
     def validate_email(self, value):
         normalized_email = value.strip().lower()
-        existing_users = User.objects.filter(email__iexact=normalized_email)
+        existing_users = User.objects.filter(
+            Q(email__iexact=normalized_email) | Q(username__iexact=normalized_email)
+        )
 
         if self.instance is not None:
             existing_users = existing_users.exclude(
@@ -297,11 +355,7 @@ class UserSerializer(serializers.ModelSerializer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         instance = getattr(self, 'instance', None)
-        if isinstance(instance, User) and instance.role in {
-            User.Role.ADMIN,
-            User.Role.FIELD_OFFICIAL,
-            User.Role.BARANGAY_OPERATOR,
-        }:
+        if isinstance(instance, User) and instance.role in SIGN_IN_EMAIL_ROLES:
             self.fields['username'].read_only = True
         if isinstance(instance, User) and hasattr(instance, 'profile'):
             self.fields['profile'].instance = getattr(instance, 'profile', None)
@@ -309,34 +363,67 @@ class UserSerializer(serializers.ModelSerializer):
     def get_full_name(self, obj):
         full_name = getattr(obj.profile, 'full_name', None) if hasattr(obj, 'profile') else None
         if not full_name:
-            identity = (
-                obj.email
-                if obj.role in {User.Role.ADMIN, User.Role.FIELD_OFFICIAL, User.Role.BARANGAY_OPERATOR}
-                else obj.username
-            )
+            identity = obj.email if obj.role in SIGN_IN_EMAIL_ROLES else obj.username
             full_name = f"{obj.first_name} {obj.last_name}".strip() or identity
         return full_name
 
+    def validate_username(self, value):
+        username = value.strip().lower()
+        if not username:
+            raise serializers.ValidationError("Username cannot be blank.")
+        exclude_id = self.instance.pk if isinstance(self.instance, User) else None
+        if has_sign_in_identity_conflict(username, exclude_user_id=exclude_id):
+            raise serializers.ValidationError(
+                "This username conflicts with an existing account sign-in identity."
+            )
+        return username
+
     def validate_email(self, value):
         normalized_email = value.strip().lower()
-        if isinstance(self.instance, User) and self.instance.role in {
-            User.Role.ADMIN,
-            User.Role.FIELD_OFFICIAL,
-            User.Role.BARANGAY_OPERATOR,
-        }:
+        exclude_id = self.instance.pk if isinstance(self.instance, User) else None
+        is_official = (
+            isinstance(self.instance, User)
+            and self.instance.role in SIGN_IN_EMAIL_ROLES
+        )
+        if is_official:
             if not normalized_email:
-                raise serializers.ValidationError("Official accounts must have an email sign-in identity.")
+                raise serializers.ValidationError(
+                    "Official accounts must have an email sign-in identity."
+                )
             conflicting_accounts = User.objects.filter(
                 Q(email__iexact=normalized_email) | Q(username__iexact=normalized_email)
-            ).exclude(pk=self.instance.pk)
+            ).exclude(pk=exclude_id)
             if conflicting_accounts.exists():
-                raise serializers.ValidationError("This email must be unique across accounts because it is the official sign-in identity.")
+                raise serializers.ValidationError(
+                    "This email must be unique across accounts because it is the official sign-in identity."
+                )
+            return normalized_email
+
+        if not normalized_email:
+            return normalized_email
+
+        if has_sign_in_identity_conflict(normalized_email, exclude_user_id=exclude_id):
+            raise serializers.ValidationError(
+                "This email conflicts with an existing account sign-in identity."
+            )
+
+        current_email = (
+            (self.instance.email or "").strip().lower()
+            if isinstance(self.instance, User)
+            else ""
+        )
+        if normalized_email != current_email:
+            conflicting_email = User.objects.filter(email__iexact=normalized_email)
+            if exclude_id is not None:
+                conflicting_email = conflicting_email.exclude(pk=exclude_id)
+            if conflicting_email.exists():
+                raise serializers.ValidationError(
+                    "An account with this email already exists."
+                )
         return normalized_email
 
     def validate_profile_picture(self, value):
-        if value is not None and value.size > 5 * 1024 * 1024:
-            raise serializers.ValidationError("Profile pictures must be 5 MB or smaller.")
-        return value
+        return _validate_image_max_size(value, "Profile pictures must be 5 MB or smaller.")
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)

@@ -691,3 +691,67 @@ class QueueTicketAPITests(ServiceAPIBaseTestCase):
         # Fourth call returns 404 No tickets waiting
         resp4 = self.client.post(reverse("ticket-next-ticket"), {"release_document": False}, format="json")
         self.assertEqual(resp4.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_unassigned_official_sees_no_queue_tickets(self):
+        QueueTicket.objects.create(
+            barangay=None,
+            ticket_number="T909",
+            service_type="DOCUMENT",
+        )
+        self.client.force_authenticate(self.official)
+
+        response = self.client.get(reverse("ticket-list"))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        items = response.data.get("results", response.data)
+        self.assertEqual(len(items), 0)
+
+    def test_field_official_cannot_delete_queue_ticket(self):
+        barangay = Barangay.objects.create(name="Queue Delete Guard Barangay")
+        field_official = User.objects.create_user(
+            username="tanod_delete_guard",
+            password="SecurePassword123!",
+            role=User.Role.FIELD_OFFICIAL,
+            barangay=barangay,
+        )
+        ticket = QueueTicket.objects.create(
+            barangay=barangay,
+            ticket_number="Q101",
+            service_type="DOCUMENT",
+        )
+
+        self.client.force_authenticate(field_official)
+        response = self.client.delete(reverse("ticket-detail", args=[ticket.pk]))
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertTrue(QueueTicket.objects.filter(pk=ticket.pk).exists())
+
+    @patch("gridy_services.views.queue.broadcast_queue_update")
+    def test_admin_deleting_queue_ticket_writes_audit_log_and_broadcasts_delete(
+        self, mock_broadcast
+    ):
+        barangay = Barangay.objects.create(name="Queue Admin Delete Barangay")
+        self.official.barangay = barangay
+        self.official.save(update_fields=["barangay"])
+        ticket = QueueTicket.objects.create(
+            barangay=barangay,
+            ticket_number="Q202",
+            service_type="DOCUMENT",
+        )
+
+        self.client.force_authenticate(self.official)
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.delete(reverse("ticket-detail", args=[ticket.pk]))
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(QueueTicket.objects.filter(pk=ticket.pk).exists())
+        self.assertTrue(
+            AuditLog.objects.filter(
+                action_type=AuditLog.ActionType.QUEUE_ACTION,
+                action_by=self.official,
+                description__icontains="Deleted queue ticket",
+            ).exists()
+        )
+        mock_broadcast.assert_called_once()
+        self.assertEqual(mock_broadcast.call_args.kwargs.get("action"), "delete")
+        self.assertEqual(mock_broadcast.call_args.kwargs.get("barangay_id"), barangay.pk)

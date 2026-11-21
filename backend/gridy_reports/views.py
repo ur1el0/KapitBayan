@@ -1,5 +1,6 @@
 from django.db import transaction
 from rest_framework import viewsets, permissions
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django.db.models import Q
@@ -19,6 +20,7 @@ class IssueReportPagination(PageNumberPagination):
 
 
 class IssueReportViewSet(viewsets.ModelViewSet):
+    lookup_value_regex = r"\d+"
     serializer_class = IssueReportSerializer
     parser_classes = [MultiPartParser, FormParser, JSONParser]
     pagination_class = IssueReportPagination
@@ -30,7 +32,10 @@ class IssueReportViewSet(viewsets.ModelViewSet):
         # Strictly residents can file new community reports
         if self.action == 'create':
             return [IsResident()]
-        # Strictly officials can update status, triage, and resolve
+        # Destructive deletion requires a Barangay Admin
+        if self.action == 'destroy':
+            return [IsBarangayOfficial()]
+        # Officials and Field Officials can update status, triage, and resolve
         return [IsBarangayOfficialOrField()]
     
     def get_queryset(self):
@@ -74,13 +79,23 @@ class IssueReportViewSet(viewsets.ModelViewSet):
 
     @transaction.atomic
     def perform_create(self, serializer):
+        user = self.request.user
+        if not user.barangay_id:
+            raise PermissionDenied(
+                "A barangay assignment is required to submit an issue report."
+            )
+        resident_profile = getattr(user, "profile", None)
+        if resident_profile is None or not resident_profile.is_verified:
+            raise PermissionDenied(
+                "Your resident account must be verified before submitting an issue report."
+            )
         serializer.save(
-            reporter=self.request.user,
-            barangay=self.request.user.barangay,
+            reporter=user,
+            barangay=user.barangay,
             status=IssueReport.Status.PENDING,
         )
         notify_barangay_admins(
-            barangay_id=self.request.user.barangay_id,
+            barangay_id=user.barangay_id,
             notification_type='report',
         )
 

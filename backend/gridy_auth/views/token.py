@@ -46,7 +46,8 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 
             # 1. Enforce Resident Verification Status
             if user.role == User.Role.RESIDENT:
-                if hasattr(user, 'profile') and not user.profile.is_verified:
+                resident_profile = getattr(user, 'profile', None)
+                if resident_profile is None or not resident_profile.is_verified:
                     return Response(
                         {"detail": "Your resident account is pending verification by the admin. Please try again later."},
                         status=status.HTTP_403_FORBIDDEN
@@ -107,6 +108,8 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 
 
 class CustomTokenRefreshView(TokenRefreshView):
+    throttle_scope = 'auth_token_refresh'
+
     def post(self, request, *args, **kwargs):
         # Retrieve refresh token from browser cookies or request payload
         refresh_token_str = request.COOKIES.get('refresh_token') or request.data.get('refresh')

@@ -39,7 +39,9 @@ class ProtectedMediaView(APIView):
         ):
             raise Http404("File not found.")
 
-        if not os.path.exists(file_path):
+        if not os.path.isfile(file_path):
             raise Http404("File not found.")
 
-        return FileResponse(open(file_path, "rb"))
+        response = FileResponse(open(file_path, "rb"))
+        response["X-Content-Type-Options"] = "nosniff"
+        return response

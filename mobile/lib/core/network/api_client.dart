@@ -358,10 +358,6 @@ class ApiClient {
       headers['Authorization'] = 'Bearer $_accessToken';
     }
 
-    if (_cookieHeader != null && _cookieHeader!.isNotEmpty) {
-      headers['Cookie'] = _cookieHeader!;
-    }
-
     if (customHeaders != null) {
       headers.addAll(customHeaders);
     }

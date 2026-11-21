@@ -1,6 +1,5 @@
 """Database-backed DRF scoped throttling for multi-worker deployments."""
 
-import ipaddress
 import secrets
 from datetime import datetime, timezone as datetime_timezone
 
@@ -10,6 +9,7 @@ from django.utils import timezone
 from django.utils.crypto import salted_hmac
 from rest_framework.throttling import ScopedRateThrottle
 
+from gridy_audit.services import get_client_ip
 from gridy_auth.models import APIRateLimitWindow
 
 
@@ -115,22 +115,8 @@ class SharedDatabaseScopedRateThrottle(ScopedRateThrottle):
         ).hexdigest()
 
     def get_ident(self, request):
-        """Use Render's documented first X-Forwarded-For entry as the client.
-
-        Render's edge sets the real client address first and may append proxy
-        addresses. DRF's default behavior hashes the whole header when
-        NUM_PROXIES is unset, allowing each proxy chain to get a different
-        bucket and making the behavior dependent on untrusted forwarded data.
-        """
-        forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
-        if forwarded_for:
-            client_ip = forwarded_for.split(",", 1)[0].strip()
-            if client_ip:
-                try:
-                    return str(ipaddress.ip_address(client_ip))
-                except ValueError:
-                    pass
-        return request.META.get("REMOTE_ADDR", "")
+        """Resolve client IP through the shared proxy-trust-aware audit helper."""
+        return get_client_ip(request) or request.META.get("REMOTE_ADDR", "")
 
     def _prune_expired_windows(self, now_datetime):
         if secrets.randbelow(self.cleanup_sample_rate) != 0:

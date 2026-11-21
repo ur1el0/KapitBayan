@@ -44,6 +44,12 @@ class ResidentProfileAPITests(IsolatedAuthAPITestCase):
         self.assertFalse(resident_profile.is_verified)
 
     def test_profile_endpoint_success(self):
+        Resident.objects.create(
+            user=self.user,
+            full_name="Profile Success Resident",
+            birth_date="1995-05-15",
+            is_verified=True,
+        )
         #  1. Login the user to obtain a token
         login_url = reverse('auth_login')
         login_payload = {

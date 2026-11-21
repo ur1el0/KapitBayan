@@ -8,6 +8,7 @@ from gridy_services.serializers.documents import DocumentServiceOfferingSerializ
 
 
 class DocumentServiceOfferingViewSet(viewsets.ModelViewSet):
+    lookup_value_regex = r"\d+"
     serializer_class = DocumentServiceOfferingSerializer
 
     def get_permissions(self):

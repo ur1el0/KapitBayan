@@ -1,9 +1,18 @@
+from unittest.mock import AsyncMock, MagicMock, patch
+
+from asgiref.sync import async_to_sync
+from channels.testing import WebsocketCommunicator
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
+from config.asgi import application
 from gridy_auth.models import Barangay, User
 from gridy_services.models import QueueTicket
+from gridy_services.websocket_events import (
+    async_broadcast_queue_update,
+    broadcast_queue_update,
+)
 
 
 class PublicQueueStatusAPITests(APITestCase):
@@ -156,3 +165,94 @@ class PublicQueueStatusAPITests(APITestCase):
         self.assertEqual(response.data["current_ticket"], "A-001")
         self.assertEqual(response.data["total_waiting"], 2)
         self.assertEqual(response.data["avg_wait_mins"], 4)
+
+
+class QueueWebSocketIsolationSecurityTests(APITestCase):
+    def setUp(self):
+        self.barangay_a = Barangay.objects.create(name="WS Security Barangay A")
+        self.barangay_b = Barangay.objects.create(name="WS Security Barangay B")
+
+    def test_broadcast_dispatches_only_to_barangay_group_never_global_room(self):
+        fake_layer = MagicMock()
+        fake_layer.group_send = AsyncMock()
+
+        with patch(
+            "gridy_services.websocket_events.get_channel_layer",
+            return_value=fake_layer,
+        ):
+            broadcast_queue_update(
+                barangay_id=self.barangay_a.id,
+                ticket="A-101",
+                action="call_next",
+            )
+            async_to_sync(async_broadcast_queue_update)(
+                barangay_id=self.barangay_a.id,
+                ticket="A-102",
+                action="create",
+            )
+
+        sent_groups = [call.args[0] for call in fake_layer.group_send.await_args_list]
+        self.assertEqual(
+            sent_groups,
+            [f"queue_{self.barangay_a.id}", f"queue_{self.barangay_a.id}"],
+        )
+        self.assertNotIn("queue_updates", sent_groups)
+
+        fake_layer.group_send.reset_mock()
+        with patch(
+            "gridy_services.websocket_events.get_channel_layer",
+            return_value=fake_layer,
+        ):
+            broadcast_queue_update(barangay_id=None, ticket="NONE-1", action="create")
+            async_to_sync(async_broadcast_queue_update)(
+                barangay_id=None,
+                ticket="NONE-2",
+                action="create",
+            )
+        fake_layer.group_send.assert_not_called()
+
+    def test_websocket_routes_reject_unscoped_or_unknown_and_isolate_tenants(self):
+        headers = [(b"origin", b"http://localhost")]
+
+        async def _exercise():
+            unscoped = WebsocketCommunicator(application, "/ws/queue/", headers=headers)
+            with self.assertRaises(ValueError):
+                await unscoped.connect()
+
+            unknown = WebsocketCommunicator(
+                application,
+                "/ws/queue/999999/",
+                headers=headers,
+            )
+            connected_unknown, close_code = await unknown.connect()
+            self.assertFalse(connected_unknown)
+            self.assertEqual(close_code, 4004)
+
+            client_a = WebsocketCommunicator(
+                application,
+                f"/ws/queue/{self.barangay_a.id}/",
+                headers=headers,
+            )
+            client_b = WebsocketCommunicator(
+                application,
+                f"/ws/queue/{self.barangay_b.id}/",
+                headers=headers,
+            )
+            connected_a, _ = await client_a.connect()
+            connected_b, _ = await client_b.connect()
+            self.assertTrue(connected_a)
+            self.assertTrue(connected_b)
+
+            await async_broadcast_queue_update(
+                barangay_id=self.barangay_a.id,
+                ticket="SEC-001",
+                action="call_next",
+            )
+            msg_a = await client_a.receive_json_from(timeout=2)
+            self.assertEqual(msg_a["ticket"], "SEC-001")
+            self.assertTrue(await client_b.receive_nothing(timeout=0.2))
+
+            await client_a.disconnect()
+            await client_b.disconnect()
+
+        async_to_sync(_exercise)()

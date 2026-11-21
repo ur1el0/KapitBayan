@@ -49,7 +49,12 @@ from gridy_communications.models import ResidentNotification
 from decimal import Decimal
 from gridy_audit.services import log_action
 from gridy_audit.models import AuditLog
-from rest_framework.exceptions import APIException, PermissionDenied, ValidationError
+from rest_framework.exceptions import (
+    APIException,
+    MethodNotAllowed,
+    PermissionDenied,
+    ValidationError,
+)
 from drf_spectacular.utils import extend_schema
 from ..fee_policy import FEE_EXEMPT_DOCUMENT_TYPES, check_ra11261_eligibility
 from ..release_rules import validate_document_release_requirements
@@ -214,6 +219,7 @@ def _ensure_unique_barangay_or_number(document_request, or_number):
 
 
 class DocumentRequestViewSet(viewsets.ModelViewSet):
+    lookup_value_regex = r"\d+"
     serializer_class = DocumentRequestSerializer
 
     @staticmethod
@@ -305,6 +311,12 @@ class DocumentRequestViewSet(viewsets.ModelViewSet):
             return [permissions.IsAuthenticated(), IsBarangayOfficialOrField()]
 
         return [IsBarangayOfficial()]
+
+    def update(self, request, *args, **kwargs):
+        raise MethodNotAllowed(request.method)
+
+    def partial_update(self, request, *args, **kwargs):
+        raise MethodNotAllowed(request.method)
 
     def get_queryset(self):
         user = self.request.user
@@ -1692,14 +1704,42 @@ class DocumentRequestViewSet(viewsets.ModelViewSet):
             document_request=document,
             revoked_at__isnull=True,
         ).first()
-        if verification_record is None:
-            verification_record = DocumentCertificateVerification.objects.create(
-                document_request=document,
-                issued_by=request.user if request.user.role == User.Role.ADMIN else None,
-            )
+        if verification_record is None and request.user.role == User.Role.ADMIN:
+            with transaction.atomic():
+                locked_document = DocumentRequest.objects.select_for_update().get(
+                    pk=document.pk
+                )
+                verification_record = DocumentCertificateVerification.objects.filter(
+                    document_request=locked_document,
+                    revoked_at__isnull=True,
+                ).first()
+                # Never re-mint once any verification record (including a revoked one) exists.
+                if (
+                    verification_record is None
+                    and not DocumentCertificateVerification.objects.filter(
+                        document_request=locked_document
+                    ).exists()
+                ):
+                    try:
+                        with transaction.atomic():
+                            verification_record = DocumentCertificateVerification.objects.create(
+                                document_request=locked_document,
+                                issued_by=request.user,
+                            )
+                    except IntegrityError:
+                        verification_record = DocumentCertificateVerification.objects.filter(
+                            document_request=locked_document,
+                            revoked_at__isnull=True,
+                        ).first()
 
-        verification_url = f"{settings.FRONTEND_URL.rstrip('/')}/verify-certificate/{verification_record.token}"
-        qr_code_data_uri = self._build_qr_code_data_uri(verification_url)
+        if verification_record is not None:
+            verification_url = (
+                f"{settings.FRONTEND_URL.rstrip('/')}/verify-certificate/{verification_record.token}"
+            )
+            qr_code_data_uri = self._build_qr_code_data_uri(verification_url)
+        else:
+            verification_url = ""
+            qr_code_data_uri = ""
 
         template = get_template('gridy_services/pdf_or_number.html')
         html = template.render({
