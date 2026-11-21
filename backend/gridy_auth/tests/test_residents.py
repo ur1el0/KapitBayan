@@ -189,3 +189,49 @@ class ResidentEmailUpdateAPITests(IsolatedAuthAPITestCase):
             ).status_code,
             status.HTTP_404_NOT_FOUND,
         )
+
+    def test_unassigned_official_sees_no_residents_or_pending_residents(self):
+        unassigned_admin = User.objects.create_user(
+            username="unassigned_resident_admin",
+            email="unassigned-admin@example.com",
+            password=None,
+            role=User.Role.ADMIN,
+            barangay=None,
+        )
+        unassigned_verified_user = User.objects.create_user(
+            username="unassigned_verified_resident",
+            email="unassigned-verified@example.com",
+            password=None,
+            role=User.Role.RESIDENT,
+            barangay=None,
+        )
+        Resident.objects.create(
+            user=unassigned_verified_user,
+            full_name="Unassigned Verified",
+            birth_date="1991-01-01",
+            is_verified=True,
+        )
+        unassigned_pending_user = User.objects.create_user(
+            username="unassigned_pending_resident",
+            email="unassigned-pending@example.com",
+            password=None,
+            role=User.Role.RESIDENT,
+            barangay=None,
+        )
+        Resident.objects.create(
+            user=unassigned_pending_user,
+            full_name="Unassigned Pending",
+            birth_date="1992-02-02",
+            is_verified=False,
+        )
+
+        self.client.force_authenticate(user=unassigned_admin)
+        pending_response = self.client.get(reverse("pending_residents"))
+        verified_response = self.client.get(reverse("resident-list"))
+
+        self.assertEqual(pending_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(verified_response.status_code, status.HTTP_200_OK)
+        pending_items = pending_response.data.get("results", pending_response.data)
+        verified_items = verified_response.data.get("results", verified_response.data)
+        self.assertEqual(len(pending_items), 0)
+        self.assertEqual(len(verified_items), 0)

@@ -56,6 +56,8 @@ class QueueTicketViewSet(viewsets.ModelViewSet):
         historical = ~Q(status__in=active_statuses)
         queryset = QueueTicket.objects.select_related('user', 'document_request')
         if user.role in [User.Role.ADMIN, User.Role.FIELD_OFFICIAL]:
+            if user.barangay_id is None:
+                return QueueTicket.objects.none()
             queryset = queryset.filter(barangay=user.barangay)
         else:
             queryset = queryset.filter(user=user)

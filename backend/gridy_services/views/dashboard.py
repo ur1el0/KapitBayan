@@ -33,6 +33,10 @@ class DashboardSummaryView(APIView):
 
     def get(self, request, *args, **kwargs):
         user = request.user
+        if not user or not user.barangay_id or not user.barangay:
+            raise PermissionDenied(
+                "Your account must be assigned to a barangay to access dashboard statistics."
+            )
         today = timezone.now().date()
 
         # 1. Total Residents for this Barangay (1 query)

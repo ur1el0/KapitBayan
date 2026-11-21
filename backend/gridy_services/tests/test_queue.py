@@ -691,3 +691,17 @@ class QueueTicketAPITests(ServiceAPIBaseTestCase):
         # Fourth call returns 404 No tickets waiting
         resp4 = self.client.post(reverse("ticket-next-ticket"), {"release_document": False}, format="json")
         self.assertEqual(resp4.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_unassigned_official_sees_no_queue_tickets(self):
+        QueueTicket.objects.create(
+            barangay=None,
+            ticket_number="T909",
+            service_type="DOCUMENT",
+        )
+        self.client.force_authenticate(self.official)
+
+        response = self.client.get(reverse("ticket-list"))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        items = response.data.get("results", response.data)
+        self.assertEqual(len(items), 0)
