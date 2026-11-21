@@ -6,6 +6,22 @@ from gridy_auth.guardianship import guardian_account_is_eligible
 
 
 MAX_RESIDENT_EVIDENCE_IMAGE_SIZE_BYTES = 5 * 1024 * 1024
+SIGN_IN_EMAIL_ROLES = (
+    User.Role.ADMIN,
+    User.Role.FIELD_OFFICIAL,
+    User.Role.BARANGAY_OPERATOR,
+)
+
+
+def has_sign_in_identity_conflict(identifier, *, exclude_user_id=None):
+    """Return True when identifier matches any existing username or official sign-in email."""
+    conflicts = User.objects.filter(
+        Q(username__iexact=identifier)
+        | Q(email__iexact=identifier, role__in=SIGN_IN_EMAIL_ROLES)
+    )
+    if exclude_user_id is not None:
+        conflicts = conflicts.exclude(pk=exclude_user_id)
+    return conflicts.exists()
 
 
 class ResidentEvidenceImageField(serializers.ImageField):
@@ -240,7 +256,9 @@ class ResidentAdminUpdateSerializer(ResidentSerializer):
 
     def validate_email(self, value):
         normalized_email = value.strip().lower()
-        existing_users = User.objects.filter(email__iexact=normalized_email)
+        existing_users = User.objects.filter(
+            Q(email__iexact=normalized_email) | Q(username__iexact=normalized_email)
+        )
 
         if self.instance is not None:
             existing_users = existing_users.exclude(
@@ -297,11 +315,7 @@ class UserSerializer(serializers.ModelSerializer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         instance = getattr(self, 'instance', None)
-        if isinstance(instance, User) and instance.role in {
-            User.Role.ADMIN,
-            User.Role.FIELD_OFFICIAL,
-            User.Role.BARANGAY_OPERATOR,
-        }:
+        if isinstance(instance, User) and instance.role in SIGN_IN_EMAIL_ROLES:
             self.fields['username'].read_only = True
         if isinstance(instance, User) and hasattr(instance, 'profile'):
             self.fields['profile'].instance = getattr(instance, 'profile', None)
@@ -309,28 +323,63 @@ class UserSerializer(serializers.ModelSerializer):
     def get_full_name(self, obj):
         full_name = getattr(obj.profile, 'full_name', None) if hasattr(obj, 'profile') else None
         if not full_name:
-            identity = (
-                obj.email
-                if obj.role in {User.Role.ADMIN, User.Role.FIELD_OFFICIAL, User.Role.BARANGAY_OPERATOR}
-                else obj.username
-            )
+            identity = obj.email if obj.role in SIGN_IN_EMAIL_ROLES else obj.username
             full_name = f"{obj.first_name} {obj.last_name}".strip() or identity
         return full_name
 
+    def validate_username(self, value):
+        username = value.strip().lower()
+        if not username:
+            raise serializers.ValidationError("Username cannot be blank.")
+        exclude_id = self.instance.pk if isinstance(self.instance, User) else None
+        if has_sign_in_identity_conflict(username, exclude_user_id=exclude_id):
+            raise serializers.ValidationError(
+                "This username conflicts with an existing account sign-in identity."
+            )
+        return username
+
     def validate_email(self, value):
         normalized_email = value.strip().lower()
-        if isinstance(self.instance, User) and self.instance.role in {
-            User.Role.ADMIN,
-            User.Role.FIELD_OFFICIAL,
-            User.Role.BARANGAY_OPERATOR,
-        }:
+        exclude_id = self.instance.pk if isinstance(self.instance, User) else None
+        is_official = (
+            isinstance(self.instance, User)
+            and self.instance.role in SIGN_IN_EMAIL_ROLES
+        )
+        if is_official:
             if not normalized_email:
-                raise serializers.ValidationError("Official accounts must have an email sign-in identity.")
+                raise serializers.ValidationError(
+                    "Official accounts must have an email sign-in identity."
+                )
             conflicting_accounts = User.objects.filter(
                 Q(email__iexact=normalized_email) | Q(username__iexact=normalized_email)
-            ).exclude(pk=self.instance.pk)
+            ).exclude(pk=exclude_id)
             if conflicting_accounts.exists():
-                raise serializers.ValidationError("This email must be unique across accounts because it is the official sign-in identity.")
+                raise serializers.ValidationError(
+                    "This email must be unique across accounts because it is the official sign-in identity."
+                )
+            return normalized_email
+
+        if not normalized_email:
+            return normalized_email
+
+        if has_sign_in_identity_conflict(normalized_email, exclude_user_id=exclude_id):
+            raise serializers.ValidationError(
+                "This email conflicts with an existing account sign-in identity."
+            )
+
+        current_email = (
+            (self.instance.email or "").strip().lower()
+            if isinstance(self.instance, User)
+            else ""
+        )
+        if normalized_email != current_email:
+            conflicting_email = User.objects.filter(email__iexact=normalized_email)
+            if exclude_id is not None:
+                conflicting_email = conflicting_email.exclude(pk=exclude_id)
+            if conflicting_email.exists():
+                raise serializers.ValidationError(
+                    "An account with this email already exists."
+                )
         return normalized_email
 
     def validate_profile_picture(self, value):

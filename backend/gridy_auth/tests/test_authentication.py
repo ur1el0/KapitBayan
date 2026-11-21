@@ -646,3 +646,162 @@ class AuthAPITests(IsolatedAuthAPITestCase):
         self.assertTrue(
             BlacklistedToken.objects.filter(token__jti=refresh_mp['jti']).exists()
         )
+
+
+class ProfileIdentityCollisionSecurityTests(IsolatedAuthAPITestCase):
+    def setUp(self):
+        self.barangay = Barangay.objects.create(name="Identity Isolation Barangay")
+        self.other_barangay = Barangay.objects.create(name="Other Identity Barangay")
+
+        self.admin = User.objects.create_user(
+            username="internal_admin_login_id",
+            email="admin@barangay.gov.ph",
+            password="AdminPassword123!",
+            role=User.Role.ADMIN,
+            barangay=self.barangay,
+        )
+        self.operator = User.objects.create_user(
+            username="internal_operator_login_id",
+            email="operator@barangay.gov.ph",
+            password="OperatorPassword123!",
+            role=User.Role.BARANGAY_OPERATOR,
+        )
+        self.resident_a = User.objects.create_user(
+            username="resident_a",
+            email="a@example.com",
+            password="ResidentPassword123!",
+            role=User.Role.RESIDENT,
+            barangay=self.other_barangay,
+        )
+        Resident.objects.create(
+            user=self.resident_a,
+            full_name="Resident Alpha",
+            birth_date="1995-01-01",
+            purok="Purok 1",
+            is_verified=True,
+        )
+        self.resident_b = User.objects.create_user(
+            username="resident_b",
+            email="b@example.com",
+            password="ResidentPassword123!",
+            role=User.Role.RESIDENT,
+            barangay=self.other_barangay,
+        )
+        Resident.objects.create(
+            user=self.resident_b,
+            full_name="Resident Beta",
+            birth_date="1996-02-02",
+            purok="Purok 2",
+            is_verified=True,
+        )
+
+    def test_resident_cannot_patch_email_to_official_email_or_existing_identity(self):
+        email_username_user = User.objects.create_user(
+            username="existing.handle@example.com",
+            email="",
+            password="ResidentPassword123!",
+            role=User.Role.RESIDENT,
+            barangay=self.other_barangay,
+        )
+        self.client.force_authenticate(user=self.resident_a)
+
+        for attempted_email in (
+            "ADMIN@barangay.gov.ph",
+            "operator@barangay.gov.ph",
+            "b@example.com",
+            email_username_user.username.upper(),
+        ):
+            response = self.client.patch(
+                reverse("auth_me"),
+                {"email": attempted_email},
+                format="json",
+            )
+            self.assertEqual(
+                response.status_code,
+                status.HTTP_400_BAD_REQUEST,
+                f"Expected 400 when resident patched email to {attempted_email!r}",
+            )
+
+        self.resident_a.refresh_from_db()
+        self.assertEqual(self.resident_a.email, "a@example.com")
+
+        self.client.force_authenticate(user=None)
+        admin_login = self.client.post(
+            reverse("auth_login"),
+            {"username": "admin@barangay.gov.ph", "password": "AdminPassword123!"},
+            format="json",
+        )
+        self.assertEqual(admin_login.status_code, status.HTTP_200_OK)
+
+    def test_resident_cannot_patch_username_to_case_variant_or_official_email(self):
+        self.client.force_authenticate(user=self.resident_a)
+
+        for attempted_username in (
+            "RESIDENT_B",
+            "admin@barangay.gov.ph",
+            "   ",
+        ):
+            response = self.client.patch(
+                reverse("auth_me"),
+                {"username": attempted_username},
+                format="json",
+            )
+            self.assertEqual(
+                response.status_code,
+                status.HTTP_400_BAD_REQUEST,
+                f"Expected 400 when resident patched username to {attempted_username!r}",
+            )
+
+        self.resident_a.refresh_from_db()
+        self.assertEqual(self.resident_a.username, "resident_a")
+
+    def test_existing_shared_household_email_resident_can_still_update_unrelated_profile_fields(self):
+        household_email = "household@example.com"
+        self.resident_a.email = household_email
+        self.resident_a.save(update_fields=["email"])
+        self.resident_b.email = household_email
+        self.resident_b.save(update_fields=["email"])
+
+        self.client.force_authenticate(user=self.resident_a)
+        response = self.client.patch(
+            reverse("auth_me"),
+            {"email": household_email, "profile": {"purok": "Purok 4"}},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.resident_a.profile.refresh_from_db()
+        self.assertEqual(self.resident_a.profile.purok, "Purok 4")
+
+    def test_official_cannot_assign_email_matching_existing_username(self):
+        User.objects.create_user(
+            username="username.handle@example.com",
+            email="",
+            password="StrongTestPassword123!",
+            role=User.Role.RESIDENT,
+            barangay=self.barangay,
+        )
+        local_user = User.objects.create_user(
+            username="local_offline_resident",
+            email="",
+            password=None,
+            role=User.Role.RESIDENT,
+            barangay=self.barangay,
+        )
+        local_resident = Resident.objects.create(
+            user=local_user,
+            full_name="Local Offline Resident",
+            birth_date="1994-04-04",
+            is_verified=True,
+        )
+
+        self.client.force_authenticate(user=self.admin)
+        response = self.client.patch(
+            reverse("resident-detail", args=[local_resident.pk]),
+            {"email": "USERNAME.HANDLE@example.com"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        local_user.refresh_from_db()
+        self.assertEqual(local_user.email, "")
