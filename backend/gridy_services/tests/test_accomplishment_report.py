@@ -383,3 +383,28 @@ class AccomplishmentReportAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["community_services"]["issues_submitted"], 3)
         self.assertEqual(response.data["community_services"]["issues_resolved"], 2)
+
+    def test_csv_export_neutralizes_spreadsheet_formula_injection(self):
+        self.barangay.name = "=CMD|' /C calc'!A0"
+        self.barangay.municipality = "+HYPERLINK(\"http://evil.example\")"
+        self.barangay.save(update_fields=["name", "municipality"])
+
+        formula_doc = DocumentRequest.objects.create(
+            user=self.resident,
+            barangay=self.barangay,
+            document_type=" @SUM(1+1)",
+            status=DocumentRequest.Status.RELEASED,
+        )
+        DocumentRequest.objects.filter(pk=formula_doc.pk).update(created_at=self.oct_dt)
+
+        self.client.force_login(self.admin)
+        csv_resp = self.client.get(
+            self.export_url,
+            {"year": 2026, "month": 10, "export_format": "csv"},
+        )
+
+        self.assertEqual(csv_resp.status_code, status.HTTP_200_OK)
+        csv_text = csv_resp.content.decode("utf-8-sig")
+        self.assertIn("'=CMD|' /C calc'!A0", csv_text)
+        self.assertIn("'+HYPERLINK(", csv_text)
+        self.assertIn("' @SUM(1+1)", csv_text)

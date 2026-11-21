@@ -334,6 +334,20 @@ def build_safe_report_filename(
     return f"Accomplishment_Report_{safe_brgy}_{year}_{month:02d}.{ext}"
 
 
+_CSV_FORMULA_PREFIXES = ("=", "+", "-", "@", "\t", "\r")
+
+
+def _sanitize_csv_cell(value):
+    """Neutralize spreadsheet formula payloads while leaving non-formula values unchanged."""
+    if not isinstance(value, str) or not value:
+        return value
+    if value[0] in _CSV_FORMULA_PREFIXES or value.lstrip(" \t\r\n").startswith(
+        ("=", "+", "-", "@")
+    ):
+        return f"'{value}"
+    return value
+
+
 def render_accomplishment_report_csv(report: dict) -> bytes:
     """Render a UTF-8 BOM-encoded CSV suitable for Excel and DILG submission."""
     included = set(report.get("included_metrics") or ALL_REPORT_METRICS)
@@ -341,32 +355,35 @@ def render_accomplishment_report_csv(report: dict) -> bytes:
     buffer.write("\ufeff")
     writer = csv.writer(buffer)
 
-    writer.writerow(["MONTHLY BARANGAY ACCOMPLISHMENT REPORT"])
-    writer.writerow(["Barangay", report["barangay_name"]])
+    def write_row(row):
+        writer.writerow([_sanitize_csv_cell(cell) for cell in row])
+
+    write_row(["MONTHLY BARANGAY ACCOMPLISHMENT REPORT"])
+    write_row(["Barangay", report["barangay_name"]])
     if report.get("municipality") or report.get("province"):
         locality = ", ".join(filter(None, [report.get("municipality"), report.get("province")]))
-        writer.writerow(["Locality", locality])
-    writer.writerow(["Period Covered", report["period_label"]])
-    writer.writerow(["Filter Scope", report.get("filter_summary", "All Report Categories")])
-    writer.writerow(["Generated At", report["generated_at"]])
-    writer.writerow([])
+        write_row(["Locality", locality])
+    write_row(["Period Covered", report["period_label"]])
+    write_row(["Filter Scope", report.get("filter_summary", "All Report Categories")])
+    write_row(["Generated At", report["generated_at"]])
+    write_row([])
 
-    writer.writerow(["Category", "Metric", "Count"])
+    write_row(["Category", "Metric", "Count"])
 
     res = report["residents_rbi"]
     if "new_registered_residents" in included:
-        writer.writerow(["1. Residents & RBI Updates", "New Registered Residents", res["new_registered_residents"]])
-        writer.writerow(["1. Residents & RBI Updates", "New Verified Residents", res["new_verified_residents"]])
+        write_row(["1. Residents & RBI Updates", "New Registered Residents", res["new_registered_residents"]])
+        write_row(["1. Residents & RBI Updates", "New Verified Residents", res["new_verified_residents"]])
     if "rbi_transfers" in included:
-        writer.writerow(["1. Residents & RBI Updates", "Approved Resident Transfers / RBI Updates", res["approved_rbi_transfers"]])
-        writer.writerow(["1. Residents & RBI Updates", "Total Active Verified Residents (Cumulative)", res["total_active_verified_residents"]])
+        write_row(["1. Residents & RBI Updates", "Approved Resident Transfers / RBI Updates", res["approved_rbi_transfers"]])
+        write_row(["1. Residents & RBI Updates", "Total Active Verified Residents (Cumulative)", res["total_active_verified_residents"]])
 
     cert = report["certificates_issuance"]
     if "documents_issued" in included:
-        writer.writerow(["2. Certificates & Document Issuance", "Total Certificates / Clearances Issued", cert["total_issued"]])
-        writer.writerow(["2. Certificates & Document Issuance", "Fee-Waived / Statutory Exempt Certificates Issued", cert["fee_waived_or_exempt_count"]])
+        write_row(["2. Certificates & Document Issuance", "Total Certificates / Clearances Issued", cert["total_issued"]])
+        write_row(["2. Certificates & Document Issuance", "Fee-Waived / Statutory Exempt Certificates Issued", cert["fee_waived_or_exempt_count"]])
         for item in cert["by_document_type"]:
-            writer.writerow([
+            write_row([
                 "2. Certificates & Document Issuance (Breakdown)",
                 item["document_type"],
                 item["count"],
@@ -374,19 +391,19 @@ def render_accomplishment_report_csv(report: dict) -> bytes:
 
     svc = report["community_services"]
     if "incidents" in included:
-        writer.writerow(["3. Community Issues, Aid & Equipment", "Community Issues Submitted", svc["issues_submitted"]])
-        writer.writerow(["3. Community Issues, Aid & Equipment", "Community Issues Resolved", svc["issues_resolved"]])
+        write_row(["3. Community Issues, Aid & Equipment", "Community Issues Submitted", svc["issues_submitted"]])
+        write_row(["3. Community Issues, Aid & Equipment", "Community Issues Resolved", svc["issues_resolved"]])
     if "aid_requests" in included:
-        writer.writerow(["3. Community Issues, Aid & Equipment", "Aid Requests Submitted", svc.get("aid_requests_submitted", 0)])
-        writer.writerow(["3. Community Issues, Aid & Equipment", "Aid Requests Approved / Fulfilled", svc["aid_requests_approved"]])
+        write_row(["3. Community Issues, Aid & Equipment", "Aid Requests Submitted", svc.get("aid_requests_submitted", 0)])
+        write_row(["3. Community Issues, Aid & Equipment", "Aid Requests Approved / Fulfilled", svc["aid_requests_approved"]])
     if "equipment_borrowing" in included:
-        writer.writerow(["3. Community Issues, Aid & Equipment", "Equipment / Facility Requests Approved or Returned", svc["equipment_requests_fulfilled"]])
-        writer.writerow(["3. Community Issues, Aid & Equipment", "Equipment / Facility Requests Returned", svc.get("equipment_requests_returned", 0)])
+        write_row(["3. Community Issues, Aid & Equipment", "Equipment / Facility Requests Approved or Returned", svc["equipment_requests_fulfilled"]])
+        write_row(["3. Community Issues, Aid & Equipment", "Equipment / Facility Requests Returned", svc.get("equipment_requests_returned", 0)])
 
     comm = report["communications_activities"]
     if "communications" in included:
-        writer.writerow(["4. Public Communications & Activities", "Public Announcements Published", comm["announcements_published"]])
-        writer.writerow(["4. Public Communications & Activities", "Community Activities Conducted", comm["activities_conducted"]])
+        write_row(["4. Public Communications & Activities", "Public Announcements Published", comm["announcements_published"]])
+        write_row(["4. Public Communications & Activities", "Community Activities Conducted", comm["activities_conducted"]])
 
     return buffer.getvalue().encode("utf-8")
 
