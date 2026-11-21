@@ -1692,14 +1692,42 @@ class DocumentRequestViewSet(viewsets.ModelViewSet):
             document_request=document,
             revoked_at__isnull=True,
         ).first()
-        if verification_record is None:
-            verification_record = DocumentCertificateVerification.objects.create(
-                document_request=document,
-                issued_by=request.user if request.user.role == User.Role.ADMIN else None,
-            )
+        if verification_record is None and request.user.role == User.Role.ADMIN:
+            with transaction.atomic():
+                locked_document = DocumentRequest.objects.select_for_update().get(
+                    pk=document.pk
+                )
+                verification_record = DocumentCertificateVerification.objects.filter(
+                    document_request=locked_document,
+                    revoked_at__isnull=True,
+                ).first()
+                # Never re-mint once any verification record (including a revoked one) exists.
+                if (
+                    verification_record is None
+                    and not DocumentCertificateVerification.objects.filter(
+                        document_request=locked_document
+                    ).exists()
+                ):
+                    try:
+                        with transaction.atomic():
+                            verification_record = DocumentCertificateVerification.objects.create(
+                                document_request=locked_document,
+                                issued_by=request.user,
+                            )
+                    except IntegrityError:
+                        verification_record = DocumentCertificateVerification.objects.filter(
+                            document_request=locked_document,
+                            revoked_at__isnull=True,
+                        ).first()
 
-        verification_url = f"{settings.FRONTEND_URL.rstrip('/')}/verify-certificate/{verification_record.token}"
-        qr_code_data_uri = self._build_qr_code_data_uri(verification_url)
+        if verification_record is not None:
+            verification_url = (
+                f"{settings.FRONTEND_URL.rstrip('/')}/verify-certificate/{verification_record.token}"
+            )
+            qr_code_data_uri = self._build_qr_code_data_uri(verification_url)
+        else:
+            verification_url = ""
+            qr_code_data_uri = ""
 
         template = get_template('gridy_services/pdf_or_number.html')
         html = template.render({
