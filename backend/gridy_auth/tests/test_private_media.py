@@ -1,7 +1,10 @@
+import os
+import tempfile
 from io import BytesIO
 from unittest.mock import patch
 
 from django.core.files.base import ContentFile
+from django.test import override_settings
 from django.urls import reverse
 from PIL import Image
 from rest_framework import status
@@ -204,3 +207,29 @@ class ResidentPrivateMediaAPITests(IsolatedAuthAPITestCase):
         response = self.client.get("/media/resident_ids/private-test.png")
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_public_media_directory_paths_return_404_and_files_set_nosniff(self):
+        with tempfile.TemporaryDirectory() as tmp_media_root:
+            public_dir = os.path.join(tmp_media_root, "barangay_logos")
+            os.makedirs(public_dir, exist_ok=True)
+            logo_path = os.path.join(public_dir, "seal.png")
+            with open(logo_path, "wb") as logo_file:
+                logo_file.write(self.test_image_bytes)
+
+            with override_settings(MEDIA_ROOT=tmp_media_root):
+                root_resp = self.client.get("/media/")
+                self.assertEqual(root_resp.status_code, status.HTTP_404_NOT_FOUND)
+
+                subdir_resp = self.client.get("/media/barangay_logos/")
+                self.assertEqual(subdir_resp.status_code, status.HTTP_404_NOT_FOUND)
+
+                file_resp = self.client.get("/media/barangay_logos/seal.png")
+                self.assertEqual(file_resp.status_code, status.HTTP_200_OK)
+                self.assertEqual(
+                    file_resp["X-Content-Type-Options"],
+                    "nosniff",
+                )
+                self.assertEqual(
+                    b"".join(file_resp.streaming_content),
+                    self.test_image_bytes,
+                )
