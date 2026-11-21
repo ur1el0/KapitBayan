@@ -1,12 +1,16 @@
 import json
 
+from django.conf import settings
+from django.db import transaction
+from django.db.models import Q
 from rest_framework import status, permissions, viewsets
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from drf_spectacular.utils import extend_schema, OpenApiTypes
 
-from gridy_auth.models import Barangay, User
+from gridy_auth.models import Barangay, BarangayApplication, User
 from gridy_auth.serializers import UserSerializer, BarangaySerializer
 from gridy_auth.permissions import IsBarangayOfficial
 from gridy_auth.lifecycle import erase_user_account
@@ -105,13 +109,77 @@ class UserProfileView(APIView):
     )
     def delete(self, request):
         user = request.user
-        erase_user_account(
-            user=user,
-            reason=f"User {user.username} (ID: {user.id}) voluntarily exercised their Right to Erasure and permanently deleted their account.",
-            request=request,
-            actor=user,
+        if user.is_superuser or user.role == User.Role.BARANGAY_OPERATOR:
+            raise PermissionDenied(
+                "Platform operator and superuser accounts cannot be self-erased."
+            )
+
+        with transaction.atomic():
+            if user.role == User.Role.ADMIN and user.barangay_id is not None:
+                list(
+                    Barangay.objects.select_for_update().filter(pk=user.barangay_id)
+                )
+            # Match PlatformAccountSupportViewSet lock order to prevent deadlocks.
+            list(
+                BarangayApplication.objects.filter(
+                    Q(applicant_user_id=user.pk) | Q(created_admin_id=user.pk)
+                )
+                .order_by("pk")
+                .select_for_update(of=("self",))
+            )
+            locked_user = (
+                User.objects.select_for_update(of=("self",))
+                .filter(pk=user.pk)
+                .first()
+            )
+            if locked_user is not None:
+                if (
+                    locked_user.is_superuser
+                    or locked_user.role == User.Role.BARANGAY_OPERATOR
+                ):
+                    raise PermissionDenied(
+                        "Platform operator and superuser accounts cannot be self-erased."
+                    )
+                if (
+                    locked_user.role == User.Role.ADMIN
+                    and locked_user.is_active
+                    and locked_user.barangay_id is not None
+                ):
+                    active_admin_count = User.objects.filter(
+                        barangay_id=locked_user.barangay_id,
+                        role=User.Role.ADMIN,
+                        is_active=True,
+                        is_superuser=False,
+                    ).count()
+                    if active_admin_count <= 1:
+                        raise ValidationError({
+                            "account": (
+                                "The last active Barangay Admin for a barangay cannot be deleted."
+                            )
+                        })
+
+                erase_user_account(
+                    user=locked_user,
+                    reason=(
+                        f"User {locked_user.username} (ID: {locked_user.id}) voluntarily exercised "
+                        "their Right to Erasure and permanently deleted their account."
+                    ),
+                    request=request,
+                    actor=locked_user,
+                )
+
+        response = Response(status=status.HTTP_204_NO_CONTENT)
+        samesite_policy = getattr(settings, "REFRESH_COOKIE_SAMESITE", "Strict")
+        secure_cookie = (not settings.DEBUG) or (samesite_policy.lower() == "none")
+        response.delete_cookie(
+            "refresh_token",
+            path="/api/v1/auth/",
+            samesite=samesite_policy,
         )
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        if secure_cookie:
+            response.cookies["refresh_token"]["secure"] = True
+        response.cookies["refresh_token"]["httponly"] = True
+        return response
     
 @extend_schema(tags=['Barangay Settings'])
 class BarangayViewSet(viewsets.ModelViewSet):

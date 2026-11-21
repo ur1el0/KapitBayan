@@ -101,6 +101,9 @@ class AccountErasureLifecycleTests(IsolatedAuthAPITestCase):
         with self.captureOnCommitCallbacks(execute=True):
             response = self.client.delete(reverse("auth_me"))
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertIn("refresh_token", response.cookies)
+        self.assertEqual(response.cookies["refresh_token"]["max-age"], 0)
+        self.assertEqual(response.cookies["refresh_token"]["path"], "/api/v1/auth/")
 
         # User and profile are destroyed
         self.assertFalse(User.objects.filter(username="resident_maria").exists())
@@ -245,3 +248,51 @@ class AccountErasureLifecycleTests(IsolatedAuthAPITestCase):
         self.assertTrue(Resident.objects.filter(pk=resident_id).exists())
         self.assertTrue(default_storage.exists(philsys_file_name))
         self.assertTrue(default_storage.exists(billing_file_name))
+
+    def test_sole_active_barangay_admin_cannot_self_erase(self):
+        self.client.force_authenticate(user=self.admin)
+
+        response = self.client.delete(reverse("auth_me"))
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("account", response.data)
+        self.assertTrue(User.objects.filter(pk=self.admin.pk).exists())
+
+    def test_non_last_barangay_admin_can_self_erase_and_clears_refresh_cookie(self):
+        backup_admin = User.objects.create_user(
+            username="backup_admin_user",
+            email="backup.admin@barangay.gov.ph",
+            password="AdminPassword123!",
+            role=User.Role.ADMIN,
+            barangay=self.barangay,
+        )
+        self.client.force_authenticate(user=self.admin)
+
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.delete(reverse("auth_me"))
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(User.objects.filter(pk=self.admin.pk).exists())
+        self.assertTrue(User.objects.filter(pk=backup_admin.pk).exists())
+        self.assertIn("refresh_token", response.cookies)
+        self.assertEqual(response.cookies["refresh_token"]["max-age"], 0)
+        self.assertEqual(response.cookies["refresh_token"]["path"], "/api/v1/auth/")
+
+    def test_barangay_operator_and_superuser_cannot_self_erase(self):
+        operator = User.objects.create_user(
+            username="platform_operator_user",
+            email="operator@kapitbayan.gov.ph",
+            password="OperatorPassword123!",
+            role=User.Role.BARANGAY_OPERATOR,
+        )
+        superuser = User.objects.create_superuser(
+            username="root_superuser",
+            email="root@kapitbayan.gov.ph",
+            password="SuperPassword123!",
+        )
+
+        for protected_user in (operator, superuser):
+            self.client.force_authenticate(user=protected_user)
+            response = self.client.delete(reverse("auth_me"))
+            self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+            self.assertTrue(User.objects.filter(pk=protected_user.pk).exists())
