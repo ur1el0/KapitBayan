@@ -3,7 +3,7 @@ from threading import Barrier
 from unittest.mock import patch
 
 from django.db import connections
-from django.test import TransactionTestCase, skipUnlessDBFeature
+from django.test import TransactionTestCase, override_settings, skipUnlessDBFeature
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIRequestFactory
@@ -132,6 +132,28 @@ class AuthScopedThrottleTests(IsolatedAuthAPITestCase):
 
         request.META['HTTP_X_FORWARDED_FOR'] = 'not-an-ip, 10.0.0.8'
         self.assertEqual(throttle.get_ident(request), '10.0.0.8')
+
+    def test_forwarded_header_proxy_trust_settings(self):
+        request = APIRequestFactory().get(
+            '/',
+            HTTP_X_FORWARDED_FOR='1.2.3.4, 203.0.113.42',
+            REMOTE_ADDR='10.0.0.8',
+        )
+        throttle = SharedDatabaseScopedRateThrottle()
+
+        with override_settings(TRUST_X_FORWARDED_FOR=False):
+            self.assertEqual(throttle.get_ident(request), '10.0.0.8')
+
+        with override_settings(TRUST_X_FORWARDED_FOR=True, TRUSTED_PROXY_COUNT=1):
+            self.assertEqual(throttle.get_ident(request), '203.0.113.42')
+
+        with override_settings(TRUST_X_FORWARDED_FOR=True, TRUSTED_PROXY_COUNT=2):
+            multi_hop = APIRequestFactory().get(
+                '/',
+                HTTP_X_FORWARDED_FOR='1.2.3.4, 198.51.100.7, 10.0.0.9',
+                REMOTE_ADDR='127.0.0.1',
+            )
+            self.assertEqual(throttle.get_ident(multi_hop), '198.51.100.7')
 
     def test_separate_throttle_instances_share_a_scope_window(self):
         request = APIRequestFactory().get('/', REMOTE_ADDR='192.0.2.10')

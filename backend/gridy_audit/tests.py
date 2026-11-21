@@ -1,4 +1,4 @@
-from django.test import RequestFactory, SimpleTestCase
+from django.test import RequestFactory, SimpleTestCase, override_settings
 
 from gridy_audit.services import get_client_ip
 
@@ -29,3 +29,16 @@ class GetClientIPTests(SimpleTestCase):
         request = self.factory.get("/", REMOTE_ADDR="testserver")
 
         self.assertIsNone(get_client_ip(request))
+
+    def test_ignores_spoofed_leftmost_forwarded_ip_when_proxy_trust_restricted(self):
+        request = self.factory.get(
+            "/",
+            REMOTE_ADDR="192.0.2.50",
+            HTTP_X_FORWARDED_FOR="198.51.100.1, 203.0.113.77",
+        )
+
+        with override_settings(TRUST_X_FORWARDED_FOR=False):
+            self.assertEqual(get_client_ip(request), "192.0.2.50")
+
+        with override_settings(TRUST_X_FORWARDED_FOR=True, TRUSTED_PROXY_COUNT=1):
+            self.assertEqual(get_client_ip(request), "203.0.113.77")
