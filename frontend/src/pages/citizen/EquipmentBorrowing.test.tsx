@@ -9,6 +9,12 @@ vi.mock('../../api/axios', () => ({
 }));
 vi.mock('../../context/auth-context', () => ({ useAuth: vi.fn() }));
 
+const formatOffsetDate = (daysFromToday: number): string => {
+    const date = new Date(Date.now() - new Date().getTimezoneOffset() * 60000);
+    date.setUTCDate(date.getUTCDate() + daysFromToday);
+    return date.toISOString().split('T')[0];
+};
+
 describe('EquipmentBorrowing', () => {
     beforeEach(() => {
         vi.mocked(axiosPrivate.get).mockReset();
@@ -18,6 +24,10 @@ describe('EquipmentBorrowing', () => {
     });
 
     it('opens the modal, validates dates, and submits a resident borrowing request', async () => {
+        const borrowDate = formatOffsetDate(4);
+        const invalidReturnDate = formatOffsetDate(2);
+        const validReturnDate = formatOffsetDate(5);
+
         vi.mocked(useAuth).mockReturnValue({ user: { role: 'RESIDENT' } } as never);
         vi.mocked(axiosPrivate.post).mockResolvedValue({ data: {} } as never);
 
@@ -33,10 +43,10 @@ describe('EquipmentBorrowing', () => {
             target: { value: '2' },
         });
         fireEvent.change(screen.getByLabelText('Borrow date'), {
-            target: { value: '2026-11-20' },
+            target: { value: borrowDate },
         });
         fireEvent.change(screen.getByLabelText('Return date'), {
-            target: { value: '2026-11-18' },
+            target: { value: invalidReturnDate },
         });
         fireEvent.change(screen.getByLabelText('Purpose'), {
             target: { value: 'Community health assembly.' },
@@ -49,7 +59,7 @@ describe('EquipmentBorrowing', () => {
         expect(axiosPrivate.post).not.toHaveBeenCalled();
 
         fireEvent.change(screen.getByLabelText('Return date'), {
-            target: { value: '2026-11-21' },
+            target: { value: validReturnDate },
         });
         fireEvent.click(screen.getByRole('button', { name: 'Submit Borrowing Request' }));
 
@@ -57,8 +67,8 @@ describe('EquipmentBorrowing', () => {
             expect(axiosPrivate.post).toHaveBeenCalledWith('/equipment-requests/', {
                 item_type: 'Tent / Canopy',
                 quantity: 2,
-                borrow_date: '2026-11-20',
-                return_date: '2026-11-21',
+                borrow_date: borrowDate,
+                return_date: validReturnDate,
                 time_slot: '08:00 AM - 05:00 PM',
                 purpose: 'Community health assembly.',
             }),

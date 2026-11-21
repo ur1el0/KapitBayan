@@ -45,22 +45,30 @@ class DashboardSummaryAPITests(ServiceAPIBaseTestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_dashboard_summary_success_for_official(self):
+        barangay = Barangay.objects.create(name="Dashboard Assigned Barangay")
+        self.official.barangay = barangay
+        self.official.save(update_fields=["barangay"])
+        self.resident.barangay = barangay
+        self.resident.save(update_fields=["barangay"])
         self.client.force_login(self.official)
 
         # Create some mock data to verify aggregation counters
         DocumentRequest.objects.create(
             user=self.resident,
+            barangay=barangay,
             document_type="Indigency Certificate",
             status="PENDING"
         )
         IssueReport.objects.create(
             reporter=self.resident,
+            barangay=barangay,
             title="Broken Light",
             description="Dark alley",
             location="Purok 2",
             urgency="HAZARD"
         )
         QueueTicket.objects.create(
+            barangay=barangay,
             status="SERVING",
             ticket_number="T001",
             service_type="DOCUMENT"
@@ -80,3 +88,68 @@ class DashboardSummaryAPITests(ServiceAPIBaseTestCase):
         self.assertEqual(response.data["document_requests"]["pending"], 1)
         self.assertEqual(response.data["issue_reports"]["urgency_breakdown"]["hazard"], 1)
         self.assertEqual(response.data["queue_activity"]["serving_now"], "T001")
+
+    def test_dashboard_summary_rejects_unassigned_official(self):
+        self.client.force_login(self.official)
+        response = self.client.get("/api/v1/dashboard/summary/")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_dashboard_summary_isolates_transferred_resident_records_and_includes_walkin_issues(self):
+        from gridy_auth.models import User
+
+        barangay_a = Barangay.objects.create(name="Transfer Source Barangay")
+        barangay_b = Barangay.objects.create(name="Transfer Destination Barangay")
+        admin_b = User.objects.create_user(
+            username="admin_b_dashboard",
+            email="admin-b@example.com",
+            password="SecurePassword123!",
+            role=User.Role.ADMIN,
+            barangay=barangay_b,
+        )
+
+        # Resident already transferred from Barangay A to Barangay B.
+        self.resident.barangay = barangay_b
+        self.resident.save(update_fields=["barangay"])
+
+        DocumentRequest.objects.create(
+            user=self.resident,
+            barangay=barangay_a,
+            document_type="Barangay Clearance",
+            status=DocumentRequest.Status.RELEASED,
+            fee_amount="999.00",
+        )
+        IssueReport.objects.create(
+            reporter=self.resident,
+            barangay=barangay_a,
+            title="Old Barangay A Leak",
+            description="Reported before transfer",
+            location="Purok 1",
+            urgency=IssueReport.Urgency.MINOR,
+        )
+
+        DocumentRequest.objects.create(
+            user=self.resident,
+            barangay=barangay_b,
+            document_type="Barangay Clearance",
+            status=DocumentRequest.Status.RELEASED,
+            fee_amount="50.00",
+        )
+        IssueReport.objects.create(
+            reporter=None,
+            barangay=barangay_b,
+            walkin_name="Kiosk Reporter",
+            title="Streetlight Outage",
+            description="Logged at Barangay B kiosk",
+            location="Purok 3",
+            status=IssueReport.Status.PENDING,
+            urgency=IssueReport.Urgency.HAZARD,
+        )
+
+        self.client.force_login(admin_b)
+        response = self.client.get("/api/v1/dashboard/summary/")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["document_requests"]["released"], 1)
+        self.assertEqual(response.data["document_requests"]["total_revenue"], 50.0)
+        self.assertEqual(response.data["issue_reports"]["total"], 1)
+        self.assertEqual(response.data["issue_reports"]["urgency_breakdown"]["hazard"], 1)

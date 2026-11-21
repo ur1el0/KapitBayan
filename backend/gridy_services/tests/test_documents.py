@@ -7,7 +7,12 @@ from rest_framework import status
 from gridy_audit.models import AuditLog
 from gridy_auth.models import Barangay, Resident, User
 from gridy_communications.models import ResidentNotification
-from gridy_services.models import DocumentRequest, DocumentServiceOffering, QueueTicket
+from gridy_services.models import (
+    DocumentCertificateVerification,
+    DocumentRequest,
+    DocumentServiceOffering,
+    QueueTicket,
+)
 from .base import ServiceAPIBaseTestCase
 
 
@@ -746,3 +751,197 @@ class DocumentRequestAPITests(ServiceAPIBaseTestCase):
         self.assertEqual(created_request.requirements_snapshot, ["Barangay Voter Certification", "Latest Cedula 2026"])
         self.assertEqual(created_request.published_fee_amount_snapshot, Decimal("75.00"))
         self.assertEqual(created_request.details_snapshot, "Custom local requirements for Ibabang Dupay.")
+
+    @patch(
+        "gridy_services.views.documents.DocumentRequestViewSet._build_qr_code_data_uri",
+        return_value="data:image/png;base64,TESTQR",
+    )
+    @patch("gridy_services.views.documents.pisa.CreatePDF")
+    def test_resident_generate_pdf_never_mints_new_certificate_verification(
+        self, create_pdf, _mock_qr
+    ):
+        barangay = self._assign_shared_barangay()
+        doc = DocumentRequest.objects.create(
+            user=self.resident,
+            barangay=barangay,
+            document_type="Barangay Clearance",
+            status=DocumentRequest.Status.RELEASED,
+            or_number="OR-RES-9001",
+        )
+        create_pdf.return_value.err = False
+        self.client.force_login(self.resident)
+
+        response = self.client.get(
+            reverse("document-request-generate-pdf", args=[doc.pk])
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        rendered_html = create_pdf.call_args.args[0]
+        self.assertIn("OR-RES-9001", rendered_html)
+        self.assertNotIn("/verify-certificate/", rendered_html)
+        self.assertEqual(
+            DocumentCertificateVerification.objects.filter(document_request=doc).count(),
+            0,
+        )
+
+    @patch(
+        "gridy_services.views.documents.DocumentRequestViewSet._build_qr_code_data_uri",
+        return_value="data:image/png;base64,TESTQR",
+    )
+    @patch("gridy_services.views.documents.pisa.CreatePDF")
+    def test_generate_pdf_does_not_remint_revoked_qr_for_resident_or_admin(
+        self, create_pdf, _mock_qr
+    ):
+        barangay = self._assign_shared_barangay()
+        doc = DocumentRequest.objects.create(
+            user=self.resident,
+            barangay=barangay,
+            document_type="Barangay Clearance",
+            status=DocumentRequest.Status.RELEASED,
+            or_number="OR-REVOKED-9002",
+        )
+        create_pdf.return_value.err = False
+
+        verify_url = reverse("document-request-certificate-verification", args=[doc.pk])
+        self.client.force_login(self.official)
+        create_resp = self.client.post(
+            verify_url,
+            {"confirm_paper_certificate_issued": True},
+            format="json",
+        )
+        self.assertEqual(create_resp.status_code, status.HTTP_200_OK)
+
+        revoke_resp = self.client.delete(verify_url)
+        self.assertEqual(revoke_resp.status_code, status.HTTP_200_OK)
+
+        # Resident download must not re-mint a revoked certificate QR.
+        self.client.force_login(self.resident)
+        resident_pdf = self.client.get(
+            reverse("document-request-generate-pdf", args=[doc.pk])
+        )
+        self.assertEqual(resident_pdf.status_code, status.HTTP_200_OK)
+        self.assertNotIn("/verify-certificate/", create_pdf.call_args.args[0])
+        self.assertEqual(
+            DocumentCertificateVerification.objects.filter(
+                document_request=doc,
+                revoked_at__isnull=True,
+            ).count(),
+            0,
+        )
+        self.assertEqual(
+            DocumentCertificateVerification.objects.filter(document_request=doc).count(),
+            1,
+        )
+
+        # Official download must also preserve revocation instead of silently re-minting.
+        self.client.force_login(self.official)
+        admin_pdf = self.client.get(
+            reverse("document-request-generate-pdf", args=[doc.pk])
+        )
+        self.assertEqual(admin_pdf.status_code, status.HTTP_200_OK)
+        self.assertNotIn("/verify-certificate/", create_pdf.call_args.args[0])
+        self.assertEqual(
+            DocumentCertificateVerification.objects.filter(
+                document_request=doc,
+                revoked_at__isnull=True,
+            ).count(),
+            0,
+        )
+        self.assertEqual(
+            DocumentCertificateVerification.objects.filter(document_request=doc).count(),
+            1,
+        )
+
+    @patch(
+        "gridy_services.views.documents.DocumentRequestViewSet._build_qr_code_data_uri",
+        return_value="data:image/png;base64,TESTQR",
+    )
+    @patch("gridy_services.views.documents.pisa.CreatePDF")
+    def test_resident_generate_pdf_embeds_existing_active_verification_without_duplicating(
+        self, create_pdf, _mock_qr
+    ):
+        barangay = self._assign_shared_barangay()
+        doc = DocumentRequest.objects.create(
+            user=self.resident,
+            barangay=barangay,
+            document_type="Barangay Clearance",
+            status=DocumentRequest.Status.RELEASED,
+            or_number="OR-ACTIVE-9003",
+        )
+        create_pdf.return_value.err = False
+
+        self.client.force_login(self.official)
+        issue_resp = self.client.post(
+            reverse("document-request-certificate-verification", args=[doc.pk]),
+            {"confirm_paper_certificate_issued": True},
+            format="json",
+        )
+        self.assertEqual(issue_resp.status_code, status.HTTP_200_OK)
+        issued_token = issue_resp.data["token"]
+
+        self.client.force_login(self.resident)
+        pdf_resp = self.client.get(
+            reverse("document-request-generate-pdf", args=[doc.pk])
+        )
+        self.assertEqual(pdf_resp.status_code, status.HTTP_200_OK)
+        self.assertIn(f"/verify-certificate/{issued_token}", create_pdf.call_args.args[0])
+        self.assertEqual(
+            DocumentCertificateVerification.objects.filter(document_request=doc).count(),
+            1,
+        )
+
+    def test_non_integer_pk_routes_return_not_found_instead_of_server_error(self):
+        self._assign_shared_barangay()
+        self.client.force_login(self.official)
+
+        for path in (
+            "/api/v1/document-requests/abc/",
+            "/api/v1/document-requests/abc/payment-proof/",
+            "/api/v1/document-catalog/abc/",
+            "/api/v1/aid-requests/abc/",
+            "/api/v1/equipment-requests/abc/",
+            "/api/v1/tickets/abc/",
+            "/api/v1/reports/abc/",
+            "/api/v1/announcements/abc/",
+            "/api/v1/activities/abc/",
+            "/api/v1/devices/abc/",
+            "/api/v1/hotlines/abc/",
+            "/api/v1/faqs/abc/",
+            "/api/v1/admin-notifications/abc/",
+            "/api/v1/resident-notifications/abc/",
+        ):
+            response = self.client.get(path)
+            self.assertEqual(
+                response.status_code,
+                status.HTTP_404_NOT_FOUND,
+                f"Expected 404 for non-integer path {path}",
+            )
+
+    def test_generic_update_methods_cannot_bypass_document_review_audit_trail(self):
+        barangay = self._assign_shared_barangay()
+        doc = DocumentRequest.objects.create(
+            user=self.resident,
+            barangay=barangay,
+            document_type="Barangay Clearance",
+            purpose="Original Purpose",
+            status=DocumentRequest.Status.RELEASED,
+            or_number="OR-AUDIT-100",
+        )
+        self.client.force_login(self.official)
+        detail_url = reverse("document-request-detail", args=[doc.pk])
+
+        patch_resp = self.client.patch(
+            detail_url,
+            {"purpose": "Tampered Purpose"},
+            format="json",
+        )
+        put_resp = self.client.put(
+            detail_url,
+            {"document_type": "Tampered", "purpose": "Tampered"},
+            format="json",
+        )
+
+        self.assertEqual(patch_resp.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+        self.assertEqual(put_resp.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+        doc.refresh_from_db()
+        self.assertEqual(doc.purpose, "Original Purpose")

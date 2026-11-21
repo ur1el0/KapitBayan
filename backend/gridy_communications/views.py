@@ -71,6 +71,7 @@ class PublicAnnouncementDetailView(APIView):
 
 
 class ActivityScheduleViewSet(viewsets.ModelViewSet):
+    lookup_value_regex = r"\d+"
     serializer_class = ActivityScheduleSerializer
 
     def get_queryset(self):
@@ -99,6 +100,7 @@ class ActivityScheduleViewSet(viewsets.ModelViewSet):
 
 
 class AnnouncementViewSet(viewsets.ModelViewSet):
+    lookup_value_regex = r"\d+"
     serializer_class = AnnouncementSerializer
 
     def get_queryset(self):
@@ -137,6 +139,7 @@ class AnnouncementViewSet(viewsets.ModelViewSet):
             )
 
 class FCMDeviceViewSet(viewsets.ModelViewSet):
+    lookup_value_regex = r"\d+"
     serializer_class = FCMDeviceSerializer
     
     def get_permissions(self):
@@ -163,6 +166,7 @@ class FCMDeviceViewSet(viewsets.ModelViewSet):
 
 
 class EmergencyHotlineViewSet(viewsets.ModelViewSet):
+    lookup_value_regex = r"\d+"
     serializer_class = EmergencyHotlineSerializer
 
     def get_queryset(self):
@@ -209,6 +213,7 @@ class FAQManagerPermission(permissions.BasePermission):
 
 
 class FAQViewSet(viewsets.ModelViewSet):
+    lookup_value_regex = r"\d+"
     serializer_class = FAQSerializer
 
     def get_queryset(self):
@@ -295,6 +300,7 @@ class AdminNotificationViewSet(
     mixins.DestroyModelMixin,
     viewsets.GenericViewSet,
 ):
+    lookup_value_regex = r"\d+"
     serializer_class = AdminNotificationSerializer
     permission_classes = [permissions.IsAuthenticated, IsAdminNotificationRecipient]
     http_method_names = ['get', 'patch', 'delete', 'post', 'head', 'options']
@@ -326,6 +332,7 @@ class ResidentNotificationViewSet(
 ):
     """Expose a resident's alerts and allow them to mark only their own as read."""
 
+    lookup_value_regex = r"\d+"
     serializer_class = ResidentNotificationSerializer
     permission_classes = [permissions.IsAuthenticated]
     pagination_class = None

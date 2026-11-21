@@ -1,4 +1,8 @@
+from io import BytesIO
+
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
+from PIL import Image
 from rest_framework import status
 
 from gridy_auth.models import Barangay, User
@@ -99,3 +103,27 @@ class BarangayBrandingAPITests(IsolatedAuthAPITestCase):
         self.assertFalse(clear_resp.data["has_kiosk_staff_pin"])
         self.barangay.refresh_from_db()
         self.assertFalse(self.barangay.check_kiosk_staff_pin("2468"))
+
+    def test_oversized_barangay_logo_and_city_seal_are_rejected(self):
+        oversized_buf = BytesIO()
+        Image.new("RGB", (1400, 1400), color="white").save(
+            oversized_buf,
+            format="PNG",
+            compress_level=0,
+        )
+        raw_bytes = oversized_buf.getvalue()
+        self.assertGreater(len(raw_bytes), 5 * 1024 * 1024)
+
+        for field_name in ("logo", "city_seal"):
+            upload = SimpleUploadedFile(
+                f"{field_name}.png",
+                raw_bytes,
+                content_type="image/png",
+            )
+            response = self.client.patch(
+                self.detail_url,
+                {field_name: upload},
+                format="multipart",
+            )
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+            self.assertIn(field_name, response.data)

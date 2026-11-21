@@ -4,7 +4,7 @@ from unittest.mock import patch
 from rest_framework.test import APITestCase
 from rest_framework import status
 from django.urls import reverse
-from gridy_auth.models import Barangay, User
+from gridy_auth.models import Barangay, Resident, User
 from gridy_audit.models import AuditLog
 from .models import IssueReport
 
@@ -12,12 +12,20 @@ from .models import IssueReport
 
 class IssueReportAPITests(APITestCase):
     def setUp(self):
-        # Create a test resident user
+        self.barangay = Barangay.objects.create(name="Report Fixture Barangay")
+        # Create a verified resident user
         self.user = User.objects.create_user(
             username="test_resident",
             password="SecurePassword123!",
             email="resident@example.com",
-            role=User.Role.RESIDENT
+            role=User.Role.RESIDENT,
+            barangay=self.barangay,
+        )
+        self.resident_profile = Resident.objects.create(
+            user=self.user,
+            full_name="Test Resident",
+            birth_date="1995-05-15",
+            is_verified=True,
         )
         self.client.force_login(self.user)
         self.url = reverse('issue-report-list')
@@ -302,3 +310,66 @@ class IssueReportAPITests(APITestCase):
         self.assertEqual(searched.status_code, status.HTTP_200_OK)
         self.assertEqual(searched.data["count"], 1)
         self.assertEqual(searched.data["results"][0]["title"], "Report #2")
+
+    def test_field_official_cannot_delete_issue_report(self):
+        field_official = User.objects.create_user(
+            username="tanod_cannot_delete_report",
+            password="SecurePassword123!",
+            role=User.Role.FIELD_OFFICIAL,
+            barangay=self.barangay,
+        )
+        report = IssueReport.objects.create(
+            reporter=self.user,
+            barangay=self.barangay,
+            title="Active Emergency",
+            description="Downed line",
+            location="Purok 1",
+            urgency=IssueReport.Urgency.EMERGENCY,
+        )
+        self.client.force_login(field_official)
+        response = self.client.delete(reverse("issue-report-detail", args=[report.id]))
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertTrue(IssueReport.objects.filter(pk=report.pk).exists())
+
+    def test_unverified_or_unassigned_resident_cannot_submit_issue_report(self):
+        unassigned_user = User.objects.create_user(
+            username="unassigned_report_resident",
+            password="SecurePassword123!",
+            role=User.Role.RESIDENT,
+            barangay=None,
+        )
+        Resident.objects.create(
+            user=unassigned_user,
+            full_name="Unassigned Resident",
+            birth_date="1998-01-01",
+            is_verified=True,
+        )
+        self.client.force_login(unassigned_user)
+        unassigned_resp = self.client.post(
+            self.url,
+            {"title": "Leak", "description": "Pipe leak", "location": "Purok 1"},
+            format="json",
+        )
+        self.assertEqual(unassigned_resp.status_code, status.HTTP_403_FORBIDDEN)
+
+        unverified_user = User.objects.create_user(
+            username="unverified_report_resident",
+            password="SecurePassword123!",
+            role=User.Role.RESIDENT,
+            barangay=self.barangay,
+        )
+        Resident.objects.create(
+            user=unverified_user,
+            full_name="Unverified Resident",
+            birth_date="1999-01-01",
+            is_verified=False,
+        )
+        self.client.force_login(unverified_user)
+        unverified_resp = self.client.post(
+            self.url,
+            {"title": "Leak", "description": "Pipe leak", "location": "Purok 1"},
+            format="json",
+        )
+        self.assertEqual(unverified_resp.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertFalse(IssueReport.objects.filter(reporter=unverified_user).exists())

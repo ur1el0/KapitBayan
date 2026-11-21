@@ -1,5 +1,6 @@
 from io import BytesIO
 from django.core.files.base import ContentFile
+from django.core.files.storage import default_storage
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 from PIL import Image
@@ -290,3 +291,22 @@ class ProfileEvidenceAPITests(IsolatedAuthAPITestCase):
 
         self.resident.refresh_from_db()
         self.assertEqual(self.resident.full_name, "Malicious Modification")
+
+    def test_replacing_private_evidence_cleans_up_old_file_post_commit(self):
+        old_file_name = self.resident.philsys_id_photo.name
+        self.assertTrue(default_storage.exists(old_file_name))
+
+        self.client.force_authenticate(user=self.user)
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.patch(
+                "/api/v1/auth/me/",
+                {
+                    "remove_philsys_id_photo": "true",
+                    "utility_billing_type": "Water Utility",
+                    "utility_billing_photo": create_test_image("new_billing.png"),
+                },
+                format="multipart",
+            )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertFalse(default_storage.exists(old_file_name))

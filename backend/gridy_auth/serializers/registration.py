@@ -5,9 +5,8 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from gridy_auth.models import User, Resident, Barangay
 from django.conf import settings
 from django.utils import timezone
-from django.db.models import Q
 from gridy_communications.admin_notifications import notify_barangay_admins
-from .base import ResidentEvidenceImageField
+from .base import ResidentEvidenceImageField, has_sign_in_identity_conflict
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
@@ -75,9 +74,9 @@ class RegisterSerializer(serializers.ModelSerializer):
         # self-service names in one canonical form and reject existing variants
         # so a later login cannot resolve to an arbitrary account.
         username = value.strip().lower()
-        if User.objects.filter(username__iexact=username).exists():
+        if has_sign_in_identity_conflict(username):
             raise serializers.ValidationError(
-                "This username is already in use, regardless of capitalization."
+                "This username conflicts with an existing account sign-in identity."
             )
         return username
 
@@ -86,16 +85,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         if not normalized_email:
             return normalized_email
 
-        official_roles = (
-            User.Role.ADMIN,
-            User.Role.FIELD_OFFICIAL,
-            User.Role.BARANGAY_OPERATOR,
-        )
-        conflicts_with_staff_identity = User.objects.filter(
-            Q(username__iexact=normalized_email)
-            | Q(email__iexact=normalized_email, role__in=official_roles)
-        ).exists()
-        if conflicts_with_staff_identity:
+        if has_sign_in_identity_conflict(normalized_email):
             raise serializers.ValidationError(
                 "This email conflicts with an existing account sign-in identity."
             )

@@ -14,6 +14,7 @@ from gridy_services.serializers import (
 
 
 class AidRequestViewSet(viewsets.ModelViewSet):
+    lookup_value_regex = r"\d+"
     http_method_names = ["get", "post", "patch", "head", "options"]
 
     def get_queryset(self):

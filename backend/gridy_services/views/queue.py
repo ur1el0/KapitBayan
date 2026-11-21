@@ -32,12 +32,13 @@ __all__ = ["QueueTicketViewSet", "DashboardSummaryView"]
 logger = logging.getLogger(__name__)
 
 class QueueTicketViewSet(viewsets.ModelViewSet):
+    lookup_value_regex = r"\d+"
     serializer_class = QueueTicketSerializer
 
     def get_permissions(self):
         if self.action in ['list', 'retrieve', 'create', 'live_status', 'cancel_ticket']:
             return [permissions.IsAuthenticated()]
-        if self.action == 'set_priority':
+        if self.action in {'set_priority', 'destroy'}:
             return [IsBarangayOfficial()]
         return [IsBarangayOfficialOrField()]
 
@@ -56,6 +57,8 @@ class QueueTicketViewSet(viewsets.ModelViewSet):
         historical = ~Q(status__in=active_statuses)
         queryset = QueueTicket.objects.select_related('user', 'document_request')
         if user.role in [User.Role.ADMIN, User.Role.FIELD_OFFICIAL]:
+            if user.barangay_id is None:
+                return QueueTicket.objects.none()
             queryset = queryset.filter(barangay=user.barangay)
         else:
             queryset = queryset.filter(user=user)
@@ -205,6 +208,33 @@ class QueueTicketViewSet(viewsets.ModelViewSet):
             ticket=ticket.ticket_number,
             action="update",
         )
+
+    def perform_destroy(self, instance):
+        ticket_id = instance.pk
+        ticket_number = instance.ticket_number
+        ticket_status = instance.status
+        barangay_id = instance.barangay_id
+
+        with transaction.atomic():
+            log_action(
+                user=self.request.user,
+                action_type=AuditLog.ActionType.QUEUE_ACTION,
+                description=(
+                    f"Deleted queue ticket #{ticket_id} ({ticket_number}) "
+                    f"with status {ticket_status}."
+                ),
+                request=self.request,
+            )
+            instance.delete()
+            if barangay_id is not None:
+                transaction.on_commit(
+                    lambda b_id=barangay_id, t_num=ticket_number: broadcast_queue_update(
+                        barangay_id=b_id,
+                        ticket=t_num,
+                        action="delete",
+                        message=f"Ticket {t_num} removed.",
+                    )
+                )
 
     @staticmethod
     def _has_notification_channel(user):
