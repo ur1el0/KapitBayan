@@ -73,8 +73,10 @@ def get_allowed_hosts(debug=False, raw_hosts=None, render_hostname=None):
 RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
 ALLOWED_HOSTS = get_allowed_hosts(DEBUG, render_hostname=RENDER_EXTERNAL_HOSTNAME)
 
-# Reverse-Proxy SSL Awareness (Render / Cloudflare Edge)
+# Reverse-Proxy SSL & Forwarded-IP Trust (Render / Cloudflare Edge / Docker Nginx)
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+TRUST_X_FORWARDED_FOR = env.bool('TRUST_X_FORWARDED_FOR', default=True)
+TRUSTED_PROXY_COUNT = env.int('TRUSTED_PROXY_COUNT', default=0)
 
 
 def get_csrf_trusted_origins(debug=False, raw_origins=None):
@@ -283,6 +285,7 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_THROTTLE_RATES': {
         'auth_login': '10/minute',
+        'auth_token_refresh': '60/minute',
         'auth_register': '20/hour',
         'auth_admin_register': '5/hour',
         'password_reset_request': '5/hour',
