@@ -1,43 +1,58 @@
 import json
 import logging
+from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
+
+from gridy_auth.models import Barangay
 
 logger = logging.getLogger(__name__)
 
 
 class QueueConsumer(AsyncWebsocketConsumer):
     """
-    WebSocket consumer handling real-time queue notifications.
-    Supports tenant-isolated rooms (queue_{barangay_id}) as well as
-    fallback global rooms (queue_updates).
+    WebSocket consumer handling real-time queue notifications strictly inside
+    verified tenant-isolated rooms (``queue_{barangay_id}``).
     """
 
+    @staticmethod
+    @database_sync_to_async
+    def _barangay_exists(barangay_id):
+        return Barangay.objects.filter(pk=barangay_id).exists()
+
     async def connect(self):
-        # Extract optional barangay_id from route kwargs
-        self.barangay_id = self.scope.get('url_route', {}).get('kwargs', {}).get('barangay_id')
+        raw_barangay_id = self.scope.get("url_route", {}).get("kwargs", {}).get("barangay_id")
+        try:
+            barangay_id = int(raw_barangay_id)
+        except (TypeError, ValueError):
+            barangay_id = None
 
-        if self.barangay_id:
-            self.group_name = f"queue_{self.barangay_id}"
-        else:
-            self.group_name = "queue_updates"
+        if (
+            not barangay_id
+            or barangay_id <= 0
+            or not await self._barangay_exists(barangay_id)
+        ):
+            await self.close(code=4004)
+            return
 
-        # Join the channel layer group
+        self.barangay_id = str(barangay_id)
+        self.group_name = f"queue_{barangay_id}"
+
         await self.channel_layer.group_add(
             self.group_name,
-            self.channel_name
+            self.channel_name,
         )
 
         await self.accept()
         logger.info("WebSocket connected on group: %s", self.group_name)
 
     async def disconnect(self, close_code):
-        # Leave the channel layer group
-        if hasattr(self, 'group_name'):
+        group_name = getattr(self, "group_name", None)
+        if group_name:
             await self.channel_layer.group_discard(
-                self.group_name,
-                self.channel_name
+                group_name,
+                self.channel_name,
             )
-            logger.info("WebSocket disconnected from group: %s (code: %s)", self.group_name, close_code)
+            logger.info("WebSocket disconnected from group: %s (code: %s)", group_name, close_code)
 
     async def queue_update(self, event):
         """
