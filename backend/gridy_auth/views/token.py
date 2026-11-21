@@ -108,6 +108,8 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 
 
 class CustomTokenRefreshView(TokenRefreshView):
+    throttle_scope = 'auth_token_refresh'
+
     def post(self, request, *args, **kwargs):
         # Retrieve refresh token from browser cookies or request payload
         refresh_token_str = request.COOKIES.get('refresh_token') or request.data.get('refresh')

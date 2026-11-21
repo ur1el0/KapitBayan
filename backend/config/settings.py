@@ -285,6 +285,7 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_THROTTLE_RATES': {
         'auth_login': '10/minute',
+        'auth_token_refresh': '60/minute',
         'auth_register': '20/hour',
         'auth_admin_register': '5/hour',
         'password_reset_request': '5/hour',

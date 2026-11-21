@@ -10,6 +10,7 @@ from rest_framework.test import APIRequestFactory
 
 from gridy_auth.models import APIRateLimitWindow
 from gridy_auth.throttling import SharedDatabaseScopedRateThrottle
+from gridy_auth.views.staff import StaffManagementViewSet
 
 from .base import IsolatedAuthAPITestCase
 
@@ -45,6 +46,16 @@ class AuthScopedThrottleTests(IsolatedAuthAPITestCase):
             SharedDatabaseScopedRateThrottle.THROTTLE_RATES['staff_management'],
             '30/minute',
         )
+        self.assertEqual(
+            SharedDatabaseScopedRateThrottle.THROTTLE_RATES['auth_token_refresh'],
+            '60/minute',
+        )
+
+    def test_staff_management_uses_shared_database_throttle(self):
+        self.assertEqual(
+            StaffManagementViewSet.throttle_classes,
+            [SharedDatabaseScopedRateThrottle],
+        )
 
     def test_authentication_and_recovery_routes_enforce_scoped_limits(self):
         endpoints = [
@@ -60,6 +71,7 @@ class AuthScopedThrottleTests(IsolatedAuthAPITestCase):
                 {'email': 'unregistered@example.com'},
             ),
             ('password_reset_confirm', reverse('password_reset_confirm'), {}),
+            ('auth_token_refresh', reverse('auth_token_refresh'), {}),
         ]
 
         for scope, url, payload in endpoints:
