@@ -8,6 +8,7 @@ from rest_framework import permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from gridy_auth.authentication import is_production_test_account
 from gridy_auth.models import User
 from gridy_auth.serializers import (
     PasswordResetConfirmSerializer,
@@ -32,10 +33,14 @@ class PasswordResetRequestView(APIView):
         if serializer.is_valid():
             email = serializer.validated_data['email']
             matching_users = list(
-                User.objects.filter(email__iexact=email, is_active=True)[:2]
+                User.objects.filter(
+                    email__iexact=email,
+                    is_active=True,
+                    is_superuser=False,
+                )[:2]
             )
 
-            if len(matching_users) == 1:
+            if len(matching_users) == 1 and not is_production_test_account(matching_users[0]):
                 user = matching_users[0]
                 uid = urlsafe_base64_encode(force_bytes(user.pk))
 
