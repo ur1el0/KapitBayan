@@ -5,7 +5,16 @@ from gridy_auth.models import User, Resident, Barangay, RefreshSession
 from gridy_auth.guardianship import guardian_account_is_eligible
 
 
-MAX_RESIDENT_EVIDENCE_IMAGE_SIZE_BYTES = 5 * 1024 * 1024
+MAX_IMAGE_UPLOAD_SIZE_BYTES = 5 * 1024 * 1024
+MAX_RESIDENT_EVIDENCE_IMAGE_SIZE_BYTES = MAX_IMAGE_UPLOAD_SIZE_BYTES
+
+
+def _validate_image_max_size(value, message):
+    if value is not None and value.size > MAX_IMAGE_UPLOAD_SIZE_BYTES:
+        raise serializers.ValidationError(message)
+    return value
+
+
 SIGN_IN_EMAIL_ROLES = (
     User.Role.ADMIN,
     User.Role.FIELD_OFFICIAL,
@@ -29,11 +38,10 @@ class ResidentEvidenceImageField(serializers.ImageField):
 
     def to_internal_value(self, data):
         uploaded_file = super().to_internal_value(data)
-        if uploaded_file and uploaded_file.size > MAX_RESIDENT_EVIDENCE_IMAGE_SIZE_BYTES:
-            raise serializers.ValidationError(
-                "Resident ID and residency proof images must be 5 MiB or smaller."
-            )
-        return uploaded_file
+        return _validate_image_max_size(
+            uploaded_file,
+            "Resident ID and residency proof images must be 5 MiB or smaller.",
+        )
 
 
 class ResidentPrivateImageField(ResidentEvidenceImageField):
@@ -104,6 +112,12 @@ class BarangaySerializer(serializers.ModelSerializer):
                 'Kiosk staff PIN must contain only letters and numbers.'
             )
         return cleaned
+
+    def validate_logo(self, value):
+        return _validate_image_max_size(value, "Barangay logo images must be 5 MiB or smaller.")
+
+    def validate_city_seal(self, value):
+        return _validate_image_max_size(value, "City seal images must be 5 MiB or smaller.")
 
     def update(self, instance, validated_data):
         raw_pin = validated_data.pop('kiosk_staff_pin', None)
@@ -383,9 +397,7 @@ class UserSerializer(serializers.ModelSerializer):
         return normalized_email
 
     def validate_profile_picture(self, value):
-        if value is not None and value.size > 5 * 1024 * 1024:
-            raise serializers.ValidationError("Profile pictures must be 5 MB or smaller.")
-        return value
+        return _validate_image_max_size(value, "Profile pictures must be 5 MB or smaller.")
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)
