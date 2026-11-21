@@ -1,8 +1,14 @@
 from rest_framework import serializers
+from django.db import transaction
 from django.db.models import Q
 from django.urls import reverse
 from gridy_auth.models import User, Resident, Barangay, RefreshSession
 from gridy_auth.guardianship import guardian_account_is_eligible
+from gridy_auth.lifecycle import (
+    RESIDENT_PRIVATE_MEDIA_FIELDS,
+    attempt_private_media_cleanup_safely,
+    queue_private_media_cleanup,
+)
 
 
 MAX_IMAGE_UPLOAD_SIZE_BYTES = 5 * 1024 * 1024
@@ -216,6 +222,11 @@ class ResidentSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         # Never permit updating is_verified through resident profile updates
         validated_data.pop('is_verified', None)
+        previous_private_files = {
+            field_name: getattr(instance, field_name).name
+            for field_name in RESIDENT_PRIVATE_MEDIA_FIELDS
+            if getattr(instance, field_name, None) and getattr(instance, field_name).name
+        }
 
         remove_philsys = validated_data.pop('remove_philsys_id_photo', False)
         remove_secondary = validated_data.pop('remove_secondary_id_photo', False)
@@ -258,7 +269,22 @@ class ResidentSerializer(serializers.ModelSerializer):
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
 
-        instance.save()
+        with transaction.atomic():
+            instance.save()
+            for field_name, old_file_name in previous_private_files.items():
+                current_field = getattr(instance, field_name, None)
+                new_file_name = current_field.name if current_field else None
+                if old_file_name and old_file_name != new_file_name:
+                    cleanup = queue_private_media_cleanup(
+                        "gridy_auth.Resident",
+                        field_name,
+                        old_file_name,
+                    )
+                    transaction.on_commit(
+                        lambda cleanup_id=cleanup.pk: attempt_private_media_cleanup_safely(
+                            cleanup_id
+                        )
+                    )
         return instance
 
 class ResidentAdminUpdateSerializer(ResidentSerializer):
