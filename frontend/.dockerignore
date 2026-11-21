@@ -1,3 +1,10 @@
 node_modules/
 dist/
+coverage/
+.git/
+.vercel/
 .env
+.env.*
+!.env.example
+*.log
+*.local
