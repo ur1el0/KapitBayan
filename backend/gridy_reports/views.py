@@ -19,6 +19,7 @@ class IssueReportPagination(PageNumberPagination):
 
 
 class IssueReportViewSet(viewsets.ModelViewSet):
+    lookup_value_regex = r"\d+"
     serializer_class = IssueReportSerializer
     parser_classes = [MultiPartParser, FormParser, JSONParser]
     pagination_class = IssueReportPagination

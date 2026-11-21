@@ -214,6 +214,7 @@ def _ensure_unique_barangay_or_number(document_request, or_number):
 
 
 class DocumentRequestViewSet(viewsets.ModelViewSet):
+    lookup_value_regex = r"\d+"
     serializer_class = DocumentRequestSerializer
 
     @staticmethod

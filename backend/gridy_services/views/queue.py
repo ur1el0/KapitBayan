@@ -32,6 +32,7 @@ __all__ = ["QueueTicketViewSet", "DashboardSummaryView"]
 logger = logging.getLogger(__name__)
 
 class QueueTicketViewSet(viewsets.ModelViewSet):
+    lookup_value_regex = r"\d+"
     serializer_class = QueueTicketSerializer
 
     def get_permissions(self):

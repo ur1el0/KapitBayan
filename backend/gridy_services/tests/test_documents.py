@@ -889,3 +889,30 @@ class DocumentRequestAPITests(ServiceAPIBaseTestCase):
             DocumentCertificateVerification.objects.filter(document_request=doc).count(),
             1,
         )
+
+    def test_non_integer_pk_routes_return_not_found_instead_of_server_error(self):
+        self._assign_shared_barangay()
+        self.client.force_login(self.official)
+
+        for path in (
+            "/api/v1/document-requests/abc/",
+            "/api/v1/document-requests/abc/payment-proof/",
+            "/api/v1/document-catalog/abc/",
+            "/api/v1/aid-requests/abc/",
+            "/api/v1/equipment-requests/abc/",
+            "/api/v1/tickets/abc/",
+            "/api/v1/reports/abc/",
+            "/api/v1/announcements/abc/",
+            "/api/v1/activities/abc/",
+            "/api/v1/devices/abc/",
+            "/api/v1/hotlines/abc/",
+            "/api/v1/faqs/abc/",
+            "/api/v1/admin-notifications/abc/",
+            "/api/v1/resident-notifications/abc/",
+        ):
+            response = self.client.get(path)
+            self.assertEqual(
+                response.status_code,
+                status.HTTP_404_NOT_FOUND,
+                f"Expected 404 for non-integer path {path}",
+            )
