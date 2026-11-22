@@ -1,6 +1,9 @@
 
+import io
 from unittest.mock import patch
 
+from PIL import Image
+from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework.test import APITestCase
 from rest_framework import status
 from django.urls import reverse
@@ -373,3 +376,63 @@ class IssueReportAPITests(APITestCase):
         )
         self.assertEqual(unverified_resp.status_code, status.HTTP_403_FORBIDDEN)
         self.assertFalse(IssueReport.objects.filter(reporter=unverified_user).exists())
+
+    def _generate_test_image(self, fmt="PNG", size=(50, 50)):
+        buf = io.BytesIO()
+        img = Image.new("RGB", size, color="blue")
+        img.save(buf, format=fmt)
+        return buf.getvalue()
+
+    def test_issue_report_valid_image_upload_succeeds(self):
+        img_bytes = self._generate_test_image("PNG")
+        uploaded_image = SimpleUploadedFile("evidence.png", img_bytes, content_type="image/png")
+        payload = {
+            "title": "Road pothole",
+            "description": "Deep pothole along main road",
+            "location": "Purok 5",
+            "image": uploaded_image,
+        }
+        response = self.client.post(self.url, payload, format="multipart")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        report = IssueReport.objects.get(title="Road pothole")
+        self.assertTrue(bool(report.image))
+
+    def test_issue_report_rejects_oversized_image(self):
+        # 5 MiB + 1 KiB
+        oversized_bytes = b"0" * (5 * 1024 * 1024 + 1024)
+        uploaded_image = SimpleUploadedFile("huge.png", oversized_bytes, content_type="image/png")
+        payload = {
+            "title": "Huge upload test",
+            "description": "Testing size limit enforcement",
+            "location": "Purok 1",
+            "image": uploaded_image,
+        }
+        response = self.client.post(self.url, payload, format="multipart")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("image", response.data)
+
+    def test_issue_report_rejects_fake_or_unsupported_image(self):
+        fake_image = SimpleUploadedFile("malicious.png", b"<html><script>alert(1)</script></html>", content_type="image/png")
+        payload = {
+            "title": "Fake image test",
+            "description": "Testing invalid image rejection",
+            "location": "Purok 2",
+            "image": fake_image,
+        }
+        response = self.client.post(self.url, payload, format="multipart")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("image", response.data)
+
+    def test_issue_report_rejects_unsupported_extension_or_null_byte(self):
+        img_bytes = self._generate_test_image("JPEG")
+        unsupported_ext = SimpleUploadedFile("payload.svg", img_bytes, content_type="image/svg+xml")
+        payload = {
+            "title": "Bad extension test",
+            "description": "Testing unsupported extension rejection",
+            "location": "Purok 3",
+            "image": unsupported_ext,
+        }
+        response = self.client.post(self.url, payload, format="multipart")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("image", response.data)
+
