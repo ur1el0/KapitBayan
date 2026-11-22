@@ -1,5 +1,6 @@
 """Anonymous, write-only intake for a physically supervised Barangay kiosk."""
 
+import logging
 import re
 from collections.abc import Mapping
 
@@ -26,6 +27,8 @@ from gridy_services.models import (
 )
 from gridy_services.websocket_events import broadcast_queue_update
 
+
+logger = logging.getLogger(__name__)
 
 KIOSK_PRIVACY_NOTICE_VERSION = "kiosk-v1"
 BORROWER_ID_TYPES = (
@@ -207,6 +210,21 @@ class KioskEquipmentBorrowSerializer(KioskSubmissionSerializer):
                 barangay,
             )
             if verified_user is None:
+                request_obj = self.context.get("request")
+                log_action(
+                    user=None,
+                    action_type=AuditLog.ActionType.USER_ACTION,
+                    description=(
+                        f"Failed kiosk resident authentication attempt for username '{resident_username}' "
+                        f"(Barangay {barangay.name})."
+                    ),
+                    request=request_obj,
+                )
+                logger.warning(
+                    "Failed kiosk resident authentication attempt for username '%s' in Barangay %s",
+                    resident_username,
+                    barangay.id,
+                )
                 raise serializers.ValidationError({
                     "detail": (
                         "Invalid resident credentials, or your account is not yet verified "
@@ -219,17 +237,23 @@ class KioskEquipmentBorrowSerializer(KioskSubmissionSerializer):
             attrs["kiosk_auth_method"] = "RESIDENT_VERIFIED"
             attrs["walkin_name"] = (profile.full_name or verified_user.username).strip()
         else:
-            if not barangay.kiosk_staff_pin_hash:
+            if not barangay.kiosk_staff_pin_hash or not staff_kiosk_pin or not barangay.check_kiosk_staff_pin(staff_kiosk_pin):
+                request_obj = self.context.get("request")
+                log_action(
+                    user=None,
+                    action_type=AuditLog.ActionType.USER_ACTION,
+                    description=(
+                        f"Failed kiosk staff PIN attempt for Barangay {barangay.name}."
+                    ),
+                    request=request_obj,
+                )
+                logger.warning(
+                    "Failed kiosk staff PIN attempt for Barangay %s (has_hash=%s)",
+                    barangay.id,
+                    bool(barangay.kiosk_staff_pin_hash),
+                )
                 raise serializers.ValidationError({
-                    "staff_kiosk_pin": (
-                        "Walk-in equipment borrowing PIN is not configured for this Barangay. "
-                        "Ask Barangay staff to configure the Kiosk Staff PIN in Barangay Settings, "
-                        "or sign in as a verified resident."
-                    )
-                })
-            if not staff_kiosk_pin or not barangay.check_kiosk_staff_pin(staff_kiosk_pin):
-                raise serializers.ValidationError({
-                    "staff_kiosk_pin": "Invalid Barangay Staff Kiosk PIN."
+                    "staff_kiosk_pin": "Invalid or unconfigured Barangay Staff Kiosk PIN."
                 })
             walkin_name = (attrs.get("walkin_name") or "").strip()
             if len(walkin_name) < 2:
@@ -267,7 +291,11 @@ class KioskSubmissionView(APIView):
     notification_type = None
 
     def post(self, request):
-        serializer = self.serializer_class(data=request.data)
+        self._current_request = request
+        serializer = self.serializer_class(
+            data=request.data,
+            context={"request": request},
+        )
         serializer.is_valid(raise_exception=True)
         with transaction.atomic():
             record = self.create_record(serializer.validated_data)
