@@ -56,17 +56,14 @@ htmlcov/
 
 STATUS.md
 
-docs/ai-workflow
+# AI Agent Workflows and Internal Task Packets (Kept local, untracked from remote)
+docs/ai-workflow/
 .codex
 .aws
 
-# Keep unrelated local workflow state ignored while tracking the active M94 packet.
-!docs/ai-workflow/
-docs/ai-workflow/*
-!docs/ai-workflow/tasks/
-docs/ai-workflow/tasks/*
-!docs/ai-workflow/tasks/m94-dilg-account-support-recovery/
-!docs/ai-workflow/tasks/m94-dilg-account-support-recovery/*.md
+# Internal Operational & Security Audit Reports (Kept local for institutional defense)
+docs/operations/resetting-production-accounts.md
+docs/revisions/vulnerability-scan-findings.md
 
 # Vercel project link metadata is local to each developer checkout.
 /frontend/.vercel/
