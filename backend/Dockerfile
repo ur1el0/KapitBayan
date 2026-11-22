@@ -39,5 +39,5 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
 # Set the entrypoint script
 ENTRYPOINT [ "./entrypoint.sh" ]
 
-# Default startup command for container execution
-CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3"]
+# Default startup command for container execution (ASGI via Daphne for HTTP + WebSockets)
+CMD ["daphne", "-b", "0.0.0.0", "-p", "8000", "config.asgi:application"]

@@ -2,6 +2,7 @@ from datetime import timedelta
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
+from gridy_audit.models import AuditLog
 from gridy_auth.models import Barangay, BarangayApplication, Resident, User
 from gridy_services.models import (
     DocumentRequest,
@@ -243,6 +244,13 @@ class KioskAPITests(ServiceAPIBaseTestCase):
         )
         self.assertEqual(res_bad_pass.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(EquipmentBorrowRequest.objects.count(), 0)
+        self.assertEqual(
+            AuditLog.objects.filter(
+                action_type=AuditLog.ActionType.USER_ACTION,
+                description__icontains="Failed kiosk resident authentication",
+            ).count(),
+            2,
+        )
 
     def test_kiosk_equipment_borrow_with_staff_pin_and_validation(self):
         url = reverse("kiosk-equipment-borrow-request")
@@ -266,6 +274,10 @@ class KioskAPITests(ServiceAPIBaseTestCase):
         no_pin_resp = self.client.post(url, payload, format="json")
         self.assertEqual(no_pin_resp.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("staff_kiosk_pin", no_pin_resp.data)
+        self.assertEqual(
+            no_pin_resp.data["staff_kiosk_pin"],
+            ["Invalid or unconfigured Barangay Staff Kiosk PIN."],
+        )
 
         # Configure hashed PIN on Barangay
         self.kiosk_barangay.set_kiosk_staff_pin("4321")
@@ -277,6 +289,17 @@ class KioskAPITests(ServiceAPIBaseTestCase):
             format="json",
         )
         self.assertEqual(wrong_pin_resp.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            wrong_pin_resp.data["staff_kiosk_pin"],
+            ["Invalid or unconfigured Barangay Staff Kiosk PIN."],
+        )
+        self.assertEqual(
+            AuditLog.objects.filter(
+                action_type=AuditLog.ActionType.USER_ACTION,
+                description__icontains="Failed kiosk staff PIN attempt",
+            ).count(),
+            2,
+        )
 
         # Rejects past borrow date
         past_date = str(timezone.localtime(timezone.now(), MANILA_TIME_ZONE).date() - timedelta(days=1))
