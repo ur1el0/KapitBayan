@@ -26,6 +26,9 @@ class LivenessCheckView(APIView):
     def get(self, request, *args, **kwargs):
         return Response({"status": "live"}, status=status.HTTP_200_OK)
 
+    def head(self, request, *args, **kwargs):
+        return Response(status=status.HTTP_200_OK)
+
 
 class HealthCheckView(APIView):
     permission_classes = [permissions.AllowAny]

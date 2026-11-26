@@ -28,6 +28,10 @@ from drf_spectacular.views import (
 from config.health_views import HealthCheckView, LivenessCheckView
 
 urlpatterns = [
+    path('health', LivenessCheckView.as_view(), name='root_health'),
+    path('health/', LivenessCheckView.as_view(), name='root_health_slash'),
+    path('live', LivenessCheckView.as_view(), name='root_live'),
+    path('live/', LivenessCheckView.as_view(), name='root_live_slash'),
     path('admin/', admin.site.urls),
     path('api/v1/auth/', include('gridy_auth.urls')),
     path('api/v1/', include('gridy_services.urls')),

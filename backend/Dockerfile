@@ -30,14 +30,15 @@ RUN SECRET_KEY="build-time-secret" DEBUG=True python manage.py collectstatic --n
 
 USER app
 
-# Expose the API port
+# Default HTTP port (overridden at runtime by $PORT on Koyeb, Cloud Run, HF Spaces, etc.)
+ENV PORT=8000
 EXPOSE 8000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health/', timeout=4)" || exit 1
+    CMD python -c "import os, urllib.request; port = os.environ.get('PORT', '8000'); urllib.request.urlopen(f'http://localhost:{port}/health', timeout=4)" || exit 1
 
 # Set the entrypoint script
 ENTRYPOINT [ "./entrypoint.sh" ]
 
 # Default startup command for container execution (ASGI via Daphne for HTTP + WebSockets)
-CMD ["daphne", "-b", "0.0.0.0", "-p", "8000", "config.asgi:application"]
+CMD ["sh", "-c", "exec daphne -b 0.0.0.0 -p ${PORT:-8000} config.asgi:application"]

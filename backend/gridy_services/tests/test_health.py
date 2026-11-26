@@ -36,6 +36,38 @@ class SystemHealthAPITests(APITestCase):
         cache_set.assert_not_called()
         cache_get.assert_not_called()
 
+    @patch(
+        "config.health_views.cache.get",
+        side_effect=AssertionError("cache probe must not run"),
+    )
+    @patch(
+        "config.health_views.cache.set",
+        side_effect=AssertionError("cache probe must not run"),
+    )
+    @patch(
+        "config.health_views.connection.cursor",
+        side_effect=AssertionError("database probe must not run"),
+    )
+    def test_root_health_and_live_support_get_and_head_without_dependencies(
+        self,
+        database_cursor,
+        cache_set,
+        cache_get,
+    ):
+        for path in ("/health", "/health/", "/live", "/live/", "/api/v1/health/live/"):
+            with self.subTest(method="GET", path=path):
+                get_resp = self.client.get(path)
+                self.assertEqual(get_resp.status_code, status.HTTP_200_OK)
+                self.assertEqual(get_resp.data, {"status": "live"})
+
+            with self.subTest(method="HEAD", path=path):
+                head_resp = self.client.head(path)
+                self.assertEqual(head_resp.status_code, status.HTTP_200_OK)
+
+        database_cursor.assert_not_called()
+        cache_set.assert_not_called()
+        cache_get.assert_not_called()
+
     def test_readiness_and_legacy_health_routes_report_dependency_health(self):
         for route_name in ("health_ready", "health_check"):
             with self.subTest(route=route_name):

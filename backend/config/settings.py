@@ -65,8 +65,13 @@ def get_allowed_hosts(debug=False, raw_hosts=None, render_hostname=None):
         for local_host in ['localhost', '127.0.0.1']:
             if local_host not in hosts:
                 hosts.append(local_host)
-    if render_hostname and render_hostname not in hosts:
-        hosts.append(render_hostname)
+    for platform_host in (
+        render_hostname,
+        os.environ.get('KOYEB_PUBLIC_DOMAIN'),
+        os.environ.get('SPACE_HOST'),
+    ):
+        if platform_host and platform_host not in hosts:
+            hosts.append(platform_host)
     return hosts
 
 
